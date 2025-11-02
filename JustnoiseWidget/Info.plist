@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.widgetkit-extension</string>
+	</dict>
+	<key>NSExtensionPrincipalClass</key>
+	<string>$(PRODUCT_MODULE_NAME).$(PRODUCT_MODULE_NAME)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Technology-Bold.ttf</string>
+		<string>ndot-45-inspired-by-nothing.ttf</string>
+		<string>nothing-font-5x7.ttf</string>
+	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+</dict>
+</plist>

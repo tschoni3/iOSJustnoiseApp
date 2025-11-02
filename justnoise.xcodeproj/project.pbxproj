@@ -1,0 +1,1336 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		321A54642D53808200A3053D /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54632D53808200A3053D /* Auth */; };
+		321A54662D53808200A3053D /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54652D53808200A3053D /* Functions */; };
+		321A54682D53808200A3053D /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54672D53808200A3053D /* PostgREST */; };
+		321A546A2D53808200A3053D /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54692D53808200A3053D /* Realtime */; };
+		321A546C2D53808200A3053D /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 321A546B2D53808200A3053D /* Storage */; };
+		321A546E2D53808200A3053D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 321A546D2D53808200A3053D /* Supabase */; };
+		321A54732D539C9800A3053D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54722D539C9800A3053D /* GoogleSignIn */; };
+		321A54752D539C9800A3053D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54742D539C9800A3053D /* GoogleSignInSwift */; };
+		322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 322A29FA2D94B67E00616706 /* Journaling.mp4 */; };
+		32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */; };
+		32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 32580DB22D4A9F05008D6AF5 /* Localizable.strings */; };
+		32A08AB82EB630E100832674 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D48D262D42F4790057C8AA /* ManagedSettings.framework */; };
+		32A08AB92EB630EF00832674 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32A08AA12EB6274300832674 /* FamilyControls.framework */; };
+		32A08AC22EB72B3100832674 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 321413C02EB488AD004998BD /* DeviceActivity.framework */; };
+		32A08AC92EB7402C00832674 /* JustNoiseFocusMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 32A08AAA2EB6308D00832674 /* JustNoiseFocusMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		32B7E0E22EAE69C2009F6BBC /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 32B7E0E12EAE69C2009F6BBC /* PostHog */; };
+		32BD0C292D662AA700A46265 /* JN_video2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 32BD0C272D662AA700A46265 /* JN_video2.mp4 */; };
+		32BD0C2A2D662AA700A46265 /* JN_video3.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 32BD0C282D662AA700A46265 /* JN_video3.mp4 */; };
+		32BD0C2B2D662AA700A46265 /* JN_video1.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 32BD0C262D662AA700A46265 /* JN_video1.mp4 */; };
+		32D48D272D42F47A0057C8AA /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D48D262D42F4790057C8AA /* ManagedSettings.framework */; };
+		32D48D292D42F47A0057C8AA /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D48D282D42F47A0057C8AA /* ManagedSettingsUI.framework */; };
+		32D48D312D42F47A0057C8AA /* ShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 32D48D242D42F4790057C8AA /* ShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		32F603272CD9E1E3000222C5 /* JustNoiseWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		323C09FC2CC504210094A28A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 323C09EA2CC504200094A28A;
+			remoteInfo = justnoiseradio;
+		};
+		323C0A062CC504210094A28A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 323C09EA2CC504200094A28A;
+			remoteInfo = justnoiseradio;
+		};
+		32A08AC72EB73AFD00832674 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 32A08AA92EB6308D00832674;
+			remoteInfo = JustNoiseFocusMonitor;
+		};
+		32A08ACA2EB7402C00832674 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 32A08AA92EB6308D00832674;
+			remoteInfo = JustNoiseFocusMonitor;
+		};
+		32D48D2F2D42F47A0057C8AA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 32D48D232D42F4790057C8AA;
+			remoteInfo = ShieldConfigurationExtension;
+		};
+		32F603252CD9E1E3000222C5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 32F603132CD9E1E2000222C5;
+			remoteInfo = JustNoiseWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3207184C2CCA71D000774537 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				32D48D312D42F47A0057C8AA /* ShieldConfigurationExtension.appex in Embed Foundation Extensions */,
+				32F603272CD9E1E3000222C5 /* JustNoiseWidget.appex in Embed Foundation Extensions */,
+				32A08AC92EB7402C00832674 /* JustNoiseFocusMonitor.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		328D2E1A2D4161510061D029 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		321413C02EB488AD004998BD /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		321413EE2EB4F8B1004998BD /* ManagedApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedApp.framework; path = System/Library/Frameworks/ManagedApp.framework; sourceTree = SDKROOT; };
+		322A29FA2D94B67E00616706 /* Journaling.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Journaling.mp4; sourceTree = "<group>"; };
+		323C09EB2CC504200094A28A /* justnoiseradio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = justnoiseradio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		323C09FB2CC504210094A28A /* justnoiseradioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = justnoiseradioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		323C0A052CC504210094A28A /* justnoiseradioUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = justnoiseradioUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Thank_You_Video.mp4; sourceTree = "<group>"; };
+		32580DB32D4A9F05008D6AF5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		32A08AA12EB6274300832674 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
+		32A08AAA2EB6308D00832674 /* JustNoiseFocusMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustNoiseFocusMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		32BD0C262D662AA700A46265 /* JN_video1.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = JN_video1.mp4; sourceTree = "<group>"; };
+		32BD0C272D662AA700A46265 /* JN_video2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = JN_video2.mp4; sourceTree = "<group>"; };
+		32BD0C282D662AA700A46265 /* JN_video3.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = JN_video3.mp4; sourceTree = "<group>"; };
+		32D48D242D42F4790057C8AA /* ShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		32D48D262D42F4790057C8AA /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		32D48D282D42F47A0057C8AA /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustNoiseWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		32F603342CD9E237000222C5 /* JustNoiseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustNoiseWidgetExtension.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		323C0A272CC504800094A28A /* Exceptions for "justnoiseradio" folder in "justnoiseradio" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
+		};
+		32A08AB72EB6308D00832674 /* Exceptions for "JustNoiseFocusMonitor" folder in "JustNoiseFocusMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
+		};
+		32A08ABB2EB6319700832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseFocusMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/ScreenTimeShared.swift,
+				Shared/SharedKeys.swift,
+			);
+			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
+		};
+		32A08AE62EB799A000832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/SharedKeys.swift,
+			);
+			target = 32F603132CD9E1E2000222C5 /* JustNoiseWidget */;
+		};
+		32A08AE72EB799A000832674 /* Exceptions for "justnoiseradio" folder in "ShieldConfigurationExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/SharedKeys.swift,
+			);
+			target = 32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */;
+		};
+		32D48D352D42F47A0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "ShieldConfigurationExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */;
+		};
+		32D48D4B2D43141F0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "justnoiseradio" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				IconShield.png,
+				ShieldConfigurationExtension.swift,
+			);
+			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
+		};
+		32F6032B2CD9E1E3000222C5 /* Exceptions for "JustNoiseWidget" folder in "JustNoiseWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 32F603132CD9E1E2000222C5 /* JustNoiseWidget */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		323C09ED2CC504200094A28A /* justnoiseradio */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				323C0A272CC504800094A28A /* Exceptions for "justnoiseradio" folder in "justnoiseradio" target */,
+				32A08AE62EB799A000832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseWidget" target */,
+				32A08AE72EB799A000832674 /* Exceptions for "justnoiseradio" folder in "ShieldConfigurationExtension" target */,
+				32A08ABB2EB6319700832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseFocusMonitor" target */,
+			);
+			path = justnoiseradio;
+			sourceTree = "<group>";
+		};
+		323C09FE2CC504210094A28A /* justnoiseradioTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = justnoiseradioTests;
+			sourceTree = "<group>";
+		};
+		323C0A082CC504210094A28A /* justnoiseradioUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = justnoiseradioUITests;
+			sourceTree = "<group>";
+		};
+		32A08AAC2EB6308D00832674 /* JustNoiseFocusMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				32A08AB72EB6308D00832674 /* Exceptions for "JustNoiseFocusMonitor" folder in "JustNoiseFocusMonitor" target */,
+			);
+			path = JustNoiseFocusMonitor;
+			sourceTree = "<group>";
+		};
+		32D48D2A2D42F47A0057C8AA /* ShieldConfigurationExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				32D48D4B2D43141F0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "justnoiseradio" target */,
+				32D48D352D42F47A0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "ShieldConfigurationExtension" target */,
+			);
+			path = ShieldConfigurationExtension;
+			sourceTree = "<group>";
+		};
+		32F603172CD9E1E2000222C5 /* JustNoiseWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				32F6032B2CD9E1E3000222C5 /* Exceptions for "JustNoiseWidget" folder in "JustNoiseWidget" target */,
+			);
+			path = JustNoiseWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		323C09E82CC504200094A28A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				321A54682D53808200A3053D /* PostgREST in Frameworks */,
+				321A54662D53808200A3053D /* Functions in Frameworks */,
+				321A546E2D53808200A3053D /* Supabase in Frameworks */,
+				321A54752D539C9800A3053D /* GoogleSignInSwift in Frameworks */,
+				321A54642D53808200A3053D /* Auth in Frameworks */,
+				321A546C2D53808200A3053D /* Storage in Frameworks */,
+				32B7E0E22EAE69C2009F6BBC /* PostHog in Frameworks */,
+				321A546A2D53808200A3053D /* Realtime in Frameworks */,
+				321A54732D539C9800A3053D /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		323C09F82CC504210094A28A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		323C0A022CC504210094A28A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32A08AA72EB6308D00832674 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32A08AB92EB630EF00832674 /* FamilyControls.framework in Frameworks */,
+				32A08AB82EB630E100832674 /* ManagedSettings.framework in Frameworks */,
+				32A08AC22EB72B3100832674 /* DeviceActivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32D48D212D42F4790057C8AA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32D48D272D42F47A0057C8AA /* ManagedSettings.framework in Frameworks */,
+				32D48D292D42F47A0057C8AA /* ManagedSettingsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32F603112CD9E1E2000222C5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		323C09E22CC504200094A28A = {
+			isa = PBXGroup;
+			children = (
+				32580DB22D4A9F05008D6AF5 /* Localizable.strings */,
+				32F603342CD9E237000222C5 /* JustNoiseWidgetExtension.entitlements */,
+				323C09ED2CC504200094A28A /* justnoiseradio */,
+				323C09FE2CC504210094A28A /* justnoiseradioTests */,
+				323C0A082CC504210094A28A /* justnoiseradioUITests */,
+				32F603172CD9E1E2000222C5 /* JustNoiseWidget */,
+				32D48D2A2D42F47A0057C8AA /* ShieldConfigurationExtension */,
+				32A08AAC2EB6308D00832674 /* JustNoiseFocusMonitor */,
+				32D48D252D42F4790057C8AA /* Frameworks */,
+				323C09EC2CC504200094A28A /* Products */,
+				32BD0C262D662AA700A46265 /* JN_video1.mp4 */,
+				322A29FA2D94B67E00616706 /* Journaling.mp4 */,
+				32BD0C272D662AA700A46265 /* JN_video2.mp4 */,
+				32BD0C282D662AA700A46265 /* JN_video3.mp4 */,
+				32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */,
+			);
+			sourceTree = "<group>";
+		};
+		323C09EC2CC504200094A28A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				323C09EB2CC504200094A28A /* justnoiseradio.app */,
+				323C09FB2CC504210094A28A /* justnoiseradioTests.xctest */,
+				323C0A052CC504210094A28A /* justnoiseradioUITests.xctest */,
+				32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */,
+				32D48D242D42F4790057C8AA /* ShieldConfigurationExtension.appex */,
+				32A08AAA2EB6308D00832674 /* JustNoiseFocusMonitor.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		32D48D252D42F4790057C8AA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				32A08AA12EB6274300832674 /* FamilyControls.framework */,
+				321413EE2EB4F8B1004998BD /* ManagedApp.framework */,
+				32D48D262D42F4790057C8AA /* ManagedSettings.framework */,
+				32D48D282D42F47A0057C8AA /* ManagedSettingsUI.framework */,
+				321413C02EB488AD004998BD /* DeviceActivity.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		323C09EA2CC504200094A28A /* justnoiseradio */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 323C0A0F2CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradio" */;
+			buildPhases = (
+				323C09E72CC504200094A28A /* Sources */,
+				323C09E82CC504200094A28A /* Frameworks */,
+				323C09E92CC504200094A28A /* Resources */,
+				3207184C2CCA71D000774537 /* Embed Foundation Extensions */,
+				328D2E1A2D4161510061D029 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				32F603262CD9E1E3000222C5 /* PBXTargetDependency */,
+				32D48D302D42F47A0057C8AA /* PBXTargetDependency */,
+				32A08AC82EB73AFD00832674 /* PBXTargetDependency */,
+				32A08ACB2EB7402C00832674 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				323C09ED2CC504200094A28A /* justnoiseradio */,
+			);
+			name = justnoiseradio;
+			packageProductDependencies = (
+				321A54632D53808200A3053D /* Auth */,
+				321A54652D53808200A3053D /* Functions */,
+				321A54672D53808200A3053D /* PostgREST */,
+				321A54692D53808200A3053D /* Realtime */,
+				321A546B2D53808200A3053D /* Storage */,
+				321A546D2D53808200A3053D /* Supabase */,
+				321A54722D539C9800A3053D /* GoogleSignIn */,
+				321A54742D539C9800A3053D /* GoogleSignInSwift */,
+				32B7E0E12EAE69C2009F6BBC /* PostHog */,
+			);
+			productName = justnoiseradio;
+			productReference = 323C09EB2CC504200094A28A /* justnoiseradio.app */;
+			productType = "com.apple.product-type.application";
+		};
+		323C09FA2CC504210094A28A /* justnoiseradioTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 323C0A122CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */;
+			buildPhases = (
+				323C09F72CC504210094A28A /* Sources */,
+				323C09F82CC504210094A28A /* Frameworks */,
+				323C09F92CC504210094A28A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				323C09FD2CC504210094A28A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				323C09FE2CC504210094A28A /* justnoiseradioTests */,
+			);
+			name = justnoiseradioTests;
+			packageProductDependencies = (
+			);
+			productName = justnoiseradioTests;
+			productReference = 323C09FB2CC504210094A28A /* justnoiseradioTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		323C0A042CC504210094A28A /* justnoiseradioUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 323C0A152CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioUITests" */;
+			buildPhases = (
+				323C0A012CC504210094A28A /* Sources */,
+				323C0A022CC504210094A28A /* Frameworks */,
+				323C0A032CC504210094A28A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				323C0A072CC504210094A28A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				323C0A082CC504210094A28A /* justnoiseradioUITests */,
+			);
+			name = justnoiseradioUITests;
+			packageProductDependencies = (
+			);
+			productName = justnoiseradioUITests;
+			productReference = 323C0A052CC504210094A28A /* justnoiseradioUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 32A08AB42EB6308D00832674 /* Build configuration list for PBXNativeTarget "JustNoiseFocusMonitor" */;
+			buildPhases = (
+				32A08AA62EB6308D00832674 /* Sources */,
+				32A08AA72EB6308D00832674 /* Frameworks */,
+				32A08AA82EB6308D00832674 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				32A08AAC2EB6308D00832674 /* JustNoiseFocusMonitor */,
+			);
+			name = JustNoiseFocusMonitor;
+			packageProductDependencies = (
+			);
+			productName = JustNoiseFocusMonitor;
+			productReference = 32A08AAA2EB6308D00832674 /* JustNoiseFocusMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 32D48D322D42F47A0057C8AA /* Build configuration list for PBXNativeTarget "ShieldConfigurationExtension" */;
+			buildPhases = (
+				32D48D202D42F4790057C8AA /* Sources */,
+				32D48D212D42F4790057C8AA /* Frameworks */,
+				32D48D222D42F4790057C8AA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				32D48D2A2D42F47A0057C8AA /* ShieldConfigurationExtension */,
+			);
+			name = ShieldConfigurationExtension;
+			packageProductDependencies = (
+			);
+			productName = ShieldConfigurationExtension;
+			productReference = 32D48D242D42F4790057C8AA /* ShieldConfigurationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		32F603132CD9E1E2000222C5 /* JustNoiseWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 32F6032A2CD9E1E3000222C5 /* Build configuration list for PBXNativeTarget "JustNoiseWidget" */;
+			buildPhases = (
+				32F603102CD9E1E2000222C5 /* Sources */,
+				32F603112CD9E1E2000222C5 /* Frameworks */,
+				32F603122CD9E1E2000222C5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				32F603172CD9E1E2000222C5 /* JustNoiseWidget */,
+			);
+			name = JustNoiseWidget;
+			packageProductDependencies = (
+			);
+			productName = JustNoiseWidgetExtension;
+			productReference = 32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		323C09E32CC504200094A28A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					323C09EA2CC504200094A28A = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					323C09FA2CC504210094A28A = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 323C09EA2CC504200094A28A;
+					};
+					323C0A042CC504210094A28A = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 323C09EA2CC504200094A28A;
+					};
+					32A08AA92EB6308D00832674 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					32D48D232D42F4790057C8AA = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					32F603132CD9E1E2000222C5 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 323C09E62CC504200094A28A /* Build configuration list for PBXProject "justnoise" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 323C09E22CC504200094A28A;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				321A54712D539C5400A3053D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				32B7E0E02EAE69C2009F6BBC /* XCRemoteSwiftPackageReference "posthog-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 323C09EC2CC504200094A28A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				323C09EA2CC504200094A28A /* justnoiseradio */,
+				323C09FA2CC504210094A28A /* justnoiseradioTests */,
+				323C0A042CC504210094A28A /* justnoiseradioUITests */,
+				32F603132CD9E1E2000222C5 /* JustNoiseWidget */,
+				32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */,
+				32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		323C09E92CC504200094A28A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32BD0C292D662AA700A46265 /* JN_video2.mp4 in Resources */,
+				32BD0C2A2D662AA700A46265 /* JN_video3.mp4 in Resources */,
+				32BD0C2B2D662AA700A46265 /* JN_video1.mp4 in Resources */,
+				32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */,
+				322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */,
+				32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		323C09F92CC504210094A28A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		323C0A032CC504210094A28A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32A08AA82EB6308D00832674 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32D48D222D42F4790057C8AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32F603122CD9E1E2000222C5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		323C09E72CC504200094A28A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		323C09F72CC504210094A28A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		323C0A012CC504210094A28A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32A08AA62EB6308D00832674 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32D48D202D42F4790057C8AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32F603102CD9E1E2000222C5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		323C09FD2CC504210094A28A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
+			targetProxy = 323C09FC2CC504210094A28A /* PBXContainerItemProxy */;
+		};
+		323C0A072CC504210094A28A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
+			targetProxy = 323C0A062CC504210094A28A /* PBXContainerItemProxy */;
+		};
+		32A08AC82EB73AFD00832674 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
+			targetProxy = 32A08AC72EB73AFD00832674 /* PBXContainerItemProxy */;
+		};
+		32A08ACB2EB7402C00832674 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
+			targetProxy = 32A08ACA2EB7402C00832674 /* PBXContainerItemProxy */;
+		};
+		32D48D302D42F47A0057C8AA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */;
+			targetProxy = 32D48D2F2D42F47A0057C8AA /* PBXContainerItemProxy */;
+		};
+		32F603262CD9E1E3000222C5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 32F603132CD9E1E2000222C5 /* JustNoiseWidget */;
+			targetProxy = 32F603252CD9E1E3000222C5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		32580DB22D4A9F05008D6AF5 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				32580DB32D4A9F05008D6AF5 /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		323C0A0D2CC504210094A28A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		323C0A0E2CC504210094A28A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		323C0A102CC504210094A28A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = justnoiseradio/justnoiseradio.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"justnoiseradio/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = justnoiseradio/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Justnoise;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "This app uses NFC to control app blocking and unblocking.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "JustNoise uses the microphone so you can record voice journals during or after a session; recordings stay on your device unless you choose to save or share them.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "JustNoise asks to use limited tracking so we can give you personalized focus insights — for example, weekly reports on how often you stayed distraction-free.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		323C0A112CC504210094A28A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = justnoiseradio/justnoiseradio.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"justnoiseradio/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = justnoiseradio/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Justnoise;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "This app uses NFC to control app blocking and unblocking.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "JustNoise uses the microphone so you can record voice journals during or after a session; recordings stay on your device unless you choose to save or share them.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "JustNoise asks to use limited tracking so we can give you personalized focus insights — for example, weekly reports on how often you stayed distraction-free.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		323C0A132CC504210094A28A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
+			};
+			name = Debug;
+		};
+		323C0A142CC504210094A28A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
+			};
+			name = Release;
+		};
+		323C0A162CC504210094A28A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0.5;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = justnoiseradio;
+			};
+			name = Debug;
+		};
+		323C0A172CC504210094A28A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0.5;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = justnoiseradio;
+			};
+			name = Release;
+		};
+		32A08AB52EB6308D00832674 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustNoiseFocusMonitor/JustNoiseFocusMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JustNoiseFocusMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JustNoiseFocusMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseFocusMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		32A08AB62EB6308D00832674 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JustNoiseFocusMonitor/JustNoiseFocusMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JustNoiseFocusMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JustNoiseFocusMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseFocusMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		32D48D332D42F47A0057C8AA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.ShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		32D48D342D42F47A0057C8AA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.ShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		32F603282CD9E1E3000222C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = JustNoiseWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JustNoiseWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JustNoiseWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		32F603292CD9E1E3000222C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = JustNoiseWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JustNoiseWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = JustNoiseWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		323C09E62CC504200094A28A /* Build configuration list for PBXProject "justnoise" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				323C0A0D2CC504210094A28A /* Debug */,
+				323C0A0E2CC504210094A28A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		323C0A0F2CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradio" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				323C0A102CC504210094A28A /* Debug */,
+				323C0A112CC504210094A28A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		323C0A122CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				323C0A132CC504210094A28A /* Debug */,
+				323C0A142CC504210094A28A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		323C0A152CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				323C0A162CC504210094A28A /* Debug */,
+				323C0A172CC504210094A28A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		32A08AB42EB6308D00832674 /* Build configuration list for PBXNativeTarget "JustNoiseFocusMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				32A08AB52EB6308D00832674 /* Debug */,
+				32A08AB62EB6308D00832674 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		32D48D322D42F47A0057C8AA /* Build configuration list for PBXNativeTarget "ShieldConfigurationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				32D48D332D42F47A0057C8AA /* Debug */,
+				32D48D342D42F47A0057C8AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		32F6032A2CD9E1E3000222C5 /* Build configuration list for PBXNativeTarget "JustNoiseWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				32F603282CD9E1E3000222C5 /* Debug */,
+				32F603292CD9E1E3000222C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		321A54712D539C5400A3053D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+		32B7E0E02EAE69C2009F6BBC /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.34.0;
+			};
+		};
+		32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		321A54632D53808200A3053D /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		321A54652D53808200A3053D /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		321A54672D53808200A3053D /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		321A54692D53808200A3053D /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		321A546B2D53808200A3053D /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		321A546D2D53808200A3053D /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		321A54722D539C9800A3053D /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 321A54712D539C5400A3053D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		321A54742D539C9800A3053D /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 321A54712D539C5400A3053D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		32B7E0E12EAE69C2009F6BBC /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 32B7E0E02EAE69C2009F6BBC /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 323C09E32CC504200094A28A /* Project object */;
+}
