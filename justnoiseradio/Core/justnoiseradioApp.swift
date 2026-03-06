@@ -20,6 +20,10 @@ struct JustNoiseApp: App {
 
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @AppStorage("isSignedIn")             var isSignedIn            = false
+
+    // 🔥 Always treat survey as completed (disable fully)
+    @AppStorage("hasCompletedSurvey") var hasCompletedSurvey = true
+    
     @AppStorage("showPostSessionJournalPrompt") var showPostSessionJournalPrompt: Bool = true
 
     @State private var showPasswordUpdate = false
