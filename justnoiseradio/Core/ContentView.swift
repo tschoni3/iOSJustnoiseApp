@@ -160,7 +160,6 @@ enum JustnoiseHeroMetrics {
     static let zapBottomActionReservedHeight: CGFloat = 132
     static let zapHeroToButtonMinGap: CGFloat = 48
     static let zapHeroToButtonMaxGap: CGFloat = 88
-    static let toolbarPlaceholderSize: CGFloat = 36
 }
 
 struct JustnoiseHeroHeader: View {
@@ -218,7 +217,6 @@ struct ContentView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @Binding var selectedTab: MainTab
     @State private var authorizationStatus = AuthorizationCenter.shared.authorizationStatus
-    @State private var showHistoryCongrats = false
 
     // Keep the enum private
     enum ActiveSheet: Identifiable {
@@ -663,11 +661,9 @@ private extension ContentView {
             ModesView().environmentObject(nfcViewModel)
                 .presentationDetents([.large])
         case .sessionHistory:
-            HistoryWrapperView(showCongrats: $showHistoryCongrats) {
-                SessionHistoryView()
-                    .environmentObject(nfcViewModel)
-            }
-            .presentationDetents([.large])
+            SessionHistoryView()
+                .environmentObject(nfcViewModel)
+                .presentationDetents([.large])
         case .schedules:
             SchedulesView().environmentObject(nfcViewModel)
                 .presentationDetents([.medium, .large])
@@ -853,7 +849,6 @@ private extension ContentView {
     func routeSessionReflectionToSignal() {
         let shouldDismissSummary = showSessionComplete
         showSessionComplete = false
-        showHistoryCongrats = false
         showCoachMarks = false
         activeSheet = nil
 
@@ -933,22 +928,6 @@ private extension ContentView {
     @MainActor
     func updateAuthorizationStatus() {
         authorizationStatus = AuthorizationCenter.shared.authorizationStatus
-    }
-}
-
-// MARK: - Shared wrappers
-extension ContentView {
-    struct HistoryWrapperView<Content: View>: View {
-        @Binding var showCongrats: Bool
-        let content: () -> Content
-        var body: some View {
-            content()
-                .alert("Nice work! 🎉", isPresented: $showCongrats) {
-                    Button("Done", role: .cancel) { }
-                } message: {
-                    Text("You’ve completed your first guided session and review.")
-                }
-        }
     }
 }
 

@@ -7,6 +7,13 @@
 
 import Foundation
 
+/// The dominant weekly attention pattern. This is not a personality or rank.
+enum SignalAttentionState: String, Codable, Equatable {
+    case drift
+    case builder
+    case guardian
+}
+
 struct NoiseRewindWeeklyInsight {
     let weekStart: Date
     let weekEnd: Date

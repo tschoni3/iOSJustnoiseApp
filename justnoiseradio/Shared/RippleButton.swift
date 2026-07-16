@@ -2,6 +2,15 @@
 
 import SwiftUI
 
+private struct SolidButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(1.0)
+            .scaleEffect(1.0)
+            .animation(.none, value: configuration.isPressed)
+    }
+}
+
 struct RippleButton: View {
     var action: () -> Void
     var isActive: Bool

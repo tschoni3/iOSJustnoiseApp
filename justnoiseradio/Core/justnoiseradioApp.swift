@@ -192,23 +192,10 @@ struct AuthenticatedContainerView: View {
     }
 }
 
-final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
         return true
-    }
-
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                didReceive response: UNNotificationResponse) async {
-        let userInfo = response.notification.request.content.userInfo
-        guard let deeplink = userInfo["deeplink"] as? String,
-              let type = DeepLinkType(rawValue: deeplink) else { return }
-
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .didReceiveDeepLink,
-                                            object: nil,
-                                            userInfo: ["type": type])
-        }
     }
 }

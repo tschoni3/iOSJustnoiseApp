@@ -678,10 +678,6 @@ private struct SignalTimelineItem: Identifiable {
         self.isLive = true
     }
 
-    var centerTime: TimeInterval {
-        startTime + (duration / 2)
-    }
-
     var waveformBars: [SignalWaveBar] {
         let amplitudes = waveformSamples?.isEmpty == false
             ? waveformSamples!

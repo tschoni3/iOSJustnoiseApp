@@ -11,8 +11,6 @@ import ManagedSettings
 import ActivityKit
 import OSLog
 
-private let JNLog = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "scheduling")
-
 // Rename our alert enum to UnifiedAlert to avoid conflicts.
 enum UnifiedAlert: Identifiable {
     case error(AlertItem)
@@ -52,7 +50,6 @@ struct DaySummary: Identifiable, Hashable {
 }
 
 class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
-    @Published var message: String?
     @Published var journalHistory: [JournalEntry] = []
     @Published var sessionHistory: [Session] = []
     @Published var isAppsBlocked: Bool = false
@@ -60,7 +57,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var isActivated: Bool = false
     @Published var showSubscriptionOffer: Bool = false
     @Published var activeAlert: UnifiedAlert?  // Unified alert state
-    @Published var pendingInterruptedSummary: Bool = false
     @Published var isHydrated: Bool = false
     @Published var lastLocalModeChangeAt: Date?
     @Published var pendingDisableScheduleId: UUID? = nil
@@ -286,8 +282,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             resumeTimer()
             logger.info("Restored blocking state at \(savedStart), mode: \(self.selectedMode?.name ?? "nil")")
         } else {
-            pendingInterruptedSummary = true
-            logger.warning("Active session without valid start date → will show 'Session Interrupted' UI.")
+            logger.warning("Active session has no valid start date.")
         }
 
         if !isActivated {
@@ -698,7 +693,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
                     logger.error("RESYNC ⚠️ start in future → ignoring adopt, clearing UI block")
                 }
             } else {
-                pendingInterruptedSummary = true
                 logger.error("RESYNC ⚠️ blocked=true but no sessionStartKey")
             }
         }
@@ -812,14 +806,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
-    func formattedElapsedTime() -> String {
-        let totalSeconds = Int(elapsedTime)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let seconds = totalSeconds % 60
-        return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-    }
-
     // MARK: - ✅ Companion helpers
     func addCompanionUserMessage(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -847,15 +833,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         )
         companionMessages.append(msg)
         saveCompanionMessages()
-    }
-
-    func companionMessages(forDay date: Date) -> [CompanionMessage] {
-        let start = Calendar.current.startOfDay(for: date)
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
-
-        return companionMessages
-            .filter { $0.createdAt >= start && $0.createdAt < end }
-            .sorted { $0.createdAt < $1.createdAt }
     }
 
     private func loadCompanionMessages() {
@@ -900,11 +877,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
                 )
             )
         )
-    }
-    func companionMessages(forSessionId sessionId: String) -> [CompanionMessage] {
-        companionMessages
-            .filter { $0.sessionId == sessionId }
-            .sorted { $0.createdAt < $1.createdAt }
     }
     // MARK: - Alerts & Errors
     private func showAlertWith(message: String) {
@@ -999,36 +971,8 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     func dismissNoiseRewindCardForNow() {
         showNoiseRewindCard = false
     }
-    // MARK: - Signal Snapshot
+    // MARK: - Signal Summary
 
-    var signalScoreResult: SignalNoiseScoreResult {
-        SignalNoiseScorer.computeSignalNoise(
-            sessions: sessionHistory,
-            reflections: journalHistory,
-            targetDay: Date()
-        )
-    }
-
-    var signalState: SignalAttentionState {
-        signalScoreResult.state
-    }
-
-    var signalLabel: String {
-        switch signalState {
-        case .drift:
-            return "The Overthinker"
-        case .builder:
-            return "The Builder"
-        case .guardian:
-            return "The Heremit"
-        }
-    }
-
-    var signalStrength: Double {
-        min(1.0, max(0.0, signalScoreResult.finalScore))
-    }
-    
-    
     func calculateSessionSignalBoost(for duration: TimeInterval) -> Int {
         let minutes = duration / 60
 
@@ -1152,11 +1096,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     }
 
     // MARK: - Reflection & Transcriptions
-    func handleReflectionResponse(startReflecting: Bool) {
-        activeAlert = nil
-        if startReflecting { showVoiceJournal = true }
-    }
-
     func saveTranscription(_ transcription: TranscriptionResponse) {
         transcriptionHistory.append(transcription)
         if let encoded = try? JSONEncoder().encode(transcriptionHistory) {
@@ -1187,13 +1126,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         checkNoiseRewindAvailability()
     }
 
-    func deleteSession(_ session: Session) {
-        if let index = sessionHistory.firstIndex(where: { $0.id == session.id }) {
-            sessionHistory.remove(at: index)
-            saveSessions()
-        }
-    }
-
     // MARK: - Journal History
     func loadJournalHistory() {
         if let data = UserDefaults.standard.data(forKey: journalHistoryKey),
@@ -1208,22 +1140,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         if let data = try? JSONEncoder().encode(journalHistory) {
             UserDefaults.standard.set(data, forKey: journalHistoryKey)
         }
-    }
-
-    func deleteJournalEntry(_ entry: JournalEntry) {
-        if let index = journalHistory.firstIndex(where: { $0.id == entry.id }) {
-            journalHistory.remove(at: index)
-            saveJournalHistory()
-        }
-    }
-
-    func journalEntries(forDay date: Date) -> [JournalEntry] {
-        let start = Calendar.current.startOfDay(for: date)
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
-
-        return journalHistory
-            .filter { $0.createdAt >= start && $0.createdAt < end }
-            .sorted { $0.createdAt < $1.createdAt }
     }
 
     private func latestRecentlyEndedSessionIndex(maxAge: TimeInterval = 20 * 60) -> Int? {
@@ -1299,12 +1215,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
         logger.info("Saved standalone journal entry.")
         return entry
-    }
-
-    // Legacy helper kept temporarily so old calls do not break.
-    // But stop using this in VoiceJournalView.
-    func addTranscriptionToLatestSession(transcription: TranscriptionResponse, audioURL: URL? = nil) {
-        _ = saveJournalEntry(transcription: transcription, audioURL: audioURL)
     }
 
     // MARK: - Dot System (Day-based)
@@ -1468,13 +1378,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
 // MARK: - 🔥 Streaks (helpers)
 private extension NFCViewModel {
-    func uniqueSessionDays() -> [Date] {
-        sessionHistory
-            .map { cal.startOfDay(for: $0.startDate) }
-            .uniqued()
-            .sorted()
-    }
-
     func hasSession(on day: Date) -> Bool {
         let sod = cal.startOfDay(for: day)
         return sessionHistory.contains { cal.isDate(cal.startOfDay(for: $0.startDate), inSameDayAs: sod) }
@@ -1514,9 +1417,6 @@ private extension NFCViewModel {
         }
     }
 
-    var hasSessionToday: Bool {
-        hasSession(on: Date())
-    }
 }
 
 // MARK: - Selection/Auth helpers
@@ -1536,14 +1436,6 @@ private extension NFCViewModel {
         if let sm = selectedMode, selectionIsEmpty(sm.selectedApps) {
             throw AppError.invalidModeSelection
         }
-    }
-}
-
-// MARK: - Small utility
-private extension Sequence where Element: Hashable {
-    func uniqued() -> [Element] {
-        var seen = Set<Element>()
-        return self.filter { seen.insert($0).inserted }
     }
 }
 
