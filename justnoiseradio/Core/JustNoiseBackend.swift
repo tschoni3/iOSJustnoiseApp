@@ -16,7 +16,6 @@ enum JustNoiseBackend {
 
     static let baseURL = URL(string: "https://\(backendHost)")!
     static let capturesURL = baseURL.appendingPathComponent("captures")
-    static let transcribeURL = baseURL.appendingPathComponent("transcribe")
 
     private static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral

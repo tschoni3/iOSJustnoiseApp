@@ -3,16 +3,6 @@
 import Foundation
 import Supabase
 
-struct UserProfileUpdate: Encodable {
-    let id: UUID
-    let name: String
-    let age: String
-    let language: String
-    let occupation: String
-    let main_goal: String
-    let biggest_distraction: String
-}
-
 class SupabaseManager: ObservableObject {
     static let shared = SupabaseManager()
     
@@ -32,30 +22,6 @@ class SupabaseManager: ObservableObject {
 extension SupabaseManager {
     func signOut() async throws {
         try await client.auth.signOut()
-    }
-    
-    // Upsert user profile (unchanged)
-    func upsertUserProfile(name: String, age: String, language: String, occupation: String, mainGoal: String, biggestDistraction: String) async throws {
-        guard let user = client.auth.currentUser else {
-            throw NSError(domain: "SupabaseManager",
-                          code: 0,
-                          userInfo: [NSLocalizedDescriptionKey: "User is not authenticated."])
-        }
-        
-        let profileUpdate = UserProfileUpdate(
-            id: user.id,
-            name: name,
-            age: age,
-            language: language,
-            occupation: occupation,
-            main_goal: mainGoal,
-            biggest_distraction: biggestDistraction
-        )
-        
-        try await client
-            .from("profiles")
-            .upsert(profileUpdate)
-            .execute()
     }
     
     // Request a password reset email with a custom redirect

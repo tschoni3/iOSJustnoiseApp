@@ -55,7 +55,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var isAppsBlocked: Bool = false
     @Published var elapsedTime: TimeInterval = 0
     @Published var isActivated: Bool = false
-    @Published var showSubscriptionOffer: Bool = false
     @Published var activeAlert: UnifiedAlert?  // Unified alert state
     @Published var isHydrated: Bool = false
     @Published var lastLocalModeChangeAt: Date?
@@ -79,7 +78,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var selectedMode: Mode? {
         didSet { if !isRestoring { saveSelectedMode() } }
     }
-    @Published var showVoiceJournal: Bool = false
     @Published var transcriptionHistory: [TranscriptionResponse] = []
 
     // Emergency Unzap tokens
@@ -116,23 +114,10 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         sharedDefaults.synchronize()
     }
 
-    // 🔗 POSTHOG: link reflections to sessions
-    @Published var currentSessionId: String? = nil
-
-    // MARK: - ✅ Companion Chat Storage (MVP)
-    @Published var companionMessages: [CompanionMessage] = []
-
-    private let companionMessagesKey = "jn_companion_messages_v1"
+    // Stable PostHog correlation ID for focus start/end, persisted across relaunch.
+    private var currentSessionId: String?
     private let activeSessionIdKey = "jn_active_session_id_v1"
     private let journalHistoryKey = "jn_journal_history_v1"
-
-    /// Only messages for the currently running session (for the in-session UI)
-    var currentSessionCompanionMessages: [CompanionMessage] {
-        guard let sid = currentSessionId else { return [] }
-        return companionMessages
-            .filter { $0.sessionId == sid }
-            .sorted { $0.createdAt < $1.createdAt }
-    }
 
     // MARK: - Init
     override init() {
@@ -174,8 +159,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         loadSchedules()
         loadSelectedMode()       // restore last user choice if possible
 
-        // ✅ Companion
-        loadCompanionMessages()
         loadActiveSessionIdIfAny()
 
         isRestoring = false      // from now on, saves are allowed
@@ -269,7 +252,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             }
         }
 
-        // ✅ Restore current session id (if app died mid-session)
+        // Restore analytics session correlation if the app died mid-session.
         if currentSessionId == nil {
             loadActiveSessionIdIfAny()
         }
@@ -487,7 +470,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         startTimer(using: now)
         startLiveActivity()
 
-        // ✅ Make a stable session id for companion linking
+        // Keep one stable analytics ID across the focus start/end pair.
         let sid = UUID().uuidString
         currentSessionId = sid
         sharedDefaults.set(sid, forKey: activeSessionIdKey)
@@ -706,7 +689,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             }
         }
 
-        // ✅ Restore active session id for companion
+        // Restore analytics session correlation after returning to foreground.
         if blocked, currentSessionId == nil {
             loadActiveSessionIdIfAny()
         }
@@ -806,78 +789,12 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
-    // MARK: - ✅ Companion helpers
-    func addCompanionUserMessage(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        let msg = CompanionMessage(
-            role: .user,
-            text: trimmed,
-            createdAt: Date(),
-            sessionId: currentSessionId
-        )
-        companionMessages.append(msg)
-        saveCompanionMessages()
-    }
-
-    func addCompanionAssistantMessage(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        let msg = CompanionMessage(
-            role: .assistant,
-            text: trimmed,
-            createdAt: Date(),
-            sessionId: currentSessionId
-        )
-        companionMessages.append(msg)
-        saveCompanionMessages()
-    }
-
-    private func loadCompanionMessages() {
-        guard let data = UserDefaults.standard.data(forKey: companionMessagesKey) else { return }
-        do {
-            companionMessages = try JSONDecoder().decode([CompanionMessage].self, from: data)
-        } catch {
-            logger.error("Failed to decode companionMessages: \(error.localizedDescription)")
-            companionMessages = []
-        }
-    }
-
-    private func saveCompanionMessages() {
-        do {
-            let data = try JSONEncoder().encode(companionMessages)
-            UserDefaults.standard.set(data, forKey: companionMessagesKey)
-        } catch {
-            logger.error("Failed to encode companionMessages: \(error.localizedDescription)")
-        }
-    }
-
     private func loadActiveSessionIdIfAny() {
         if let sid = sharedDefaults.string(forKey: activeSessionIdKey), !sid.isEmpty {
             currentSessionId = sid
         }
     }
-    
-    @Published var isCompanionRequestInFlight: Bool = false
 
-    func requestCompanionReply(
-        userMessage: String,
-        completion: @escaping (Result<String, Error>) -> Void
-    ) {
-        _ = userMessage
-        isCompanionRequestInFlight = false
-        completion(
-            .failure(
-                NSError(
-                    domain: "Companion",
-                    code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "Companion chat is no longer available."]
-                )
-            )
-        )
-    }
     // MARK: - Alerts & Errors
     private func showAlertWith(message: String) {
         let alertItem = AlertItem(

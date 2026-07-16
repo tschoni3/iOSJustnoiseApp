@@ -15,8 +15,6 @@
 		321A546E2D53808200A3053D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 321A546D2D53808200A3053D /* Supabase */; };
 		321A54732D539C9800A3053D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54722D539C9800A3053D /* GoogleSignIn */; };
 		321A54752D539C9800A3053D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54742D539C9800A3053D /* GoogleSignInSwift */; };
-		322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 322A29FA2D94B67E00616706 /* Journaling.mp4 */; };
-		32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */; };
 		32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 32580DB22D4A9F05008D6AF5 /* Localizable.strings */; };
 		3299258F2F25FC1500A8060D /* AppIconJN.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3299258E2F25FC1500A8060D /* AppIconJN.icon */; };
 		32A08AB82EB630E100832674 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D48D262D42F4790057C8AA /* ManagedSettings.framework */; };
@@ -93,9 +91,7 @@
 /* Begin PBXFileReference section */
 		321413C02EB488AD004998BD /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		321413EE2EB4F8B1004998BD /* ManagedApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedApp.framework; path = System/Library/Frameworks/ManagedApp.framework; sourceTree = SDKROOT; };
-		322A29FA2D94B67E00616706 /* Journaling.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Journaling.mp4; sourceTree = "<group>"; };
 		323C09EB2CC504200094A28A /* justnoiseradio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = justnoiseradio.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Thank_You_Video.mp4; sourceTree = "<group>"; };
 		32580DB32D4A9F05008D6AF5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		3299258E2F25FC1500A8060D /* AppIconJN.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIconJN.icon; sourceTree = "<group>"; };
 		32A08AA12EB6274300832674 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
@@ -268,10 +264,8 @@
 				32D48D252D42F4790057C8AA /* Frameworks */,
 				323C09EC2CC504200094A28A /* Products */,
 				32BD0C262D662AA700A46265 /* JN_video1.mp4 */,
-				322A29FA2D94B67E00616706 /* Journaling.mp4 */,
 				32BD0C272D662AA700A46265 /* JN_video2.mp4 */,
 				32BD0C282D662AA700A46265 /* JN_video3.mp4 */,
-				32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */,
 				3299258E2F25FC1500A8060D /* AppIconJN.icon */,
 			);
 			sourceTree = "<group>";
@@ -466,8 +460,6 @@
 				3299258F2F25FC1500A8060D /* AppIconJN.icon in Resources */,
 				32BD0C2B2D662AA700A46265 /* JN_video1.mp4 in Resources */,
 				32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */,
-				322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */,
-				32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

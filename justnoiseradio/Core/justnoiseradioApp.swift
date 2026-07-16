@@ -5,7 +5,6 @@ import SwiftUI
 import UserNotifications
 import AppTrackingTransparency
 import AdSupport
-import StoreKit
 import PostHog
 import FamilyControls
 
@@ -20,11 +19,6 @@ struct JustNoiseApp: App {
 
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @AppStorage("isSignedIn")             var isSignedIn            = false
-
-    // 🔥 Always treat survey as completed (disable fully)
-    @AppStorage("hasCompletedSurvey") var hasCompletedSurvey = true
-    
-    @AppStorage("showPostSessionJournalPrompt") var showPostSessionJournalPrompt: Bool = true
 
     @State private var showPasswordUpdate = false
     @State private var resetToken: String?
@@ -81,7 +75,6 @@ struct JustNoiseApp: App {
                     }
 
                 } else {
-                    // 🔥 Survey removed: goes straight to the authenticated container
                     AuthenticatedContainerView()
                         .environmentObject(nfcViewModel)
                         .environmentObject(subscriptionManager)
@@ -135,7 +128,6 @@ struct JustNoiseApp: App {
             }
             .environmentObject(SupabaseManager.shared)
             .environmentObject(signalStore)
-            .environment(\.showPostSessionJournalPrompt, $showPostSessionJournalPrompt)
             .onOpenURL { url in
                 guard url.scheme == "justnoise" else { return }
                 switch url.host {
@@ -156,17 +148,6 @@ struct JustNoiseApp: App {
                 }
             }
         }
-    }
-}
-
-private struct ShowPostSessionJournalPromptKey: EnvironmentKey {
-    static let defaultValue: Binding<Bool> = .constant(true)
-}
-
-extension EnvironmentValues {
-    var showPostSessionJournalPrompt: Binding<Bool> {
-        get { self[ShowPostSessionJournalPromptKey.self] }
-        set { self[ShowPostSessionJournalPromptKey.self] = newValue }
     }
 }
 
