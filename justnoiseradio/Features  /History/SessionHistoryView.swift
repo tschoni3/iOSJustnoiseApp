@@ -19,8 +19,6 @@ struct SessionHistoryView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Environment(\.dismiss) private var dismiss
 
-    var showsCloseButton: Bool = true
-
     @State private var viewMode: HistoryViewMode = .ninetyDays
     @State private var showSettings = false
 
@@ -99,13 +97,11 @@ struct SessionHistoryView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 24) {
-                        if showsCloseButton {
-                            Button { dismiss() } label: {
-                                Image("Justnoise_logo")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 26, height: 26)
-                            }
+                        Button { dismiss() } label: {
+                            Image("Justnoise_logo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 26, height: 26)
                         }
 
                         Button { showSettings = true } label: {

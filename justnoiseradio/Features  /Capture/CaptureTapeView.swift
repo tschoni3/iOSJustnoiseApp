@@ -708,8 +708,7 @@ private struct SignalTimelineItem: Identifiable {
             return SignalWaveBar(
                 time: time,
                 height: height,
-                clipID: clipID,
-                amplitude: gatedAmplitude
+                clipID: clipID
             )
         }
     }
@@ -719,7 +718,6 @@ private struct SignalWaveBar: Identifiable {
     let time: TimeInterval
     let height: CGFloat
     let clipID: UUID
-    let amplitude: CGFloat
 
     var id: String {
         "\(clipID.uuidString)-\(Int((time * 1000).rounded()))"
@@ -871,8 +869,7 @@ private struct SignalTapeTimelineView: View {
             return SignalWaveBar(
                 time: centeredTime,
                 height: displayHeight,
-                clipID: clipIDs[index] ?? owningItem.clipID,
-                amplitude: rawHeight
+                clipID: clipIDs[index] ?? owningItem.clipID
             )
         }
     }

@@ -4,7 +4,6 @@ import SwiftUI
 
 struct NFCActivationView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
-    @State private var isScanning = false // Loading indicator control
 
     var body: some View {
         NavigationView {
@@ -22,7 +21,6 @@ struct NFCActivationView: View {
                         .frame(width: 220, height: 220)
                         .opacity(1.0)
                         .onTapGesture {
-                            isScanning = true
                             nfcViewModel.startScanning(purpose: .activation)
                         }
                         .frame(width: 240, height: 240)
@@ -77,15 +75,9 @@ struct NFCActivationView: View {
                     return Alert(
                         title: alertItem.title,
                         message: alertItem.message,
-                        dismissButton: .default(Text("OK"), action: {
-                            isScanning = false
-                        })
+                        dismissButton: .default(Text("OK"))
                     )
-                    
                 }
-            }
-            .onChange(of: nfcViewModel.isActivated) { _, newValue in
-                if newValue { isScanning = false }
             }
         }
     }

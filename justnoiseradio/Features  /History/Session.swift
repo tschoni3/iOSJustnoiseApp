@@ -29,18 +29,4 @@ struct Session: Identifiable, Hashable, Codable {
         self.audioFileURL = audioFileURL
     }
     
-    var formattedDuration: String {
-        let totalSeconds = Int(duration)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        // Format as "H:MM"
-        return String(format: "%d:%02d", hours, minutes)
-    }
-
-    var formattedStartDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: startDate)
-    }
 }

@@ -37,11 +37,6 @@
 	<string>60378924357-at4eeqslt180ca999e97i9tt785qt4rb.apps.googleusercontent.com</string>
 	<key>NSNFCUsageDescription</key>
 	<string>JustNoise uses NFC so you can scan your Zap tag with your iPhone to start or stop a focus session — for example, tap your phone to the tag to begin, and scan again to end and save your session.</string>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Technology-Bold.ttf</string>
-		<string>ndot-45-inspired-by-nothing.ttf</string>
-	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

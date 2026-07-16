@@ -14,7 +14,6 @@ struct OnboardingView: View {
                 // TabView for Onboarding Pages (3 pages)
                 TabView(selection: $currentPage) {
                     OnboardingPage(
-                        mediaType: .video,
                         mediaName: "JN_video1",
                         title: "Select Mode",
                         description: "Press the Customize Apps button to choose which apps stay unblocked."
@@ -22,7 +21,6 @@ struct OnboardingView: View {
                     .tag(0)
 
                     OnboardingPage(
-                        mediaType: .video,
                         mediaName: "JN_video2",
                         title: "Stay Focused",
                         description: "Get in the zone—distractions off, focus mode on."
@@ -30,7 +28,6 @@ struct OnboardingView: View {
                     .tag(1)
 
                     OnboardingPage(
-                        mediaType: .video,
                         mediaName: "JN_video3",
                         title: "Reset & Reflect",
                         description: "After each session, take a moment to capture your thoughts, track your progress, and reset your mind for what’s next."
@@ -94,17 +91,9 @@ struct OnboardingView: View {
     }
 }
 
-// MARK: - Media Type Enum
-enum MediaType {
-    case image
-    case video
-    case none
-}
-
 // MARK: - Reusable Onboarding Page
 struct OnboardingPage: View {
-    let mediaType: MediaType
-    let mediaName: String?
+    let mediaName: String
     let title: String
     let description: String
     
@@ -120,22 +109,10 @@ struct OnboardingPage: View {
                 .foregroundColor(.primary)
                 .accessibilityAddTraits(.isHeader)
             
-            // Display Image or Video
-            if let mediaName = mediaName {
-                if mediaType == .image {
-                    Image(uiImage: UIImage(named: mediaName) ?? UIImage(systemName: "questionmark.circle")!)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 250)
-                        .foregroundColor(.teal)
-                        .accessibilityHidden(true)
-                } else if mediaType == .video {
-                    VideoPlayerView(videoName: mediaName)
-                        .frame(height: 250)
-                        .cornerRadius(12)
-                        .shadow(radius: 5)
-                }
-            }
+            VideoPlayerView(videoName: mediaName)
+                .frame(height: 250)
+                .cornerRadius(12)
+                .shadow(radius: 5)
             
             // Description
             Text(description)
