@@ -12,10 +12,10 @@ import FamilyControls
 @main
 struct JustNoiseApp: App {
 
-    // AppDelegate for notification delegation
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @StateObject private var nfcViewModel        = NFCViewModel()
+    @StateObject private var signalStore         = SignalStore()
     @StateObject private var subscriptionManager = SubscriptionManager()
 
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
@@ -52,14 +52,17 @@ struct JustNoiseApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                // 🚪 Block UI until protected storage is hydrated
-                if !nfcViewModel.isHydrated {
+
+                if !nfcViewModel.isHydrated || !signalStore.isHydrated {
                     ZStack {
                         Color.black.ignoresSafeArea()
                         ProgressView("Loading JustNoise…")
                             .foregroundStyle(.white)
                     }
-                    .task { nfcViewModel.hydrateOnLaunch() } // idempotent
+                    .task {
+                        nfcViewModel.hydrateOnLaunch()
+                        signalStore.hydrateOnLaunch()
+                    }
 
                 } else if !hasCompletedOnboarding {
                     OnboardingView()
@@ -78,22 +81,20 @@ struct JustNoiseApp: App {
                     }
 
                 } else {
+                    // 🔥 Survey removed: goes straight to the authenticated container
                     AuthenticatedContainerView()
                         .environmentObject(nfcViewModel)
                         .environmentObject(subscriptionManager)
                 }
             }
-            .preferredColorScheme(.dark)
-
-            // Global setup
-            .onAppear {
+                .preferredColorScheme(.dark)
+                .onAppear {
                 Task {
-                    // Screen Time auth (needed for ManagedSettings)
                     let center = AuthorizationCenter.shared
                     if center.authorizationStatus != .approved {
-                        do { try await center.requestAuthorization(for: .individual) } catch {
-                        }
+                        do { try await center.requestAuthorization(for: .individual) } catch {}
                     }
+
                     print(center.authorizationStatus == .approved
                           ? "✅ ScreenTime authorization granted"
                           : "❌ ScreenTime authorization denied or not approved")
@@ -101,46 +102,39 @@ struct JustNoiseApp: App {
 
                 Task { await subscriptionManager.updateSubscriptionStatus() }
 
-                // Local notifications (keep – not DeviceActivity)
                 NotificationManager.shared.requestAuthorization()
                 NotificationManager.shared.scheduleDailyPreSessionNudgeIfNeeded()
                 NotificationManager.shared.scheduleDailyStreakSave()
+                NotificationManager.shared.cancelNoiseRewindNotifications()
 
-                // ATT
                 if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         requestTrackingPermission()
                     }
                 }
-
-                // ⛔️ REMOVED: Any DeviceActivityBridge resync/arming
-                // ⛔️ REMOVED: Any JNShared/JNPayloadStore debug mirrors
             }
+                .onChange(of: scenePhase) { _, newPhase in
+                    guard newPhase == .active else { return }
 
-            // Foreground refresh
-            .onChange(of: scenePhase) { _, newPhase in
-                guard newPhase == .active else { return }
+                    if !nfcViewModel.isHydrated {
+                        nfcViewModel.hydrateOnLaunch()
+                    }
 
-                if !nfcViewModel.isHydrated {
-                    nfcViewModel.hydrateOnLaunch()
-                }
+                    if !signalStore.isHydrated {
+                        signalStore.hydrateOnLaunch()
+                    }
 
-                Task {
-                    await nfcViewModel.foregroundResync()
-                }
-
-                // ⛔️ REMOVED: DeviceActivityBridge.resyncAll(...)
-                // ⛔️ REMOVED: AppGroup mirror debug for DA extension
+                    Task {
+                        await nfcViewModel.foregroundResync()
+                        nfcViewModel.checkNoiseRewindAvailability()
+                    }
             }
-
-            // ⛔️ REMOVED: onChange of isHydrated that armed DeviceActivity monitors
-
-            // Deep links + password reset
             .fullScreenCover(isPresented: $showPasswordUpdate) {
                 PasswordUpdateView(token: resetToken)
                     .environmentObject(SupabaseManager.shared)
             }
             .environmentObject(SupabaseManager.shared)
+            .environmentObject(signalStore)
             .environment(\.showPostSessionJournalPrompt, $showPostSessionJournalPrompt)
             .onOpenURL { url in
                 guard url.scheme == "justnoise" else { return }
@@ -165,7 +159,6 @@ struct JustNoiseApp: App {
     }
 }
 
-// MARK: - Environment key for post-session journal prompt preference
 private struct ShowPostSessionJournalPromptKey: EnvironmentKey {
     static let defaultValue: Binding<Bool> = .constant(true)
 }
@@ -177,39 +170,29 @@ extension EnvironmentValues {
     }
 }
 
-// MARK: - Tracking permission helper
 func requestTrackingPermission() {
     ATTrackingManager.requestTrackingAuthorization { _ in }
 }
 
-// MARK: - Authenticated container
+// MARK: - No-survey Authenticated Container
 struct AuthenticatedContainerView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
-    @AppStorage("hasCompletedSurvey") var hasCompletedSurvey = false
-    @State private var showSurvey = false
 
     var body: some View {
-        ContentView()
+        MainTabView()
             .onAppear {
-                if !hasCompletedSurvey { showSurvey = true }
                 Task { await subscriptionManager.updateSubscriptionStatus() }
 
-                // Identify signed-in user for PostHog
                 if let user = SupabaseManager.shared.client.auth.currentUser {
                     var props: [String: Any] = [:]
                     if let email = user.email { props["email"] = email }
                     PostHogSDK.shared.identify(user.id.uuidString, userProperties: props)
                 }
             }
-            .fullScreenCover(isPresented: $showSurvey) {
-                SurveyView(showSurvey: $showSurvey)
-            }
     }
 }
 
-// MARK: - AppDelegate for notifications & deep links from notifications
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationManager.shared

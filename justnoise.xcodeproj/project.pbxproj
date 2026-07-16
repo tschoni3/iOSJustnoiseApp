@@ -34,20 +34,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		323C09FC2CC504210094A28A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 323C09E32CC504200094A28A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 323C09EA2CC504200094A28A;
-			remoteInfo = justnoiseradio;
-		};
-		323C0A062CC504210094A28A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 323C09E32CC504200094A28A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 323C09EA2CC504200094A28A;
-			remoteInfo = justnoiseradio;
-		};
 		32A08AC72EB73AFD00832674 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 323C09E32CC504200094A28A /* Project object */;
@@ -109,8 +95,6 @@
 		321413EE2EB4F8B1004998BD /* ManagedApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedApp.framework; path = System/Library/Frameworks/ManagedApp.framework; sourceTree = SDKROOT; };
 		322A29FA2D94B67E00616706 /* Journaling.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Journaling.mp4; sourceTree = "<group>"; };
 		323C09EB2CC504200094A28A /* justnoiseradio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = justnoiseradio.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		323C09FB2CC504210094A28A /* justnoiseradioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = justnoiseradioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		323C0A052CC504210094A28A /* justnoiseradioUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = justnoiseradioUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Thank_You_Video.mp4; sourceTree = "<group>"; };
 		32580DB32D4A9F05008D6AF5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		3299258E2F25FC1500A8060D /* AppIconJN.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIconJN.icon; sourceTree = "<group>"; };
@@ -199,16 +183,6 @@
 			path = justnoiseradio;
 			sourceTree = "<group>";
 		};
-		323C09FE2CC504210094A28A /* justnoiseradioTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = justnoiseradioTests;
-			sourceTree = "<group>";
-		};
-		323C0A082CC504210094A28A /* justnoiseradioUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = justnoiseradioUITests;
-			sourceTree = "<group>";
-		};
 		32A08AAC2EB6308D00832674 /* JustNoiseFocusMonitor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -253,20 +227,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		323C09F82CC504210094A28A /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		323C0A022CC504210094A28A /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		32A08AA72EB6308D00832674 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -302,8 +262,6 @@
 				32580DB22D4A9F05008D6AF5 /* Localizable.strings */,
 				32F603342CD9E237000222C5 /* JustNoiseWidgetExtension.entitlements */,
 				323C09ED2CC504200094A28A /* justnoiseradio */,
-				323C09FE2CC504210094A28A /* justnoiseradioTests */,
-				323C0A082CC504210094A28A /* justnoiseradioUITests */,
 				32F603172CD9E1E2000222C5 /* JustNoiseWidget */,
 				32D48D2A2D42F47A0057C8AA /* ShieldConfigurationExtension */,
 				32A08AAC2EB6308D00832674 /* JustNoiseFocusMonitor */,
@@ -322,8 +280,6 @@
 			isa = PBXGroup;
 			children = (
 				323C09EB2CC504200094A28A /* justnoiseradio.app */,
-				323C09FB2CC504210094A28A /* justnoiseradioTests.xctest */,
-				323C0A052CC504210094A28A /* justnoiseradioUITests.xctest */,
 				32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */,
 				32D48D242D42F4790057C8AA /* ShieldConfigurationExtension.appex */,
 				32A08AAA2EB6308D00832674 /* JustNoiseFocusMonitor.appex */,
@@ -382,52 +338,6 @@
 			productName = justnoiseradio;
 			productReference = 323C09EB2CC504200094A28A /* justnoiseradio.app */;
 			productType = "com.apple.product-type.application";
-		};
-		323C09FA2CC504210094A28A /* justnoiseradioTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 323C0A122CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */;
-			buildPhases = (
-				323C09F72CC504210094A28A /* Sources */,
-				323C09F82CC504210094A28A /* Frameworks */,
-				323C09F92CC504210094A28A /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				323C09FD2CC504210094A28A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				323C09FE2CC504210094A28A /* justnoiseradioTests */,
-			);
-			name = justnoiseradioTests;
-			packageProductDependencies = (
-			);
-			productName = justnoiseradioTests;
-			productReference = 323C09FB2CC504210094A28A /* justnoiseradioTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		323C0A042CC504210094A28A /* justnoiseradioUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 323C0A152CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioUITests" */;
-			buildPhases = (
-				323C0A012CC504210094A28A /* Sources */,
-				323C0A022CC504210094A28A /* Frameworks */,
-				323C0A032CC504210094A28A /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				323C0A072CC504210094A28A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				323C0A082CC504210094A28A /* justnoiseradioUITests */,
-			);
-			name = justnoiseradioUITests;
-			packageProductDependencies = (
-			);
-			productName = justnoiseradioUITests;
-			productReference = 323C0A052CC504210094A28A /* justnoiseradioUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */ = {
 			isa = PBXNativeTarget;
@@ -508,14 +418,6 @@
 					323C09EA2CC504200094A28A = {
 						CreatedOnToolsVersion = 16.0;
 					};
-					323C09FA2CC504210094A28A = {
-						CreatedOnToolsVersion = 16.0;
-						TestTargetID = 323C09EA2CC504200094A28A;
-					};
-					323C0A042CC504210094A28A = {
-						CreatedOnToolsVersion = 16.0;
-						TestTargetID = 323C09EA2CC504200094A28A;
-					};
 					32A08AA92EB6308D00832674 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -547,8 +449,6 @@
 			projectRoot = "";
 			targets = (
 				323C09EA2CC504200094A28A /* justnoiseradio */,
-				323C09FA2CC504210094A28A /* justnoiseradioTests */,
-				323C0A042CC504210094A28A /* justnoiseradioUITests */,
 				32F603132CD9E1E2000222C5 /* JustNoiseWidget */,
 				32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */,
 				32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */,
@@ -568,20 +468,6 @@
 				32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */,
 				322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */,
 				32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		323C09F92CC504210094A28A /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		323C0A032CC504210094A28A /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -616,20 +502,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		323C09F72CC504210094A28A /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		323C0A012CC504210094A28A /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		32A08AA62EB6308D00832674 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -654,16 +526,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		323C09FD2CC504210094A28A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
-			targetProxy = 323C09FC2CC504210094A28A /* PBXContainerItemProxy */;
-		};
-		323C0A072CC504210094A28A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
-			targetProxy = 323C0A062CC504210094A28A /* PBXContainerItemProxy */;
-		};
 		32A08AC82EB73AFD00832674 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
@@ -853,7 +715,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -897,7 +759,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -908,90 +770,6 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
-		323C0A132CC504210094A28A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
-			};
-			name = Debug;
-		};
-		323C0A142CC504210094A28A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
-			};
-			name = Release;
-		};
-		323C0A162CC504210094A28A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.5;
-				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_TARGET_NAME = justnoiseradio;
-			};
-			name = Debug;
-		};
-		323C0A172CC504210094A28A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.5;
-				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_TARGET_NAME = justnoiseradio;
 			};
 			name = Release;
 		};
@@ -1013,7 +791,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseFocusMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1048,7 +826,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseFocusMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1083,7 +861,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.ShieldConfigurationExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1116,7 +894,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.ShieldConfigurationExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1149,7 +927,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1181,7 +959,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1212,24 +990,6 @@
 			buildConfigurations = (
 				323C0A102CC504210094A28A /* Debug */,
 				323C0A112CC504210094A28A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		323C0A122CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				323C0A132CC504210094A28A /* Debug */,
-				323C0A142CC504210094A28A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		323C0A152CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradioUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				323C0A162CC504210094A28A /* Debug */,
-				323C0A172CC504210094A28A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

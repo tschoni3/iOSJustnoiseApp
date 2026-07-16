@@ -1,5 +1,6 @@
-// SchedulesView.swift
-
+//
+//  SchedulesView.swift
+//
 import SwiftUI
 import FamilyControls
 
@@ -11,11 +12,11 @@ struct SchedulesView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @State private var showingNewSchedule = false
     @State private var editingSchedule: Schedule?
+    @State private var lastEditedScheduleId: UUID?
 
     var body: some View {
         NavigationStack {
             List {
-                // Keep visible so toggling can prompt auth inline
                 if AuthorizationCenter.shared.authorizationStatus != .approved {
                     Text("Enable Screen Time access to run schedules automatically.")
                         .foregroundColor(.red)
@@ -27,13 +28,10 @@ struct SchedulesView: View {
                         .foregroundColor(.gray)
                         .italic()
                 } else {
-                    ForEach(Array(nfcViewModel.schedules.enumerated()), id: \.element.id) { index, schedule in
-                        let scheduleId = schedule.id
-
+                    ForEach(nfcViewModel.schedules, id: \.id) { schedule in
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(schedule.name)
-                                    .font(.headline)
+                                Text(schedule.name).font(.headline)
 
                                 scheduleSubtitle(schedule)
                                     .font(.subheadline)
@@ -41,66 +39,36 @@ struct SchedulesView: View {
 
                                 WeekdayDots(selected: Set(schedule.repeatWeekdays))
                                     .opacity(schedule.repeatWeekdays.isEmpty ? 0 : 1)
+
+                                if let fired = schedule.lastFireDate {
+                                    Text("Last used: \(fired.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
                             }
 
                             Spacer()
 
-                            Toggle("", isOn: Binding(
-                                get: { nfcViewModel.schedules[index].isEnabled },
-                                set: { newValue in
-                                    // Optimistic UI
-                                    nfcViewModel.schedules[index].isEnabled = newValue
-                                    nfcViewModel.saveSchedules()
-
-                                    if newValue {
-                                        Task {
-                                            do {
-                                                try await DeviceActivityBridge.ensureAuthorization()
-
-                                                // Persist the active selection for the monitor (mode, apps, weekdays)
-                                                await MainActor.run {
-                                                    if let idx = nfcViewModel.schedules.firstIndex(where: { $0.id == scheduleId }) {
-                                                        let s = nfcViewModel.schedules[idx]
-                                                        SharedSelectionBridge.writeForSchedule(s, allModes: nfcViewModel.modes)
-                                                    }
-                                                }
-
-                                                // Arm/refresh monitor with latest schedule definition
-                                                await MainActor.run {
-                                                    if let idx = nfcViewModel.schedules.firstIndex(where: { $0.id == scheduleId }) {
-                                                        DeviceActivityBridge.sync(
-                                                            schedule: nfcViewModel.schedules[idx],
-                                                            allModes: nfcViewModel.modes
-                                                        )
-                                                    }
-                                                }
-                                            } catch {
-                                                // Revert UI on failure
-                                                await MainActor.run {
-                                                    if let idx = nfcViewModel.schedules.firstIndex(where: { $0.id == scheduleId }) {
-                                                        nfcViewModel.schedules[idx].isEnabled = false
-                                                        nfcViewModel.saveSchedules()
-                                                    }
-                                                }
-                                                print("❌ Screen Time auth/arm failed: \(error)")
-                                            }
-                                        }
-                                    } else {
-                                        // Disarm the monitor for this schedule
-                                        DeviceActivityBridge.stop(scheduleId: scheduleId)
-                                    }
-
-                                    // Keep nudges in sync
-                                    resyncNudges()
-                                }
-                            ))
+                            Toggle("",
+                                   isOn: Binding(
+                                       get: {
+                                           nfcViewModel.schedules.first(where: { $0.id == schedule.id })?.isEnabled ?? false
+                                       },
+                                       set: { newValue in
+                                           handleToggle(scheduleId: schedule.id, newValue: newValue)
+                                       }
+                                   )
+                            )
                             .labelsHidden()
                         }
                         .contentShape(Rectangle())
-                        .onTapGesture { editingSchedule = schedule }
+                        .onTapGesture {
+                            lastEditedScheduleId = schedule.id
+                            editingSchedule = schedule
+                        }
                     }
                     .onDelete { indexSet in
-                        nfcViewModel.deleteSchedule(at: indexSet)
+                        nfcViewModel.deleteSchedule(at: indexSet)   // saveSchedules() → rebalanceArming() runs inside
                         resyncNudges()
                     }
                 }
@@ -111,36 +79,67 @@ struct SchedulesView: View {
                     Button { showingNewSchedule = true } label: { Image(systemName: "plus") }
                 }
             }
-            // New schedule
-            .sheet(isPresented: $showingNewSchedule, onDismiss: resyncNudges) {
+            // Create
+            .sheet(isPresented: $showingNewSchedule, onDismiss: {
+                nfcViewModel.consumeScheduleFireMarkers()
+                resyncNudges()
+            }) {
                 NewScheduleView()
                     .environmentObject(nfcViewModel)
             }
-            // Edit schedule
+            // Edit
             .sheet(item: $editingSchedule, onDismiss: {
-                // If the edited schedule remains enabled, refresh the persisted selection so the Monitor applies changes.
-                if let edited = editingSchedule,
-                   let idx = nfcViewModel.schedules.firstIndex(where: { $0.id == edited.id }) {
-                    let s = nfcViewModel.schedules[idx]
-                    if s.isEnabled {
-                        SharedSelectionBridge.writeForSchedule(s, allModes: nfcViewModel.modes)
-                        DeviceActivityBridge.sync(schedule: s, allModes: nfcViewModel.modes)
-                    }
-                }
+                // ❗️No direct sync of the edited schedule here.
+                // NewScheduleView(update) already called saveSchedules() → rebalanceArming()
+                nfcViewModel.consumeScheduleFireMarkers()
                 resyncNudges()
+                lastEditedScheduleId = nil
             }) { schedule in
                 NewScheduleView(editingSchedule: schedule)
                     .environmentObject(nfcViewModel)
             }
         }
-        .onAppear(perform: resyncNudges)
+        .onAppear {
+            nfcViewModel.consumeScheduleFireMarkers()
+            resyncNudges()
+        }
+    }
+
+    // MARK: - Toggle handling
+    private func handleToggle(scheduleId: UUID, newValue: Bool) {
+        guard let idx = nfcViewModel.schedules.firstIndex(where: { $0.id == scheduleId }) else { return }
+        let schedule = nfcViewModel.schedules[idx]
+
+        // If turning OFF the currently armed schedule while a session is running, defer disable until unblock.
+        let activeIdStr = JNShared.suite.string(forKey: SharedKeys.activeScheduleIdKey)
+        let isThisScheduleActive = (activeIdStr == schedule.id.uuidString)
+        let isSessionRunning = nfcViewModel.isAppsBlocked
+        if !newValue && isThisScheduleActive && isSessionRunning {
+            nfcViewModel.pendingDisableScheduleId = schedule.id
+            return
+        }
+
+        if newValue {
+            // Enable → clear old fire stamp (so UI shows upcoming), persist, and LET REBALANCER PICK THE WINNER.
+            nfcViewModel.schedules[idx].isEnabled = true
+            nfcViewModel.clearLastFireIfRearming(schedule.id)
+            nfcViewModel.saveSchedules()   // saveSchedules() → DeviceActivityBridge.rebalanceArming(...)
+        } else {
+            // Disable → persist; rebalancer will stop current and choose next (or clear if none).
+            nfcViewModel.schedules[idx].isEnabled = false
+            nfcViewModel.saveSchedules()
+        }
+
+        // No direct DeviceActivityBridge.sync(...) here. That is the whole fix.
+        resyncNudges()
     }
 
     // MARK: - Helpers
-
     private func resyncNudges() {
         NotificationManager.shared.syncPreferredTimeFromSchedules()
         NotificationManager.shared.scheduleDailyPreSessionNudgeIfNeeded()
+        NotificationManager.shared.scheduleDailyStreakSave()
+
     }
 
     @ViewBuilder
@@ -155,9 +154,9 @@ struct SchedulesView: View {
     }
 }
 
+// MARK: - Weekday Dots
 private struct WeekdayDots: View {
-    let selected: Set<Int> // 1..7, where 1 = Sunday
-
+    let selected: Set<Int> // 1..7
     var body: some View {
         HStack(spacing: 6) {
             ForEach(weekdayOrder, id: \.self) { wd in

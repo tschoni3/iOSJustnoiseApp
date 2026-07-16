@@ -4,6 +4,7 @@ import SwiftUI
 import FamilyControls
 import ManagedSettings
 import Combine
+import UIKit
 
 struct AlertItem: Identifiable {
     let id = UUID()
@@ -12,153 +13,288 @@ struct AlertItem: Identifiable {
     let dismissAction: (() -> Void)?
 }
 
+enum MainTab: Hashable {
+    case zap
+    case capture
+}
+
+struct MainTabView: View {
+    @State private var selectedTab: MainTab = .zap
+
+    init() {
+        configureTabBarAppearance()
+    }
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            ContentView(selectedTab: $selectedTab)
+            .tabItem {
+                Label("Zap", systemImage: "bolt.horizontal")
+                    .environment(\.symbolVariants, selectedTab == .zap ? .fill : .none)
+            }
+            .tag(MainTab.zap)
+
+            SignalTabView()
+            .tabItem {
+                Image(selectedTab == .capture ? "SignalTabFilled" : "SignalTabOutline")
+                    .renderingMode(.template)
+                Text("Capture")
+            }
+            .tag(MainTab.capture)
+        }
+    }
+
+    private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 0.98)
+        appearance.shadowColor = UIColor.white.withAlphaComponent(0.08)
+
+        let selectedColor = UIColor.white
+        let normalColor = UIColor.white.withAlphaComponent(0.3)
+        let appearances = [
+            appearance.stackedLayoutAppearance,
+            appearance.inlineLayoutAppearance,
+            appearance.compactInlineLayoutAppearance
+        ]
+
+        appearances.forEach { itemAppearance in
+            itemAppearance.selected.iconColor = selectedColor
+            itemAppearance.selected.titleTextAttributes = [.foregroundColor: selectedColor]
+            itemAppearance.normal.iconColor = normalColor
+            itemAppearance.normal.titleTextAttributes = [.foregroundColor: normalColor]
+        }
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().tintColor = selectedColor
+        UITabBar.appearance().unselectedItemTintColor = normalColor
+    }
+}
+
+private struct SignalTabView: View {
+    @EnvironmentObject private var nfcViewModel: NFCViewModel
+    @State private var activeSheet: SignalTabSheet?
+
+    private enum SignalTabSheet: Identifiable {
+        case sessionHistory
+        case schedules
+
+        var id: Int { hashValue }
+    }
+
+    var body: some View {
+        NavigationStack {
+            SignalTapeView()
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button { activeSheet = .schedules } label: {
+                            Image(systemName: "calendar")
+                                .imageScale(.large)
+                                .foregroundColor(.white)
+                        }
+                    }
+
+                    ToolbarItem(placement: .principal) {
+                        JustnoiseToolbarLogo()
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button { activeSheet = .sessionHistory } label: {
+                            HistoryToolbarIcon()
+                        }
+                    }
+                }
+                .sheet(item: $activeSheet) { sheet in
+                    switch sheet {
+                    case .sessionHistory:
+                        SessionHistoryView()
+                            .environmentObject(nfcViewModel)
+                            .presentationDetents([.large])
+                    case .schedules:
+                        SchedulesView()
+                            .environmentObject(nfcViewModel)
+                            .presentationDetents([.medium, .large])
+                    }
+                }
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .toolbarTitleDisplayMode(.inline)
+        }
+        .environmentObject(nfcViewModel)
+    }
+}
+
+private struct JustnoiseToolbarLogo: View {
+    var foregroundColor: Color = .white
+
+    var body: some View {
+        Image("Justnoise_logo_nav")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(height: 15)
+            .foregroundColor(foregroundColor)
+    }
+}
+
+private struct HistoryToolbarIcon: View {
+    var body: some View {
+        Image(systemName: "circle.grid.2x2.fill")
+            .imageScale(.large)
+            .foregroundColor(.white)
+    }
+}
+
+enum JustnoiseHeroMetrics {
+    static let titleFontSize: CGFloat = 50
+    static let subtitleFontSize: CGFloat = 48
+    static let containerHeight: CGFloat = 118
+    static let topPadding: CGFloat = 8
+    static let horizontalPadding: CGFloat = 24
+    static let zapButtonSlotSize: CGFloat = 240
+    static let zapButtonImageSize: CGFloat = 220
+    static let zapStateSlotHeight: CGFloat = 84
+    static let zapTopInset: CGFloat = 0
+    static let zapStateSlotSpacing: CGFloat = 26
+    static let zapBottomButtonPadding: CGFloat = 12
+    static let zapBottomActionReservedHeight: CGFloat = 132
+    static let zapHeroToButtonMinGap: CGFloat = 48
+    static let zapHeroToButtonMaxGap: CGFloat = 88
+    static let toolbarPlaceholderSize: CGFloat = 36
+}
+
+struct JustnoiseHeroHeader: View {
+    let title: String
+    let subtitle: String
+    let titleColor: Color
+    let subtitleColor: Color
+    var subtitleFontSize: CGFloat = JustnoiseHeroMetrics.subtitleFontSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: -8) {
+            Text(title)
+                .font(.system(size: JustnoiseHeroMetrics.titleFontSize, weight: .heavy))
+                .foregroundColor(titleColor)
+                .minimumScaleFactor(0.7)
+
+            Text(subtitle)
+                .font(.system(size: subtitleFontSize, weight: .black))
+                .foregroundColor(subtitleColor)
+                .minimumScaleFactor(0.72)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct JustnoiseHeroSection: View {
+    let title: String
+    let subtitle: String
+    let titleColor: Color
+    let subtitleColor: Color
+    var subtitleFontSize: CGFloat = JustnoiseHeroMetrics.subtitleFontSize
+
+    var body: some View {
+        JustnoiseHeroHeader(
+            title: title,
+            subtitle: subtitle,
+            titleColor: titleColor,
+            subtitleColor: subtitleColor,
+            subtitleFontSize: subtitleFontSize
+        )
+        .frame(
+            maxWidth: .infinity,
+            minHeight: JustnoiseHeroMetrics.containerHeight,
+            maxHeight: JustnoiseHeroMetrics.containerHeight,
+            alignment: .topLeading
+        )
+        .padding(.top, JustnoiseHeroMetrics.topPadding)
+        .padding(.horizontal, JustnoiseHeroMetrics.horizontalPadding)
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
-    @Environment(\.showPostSessionJournalPrompt) private var showPostSessionJournalPrompt
+    @Binding var selectedTab: MainTab
     @State private var authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+    @State private var showHistoryCongrats = false
 
     // Keep the enum private
     enum ActiveSheet: Identifiable {
-        case appControl, sessionHistory, settings, schedules, voiceJournal
+        case appControl, sessionHistory, schedules
         var id: Int { hashValue }
     }
 
     @State private var activeSheet: ActiveSheet?
-    @State private var lastPresentedSheet: ActiveSheet?
     @State private var mirrorCancellable: AnyCancellable?   // ⬅️ timer
-    
+    @State private var showNoiseRewind = false
+    @State private var showSessionComplete = false
+    @State private var completedSessionDuration: TimeInterval = 0
+    @State private var completedSessionModeName: String = "Focus"
 
     // MARK: - Coach Marks
     @AppStorage("hasCompletedCoachMarks") private var hasCompletedCoachMarks: Bool = false
     @State private var showCoachMarks = false
     @State private var coachStep = 0
     
-    // MARK: - UI: Streak Badge (minimal, hides when 0)
-    struct StreakBadge: View {
-        let streak: Int
-        var body: some View {
-            if streak > 0 {
-                HStack(spacing: 8) {
-                    Text("🔥").font(.system(size: 18)).accessibilityHidden(true)
-                    Text("\(streak)-day streak")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(red: 0.843, green: 0.980, blue: 0.000))
-                        .transition(.opacity.combined(with: .scale))
-                        .id(streak)
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 12)
-                .background(Capsule().fill(Color.white.opacity(0.06)))
-                .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
-                .accessibilityLabel(Text("Streak \(streak) days"))
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: streak)
-            }
-        }
-    }
+
 
     enum TourPhase { case basic, extendedPreStart, extendedRunning, extendedPostStop, extendedFinished, none }
     @State private var tourPhase: TourPhase = .basic
     @State private var showStartFirstSessionPrompt = false
     @State private var wasBlocked = false
-    @State private var showCongrats = false
-    
-    struct RoundedCorner: Shape {
-        var radius: CGFloat = 0.0
-        var corners: UIRectCorner = .allCorners
-        func path(in rect: CGRect) -> Path {
-            let path = UIBezierPath(
-                roundedRect: rect,
-                byRoundingCorners: corners,
-                cornerRadii: CGSize(width: radius, height: radius)
-            )
-            return Path(path.cgPath)
-        }
-    }
     
     var body: some View {
+        rootStack
+    }
+
+    private var rootStack: some View {
         NavigationStack {
             mainScreen()
                 .toolbar { toolbarContent() }
-
-                // ✅ One sheet only — switch inside
-                .sheet(item: $activeSheet, onDismiss: {
-                    // Always ensure flags are reset so we never bounce back in
-                    nfcViewModel.showVoiceJournal = false
-
-                    // If we just dismissed VoiceJournal, decide where to go next.
-                    if lastPresentedSheet == .voiceJournal {
-                        defer { lastPresentedSheet = nil }
-
-                        if tourPhase == .extendedPostStop {
-                            // Guided onboarding → open History with congrats
-                            DispatchQueue.main.async {
-                                showCongrats = true
-                                tourPhase = .extendedFinished
-                                activeSheet = .sessionHistory
-                            }
-                        }
-                        return
-                    }
-
-                    // If we dismissed something else in guided flow *after* journaling, keep the intended route.
-                    if tourPhase == .extendedPostStop, activeSheet == nil {
-                        DispatchQueue.main.async {
-                            showCongrats = true
-                            tourPhase = .extendedFinished
-                            activeSheet = .sessionHistory
-                        }
-                    }
-                }) { sheet in
-                    switch sheet {
-                    case .appControl:
-                        ModesView().environmentObject(nfcViewModel)
-                            .presentationDetents([.large])
-
-                    case .sessionHistory:
-                        HistoryWrapperView(showCongrats: $showCongrats) {
-                            SessionHistoryView().environmentObject(nfcViewModel)
-                        }
-                        .presentationDetents([.large])
-
-                    case .settings:
-                        SettingsView().environmentObject(nfcViewModel)
-                            .presentationDetents([.large])
-
-                    case .schedules:
-                        SchedulesView().environmentObject(nfcViewModel)
-                            .presentationDetents([.medium, .large])
-
-                    case .voiceJournal:
-                        VoiceJournalView(onFlowEnded: {
-                            lastPresentedSheet = .voiceJournal
-                        })
-                        .environmentObject(nfcViewModel)
-                        .presentationDetents([.large])
-                        .interactiveDismissDisabled(false)
-                    }
+                .toolbarTitleDisplayMode(.inline)
+                .sheet(item: $activeSheet) { sheet in
+                    contentForSheet(sheet)
                 }
-
-                // Alerts
                 .alert(item: $nfcViewModel.activeAlert) { unifiedAlert in
-                    switch unifiedAlert {
-                    case .error(let alertItem):
-                        return Alert(
-                            title: alertItem.title,
-                            message: alertItem.message,
-                            dismissButton: .default(Text("OK"), action: alertItem.dismissAction)
-                        )
-                    case .reflectionPrompt:
-                        return Alert(
-                            title: Text("Ready to reflect?"),
-                            message: Text("60 sek of Brain dump is a great way to process your thoughts and emotions. Ready to get started?"),
-                            primaryButton: .default(Text("Start")) {
-                                nfcViewModel.handleReflectionResponse(startReflecting: true)
-                                presentVoiceJournal()
-                            },
-                            secondaryButton: .cancel(Text("Skip")) {
-                                nfcViewModel.handleReflectionResponse(startReflecting: false)
+                    alertForUnified(unifiedAlert)
+                }
+                .sheet(isPresented: $showSessionComplete) {
+                    SessionCompleteCard(
+                        modeName: completedSessionModeName,
+                        duration: completedSessionDuration,
+                        signalBoost: nfcViewModel.calculateSessionSignalBoost(for: completedSessionDuration),
+                        onReflect: {
+                            routeSessionReflectionToSignal()
+                        },
+                        onDone: {
+                            showSessionComplete = false
+                        }
+                    )
+                    .presentationDetents([.height(360)])
+                }
+                .sheet(isPresented: $showNoiseRewind) {
+                    if let insight = nfcViewModel.weeklyNoiseRewindInsight {
+                        NoiseRewindWeeklyView(insight: insight)
+                            .environmentObject(nfcViewModel)
+                    } else {
+                        VStack(spacing: 16) {
+                            Text("Not enough signal yet.")
+                                .font(.title2.weight(.bold))
+
+                            Text("Complete a few protected sessions to reveal your weekly pattern.")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+
+                            Button("Done") {
+                                showNoiseRewind = false
                             }
-                        )
+                            .buttonStyle(.borderedProminent)
+                            .padding(.top, 8)
+                        }
+                        .padding(28)
                     }
                 }
                 .alert("Start your first session now?", isPresented: $showStartFirstSessionPrompt) {
@@ -172,7 +308,6 @@ struct ContentView: View {
                     Text("We’ll guide you to pick a mode, start, stop, and review it in History.")
                 }
         }
-        // Coach marks overlay host
         .overlayPreferenceValue(CoachMarkFramesKey.self) { frames in
             let setToShow = CoachMarksFactory.marks(for: tourPhase)
             CoachMarksOverlay(
@@ -226,145 +361,317 @@ struct ContentView: View {
 private extension ContentView {
     @ViewBuilder
     func mainScreen() -> some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             backgroundColor.ignoresSafeArea()
-            if authorizationStatus == .approved {
-                approvedColumn()
-            } else {
-                notApprovedColumn()
-            }
-            if !nfcViewModel.isAppsBlocked {
-                HistorySectionView(activeSheet: $activeSheet)
-                    .environmentObject(nfcViewModel)
-                    .coachMarkTarget(id: "history")
+            zapColumn()
+            if authorizationStatus == .approved && nfcViewModel.showNoiseRewindCard && !nfcViewModel.isAppsBlocked {
+                noiseRewindReadyOverlay()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .transition(.scale(scale: 0.94).combined(with: .opacity))
+                    .zIndex(4)
             }
         }
+        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: nfcViewModel.showNoiseRewindCard)
     }
     
     @ViewBuilder
-    func approvedColumn() -> some View {
-        VStack(spacing: 20) {
-            Text(nfcViewModel.isAppsBlocked ? "Tap to Unlock" : "Tap to Lock")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(foregroundColor)
-                .padding(.top, 80)
+    func zapColumn() -> some View {
+        GeometryReader { geometry in
+            let heroBlockHeight =
+                JustnoiseHeroMetrics.containerHeight +
+                JustnoiseHeroMetrics.topPadding
+            let bottomReservedHeight = max(
+                geometry.safeAreaInsets.bottom + JustnoiseHeroMetrics.zapBottomActionReservedHeight,
+                JustnoiseHeroMetrics.zapBottomActionReservedHeight
+            )
+            let availableFlexibleGap = max(
+                0,
+                geometry.size.height -
+                heroBlockHeight -
+                bottomReservedHeight -
+                JustnoiseHeroMetrics.zapButtonSlotSize -
+                JustnoiseHeroMetrics.zapStateSlotHeight -
+                JustnoiseHeroMetrics.zapStateSlotSpacing
+            )
+            let heroToButtonGap = min(
+                max(
+                    availableFlexibleGap * 0.5,
+                    JustnoiseHeroMetrics.zapHeroToButtonMinGap
+                ),
+                JustnoiseHeroMetrics.zapHeroToButtonMaxGap
+            )
+            let buttonTop = heroBlockHeight + heroToButtonGap
+            let stateSlotTop =
+                buttonTop +
+                JustnoiseHeroMetrics.zapButtonSlotSize +
+                JustnoiseHeroMetrics.zapStateSlotSpacing
 
-            scanButton()
-                .frame(width: 220, height: 220)
-                .padding(.top, 20)
-                .coachMarkTarget(id: "scan")
-            
-            if !nfcViewModel.isAppsBlocked {
-                modePickerBlock()
-            } else {
-                lockedInfoCard()
+            ZStack(alignment: .top) {
+                zapHeader()
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(.top, JustnoiseHeroMetrics.zapTopInset)
+
+                scanButton()
+                    .frame(
+                        width: JustnoiseHeroMetrics.zapButtonSlotSize,
+                        height: JustnoiseHeroMetrics.zapButtonSlotSize
+                    )
+                    .padding(.top, buttonTop)
+                    .coachMarkTarget(id: "scan")
+
+                zapStateSlotPlaceholder()
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: JustnoiseHeroMetrics.zapStateSlotHeight,
+                        maxHeight: JustnoiseHeroMetrics.zapStateSlotHeight,
+                        alignment: .top
+                    )
+                    .padding(.top, stateSlotTop)
+
+                if nfcViewModel.isAppsBlocked {
+                    unzapButton()
+                        .padding(.bottom, max(
+                            geometry.safeAreaInsets.bottom + JustnoiseHeroMetrics.zapBottomButtonPadding,
+                            JustnoiseHeroMetrics.zapBottomButtonPadding
+                        ))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                }
             }
-            Spacer()
         }
-        .padding(.bottom, 80)
     }
-    
+
     @ViewBuilder
-    func notApprovedColumn() -> some View {
-        VStack(spacing: 20) {
-            Text("Tap to Lock")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(foregroundColor)
-                .padding(.top, 80)
-            
-            NFCScanButton(action: { requestAuthorization() },
-                          isBlocked: nfcViewModel.isAppsBlocked)
-            .frame(width: 220, height: 220)
-            .padding(.top, 20)
-            
-            Spacer()
+    func unzapButton() -> some View {
+        Button {
+            nfcViewModel.startScanning(purpose: .sessionToggle)
+        } label: {
+            Text("Unzap Phone")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.yellow.opacity(0.9))
+                .cornerRadius(30)
+                .padding(.horizontal, 28)
         }
-        .padding(.bottom, 80)
+    }
+
+    @ViewBuilder
+    func noiseRewindReadyOverlay() -> some View {
+        ZStack(alignment: .center) {
+            Color.black.opacity(0.42)
+                .ignoresSafeArea()
+
+            noiseRewindReadyCard()
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .ignoresSafeArea()
+    }
+
+    @ViewBuilder
+    func noiseRewindReadyCard() -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Your Noise Rewind is ready")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    nfcViewModel.dismissNoiseRewindCardForNow()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white.opacity(0.78))
+                        .frame(width: 34, height: 34)
+                        .background(Color.white.opacity(0.10))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text("Review your focus rhythm from the past week. A quiet weekly ritual, not another interruption.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.white.opacity(0.62))
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                nfcViewModel.markNoiseRewindSeen()
+                showNoiseRewind = true
+            } label: {
+                HStack(spacing: 8) {
+                    Text("View Rewind")
+                        .font(.system(size: 16, weight: .bold))
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(Color(#colorLiteral(red: 0.8667, green: 1.0, blue: 0.0, alpha: 1.0)))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(24)
+        .frame(maxWidth: 360)
+        .background(
+            RoundedRectangle(cornerRadius: 28)
+                .fill(Color.white.opacity(0.08))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+        )
+        .shadow(color: Color(#colorLiteral(red: 0.8667, green: 1.0, blue: 0.0, alpha: 1.0)).opacity(0.22), radius: 34, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.42), radius: 34, x: 0, y: 22)
+        .overlay(alignment: .topTrailing) {
+            Circle()
+                .fill(Color(#colorLiteral(red: 0.8667, green: 1.0, blue: 0.0, alpha: 1.0)).opacity(0.16))
+                .frame(width: 170, height: 170)
+                .blur(radius: 44)
+                .offset(x: 54, y: -76)
+                .allowsHitTesting(false)
+        }
+        .clipped()
     }
     
     @ViewBuilder
     func scanButton() -> some View {
-        NFCScanButton(
-            action: {
-                if authorizationStatus == .approved {
-                    nfcViewModel.startScanning(purpose: .sessionToggle)
-                } else {
-                    requestAuthorization()
+        VStack(spacing: 6) {
+            Image("zap_button")
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: JustnoiseHeroMetrics.zapButtonImageSize,
+                    height: JustnoiseHeroMetrics.zapButtonImageSize
+                )
+                .opacity(1.0)
+                .onTapGesture {
+                    if authorizationStatus == .approved {
+                        nfcViewModel.startScanning(purpose: .sessionToggle)
+                    } else {
+                        requestAuthorization()
+                    }
                 }
-            },
-            isBlocked: nfcViewModel.isAppsBlocked,
-            longPressAction: {
-                if !nfcViewModel.isAppsBlocked { nfcViewModel.blockApplications() }
-            }
+                .onLongPressGesture {
+                    Task {
+                        if !nfcViewModel.isAppsBlocked {
+                            if AuthorizationCenter.shared.authorizationStatus != .approved {
+                                do {
+                                    try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+                                } catch {
+                                    await MainActor.run {
+                                        nfcViewModel.setError(.unknown(description: "Authorization failed: \(error.localizedDescription)"))
+                                    }
+                                    return
+                                }
+                                if AuthorizationCenter.shared.authorizationStatus != .approved {
+                                    await MainActor.run {
+                                        nfcViewModel.setError(.unknown(description: "Authorization denied. Enable in Settings."))
+                                    }
+                                    return
+                                }
+                            }
+                            nfcViewModel.blockApplications()
+                        }
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    func zapHeader() -> some View {
+        JustnoiseHeroSection(
+            title: zapHeroTitle,
+            subtitle: zapHeroSubtitle,
+            titleColor: foregroundColor,
+            subtitleColor: heroSubtitleColor,
+            subtitleFontSize: JustnoiseHeroMetrics.subtitleFontSize
         )
+    }
+
+    @ViewBuilder
+    func zapStateSlotPlaceholder() -> some View {
+        if authorizationStatus == .approved && !nfcViewModel.isAppsBlocked {
+            modePickerBlock()
+                .frame(maxWidth: .infinity, alignment: .top)
+        } else if authorizationStatus == .approved,
+                  nfcViewModel.isAppsBlocked,
+                  let modeName = nfcViewModel.selectedMode?.name {
+            Text(modeName)
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity, alignment: .top)
+        } else {
+            Color.clear
+        }
     }
     
     @ViewBuilder
     func modePickerBlock() -> some View {
-        Text("Select a mode")
-            .font(.system(size: 14, weight: .regular))
-            .foregroundColor(Color(#colorLiteral(red: 0.4549, green: 0.4549, blue: 0.4549, alpha: 1)))
-            .padding(.top, 30)
-        
-        Button {
-            activeSheet = .appControl
-        } label: {
-            HStack(spacing: 2) {
-                Text(nfcViewModel.selectedMode?.name ?? "Select a Mode")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(.white)
+        VStack(spacing: 8) {
+            Text("Select a mode")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(Color(#colorLiteral(red: 0.4549, green: 0.4549, blue: 0.4549, alpha: 1)))
+
+            Button {
+                activeSheet = .appControl
+            } label: {
+                HStack(spacing: 2) {
+                    Text(nfcViewModel.selectedMode?.name ?? "Select a Mode")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color.black.opacity(0.92))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(Color.black.opacity(0.78))
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .frame(width: 220, height: 38)
+                .background(
+                    Capsule()
+                        .fill(Color.white)
+                )
+                .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
+                .shadow(color: .white.opacity(0.28), radius: 1, x: 0, y: -1)
+                .overlay(
+                    Capsule()
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
             }
-            .padding(10)
-            .frame(width: 220, height: 38)
-            .overlay(
-                RoundedRectangle(cornerRadius: 19)
-                    .stroke(Color(#colorLiteral(red: 0.8667, green: 1.0, blue: 0.0, alpha: 1.0)), lineWidth: 0.5)
-            )
+            .coachMarkTarget(id: "mode")
         }
-        .coachMarkTarget(id: "mode")
     }
-    
+}
+
+
+
+private extension ContentView {
     @ViewBuilder
-    func lockedInfoCard() -> some View {
-        VStack(spacing: 10) {
-            Text("Locked in for")
-                .font(.caption)
-                .foregroundColor(.white)
-                .textCase(.uppercase)
-                .padding(.bottom, 2)
-                .fixedSize()
-            
-            Text("\(nfcViewModel.formattedElapsedTime())")
-                .font(.custom("Technology-Bold", size: 52))
-                .foregroundColor(Color(red: 0.843, green: 0.980, blue: 0.000))
-                .tracking(1)
-                .multilineTextAlignment(.center)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .fixedSize()
-                .frame(width: 180)
-            
-            if let modeName = nfcViewModel.selectedMode?.name {
-                Text(modeName)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .textCase(.uppercase)
-                    .fixedSize()
+    func contentForSheet(_ sheet: ActiveSheet) -> some View {
+        switch sheet {
+        case .appControl:
+            ModesView().environmentObject(nfcViewModel)
+                .presentationDetents([.large])
+        case .sessionHistory:
+            HistoryWrapperView(showCongrats: $showHistoryCongrats) {
+                SessionHistoryView()
+                    .environmentObject(nfcViewModel)
             }
+            .presentationDetents([.large])
+        case .schedules:
+            SchedulesView().environmentObject(nfcViewModel)
+                .presentationDetents([.medium, .large])
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(red: 0.094, green: 0.094, blue: 0.102))
-                .shadow(color: Color.black.opacity(0.4), radius: 5, x: 0, y: 3)
-        )
-        .frame(width: 300, height: 140)
-        .fixedSize()
-        .padding(.top, 30)
     }
 }
 
@@ -373,14 +680,13 @@ private extension ContentView {
     @ToolbarContentBuilder
     func toolbarContent() -> some ToolbarContent {
         ToolbarItem(placement: .principal) {
-            Image("Justnoise_logo_nav")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 15)
+            JustnoiseToolbarLogo(foregroundColor: nfcViewModel.isAppsBlocked ? .black : .white)
         }
         ToolbarItem(placement: .navigationBarLeading) {
             if !nfcViewModel.isAppsBlocked {
-                Button { activeSheet = .schedules } label: {
+                Button {
+                    activeSheet = .schedules
+                } label: {
                     Image(systemName: "calendar")
                         .imageScale(.large)
                         .foregroundColor(.white)
@@ -390,10 +696,13 @@ private extension ContentView {
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
-            Button { activeSheet = .settings } label: {
-                Image(systemName: "gear").imageScale(.large).foregroundColor(nfcViewModel.isAppsBlocked ? .black : .white)
+            if !nfcViewModel.isAppsBlocked {
+                Button {
+                    activeSheet = .sessionHistory
+                } label: {
+                    HistoryToolbarIcon()
+                }
             }
-            .coachMarkToolbarTarget(id: "settings")
         }
     }
 }
@@ -409,13 +718,9 @@ private enum CoachMarksFactory {
                           padding: 8, offset: CGSize(width: 0, height: 20)),
                 CoachMark(targetID: "mode", title: "Choose a Mode",
                           message: "Pick which apps/sites you want blocked before you start."),
-                CoachMark(targetID: "settings", title: "Settings",
-                          message: "Manage account, subscription, and app preferences here."),
                 CoachMark(targetID: "schedule", title: "Schedules",
                           message: "Plan automatic focus sessions. Set start times and modes, and we’ll block for you.",
-                          offset: CGSize(width: 0, height: 6)),
-                CoachMark(targetID: "history", title: "Your History",
-                          message: "Swipe up or tap here to review past sessions.")
+                          offset: CGSize(width: 0, height: 6))
             ]
         case .extendedPreStart:
             return [
@@ -429,7 +734,7 @@ private enum CoachMarksFactory {
                                message: "Tap the Zap button again to end the session.") ]
         case .extendedPostStop:
             return [ CoachMark(targetID: "scan", title: "Reflect on Your Session",
-                               message: "We’ll prompt you to reflect now. Start a quick voice journal to capture your thoughts.",
+                               message: "We’ll take you to Capture so you can record a short reflection and generate a Signal.",
                                offset: CGSize(width: 0, height: 12)) ]
         case .extendedFinished, .none:
             return []
@@ -447,7 +752,8 @@ private extension ContentView {
             coachStep = 0
             showCoachMarks = true
         }
-        startAppGroupMirror() // ⬅️ FIX: invoke the function
+        startAppGroupMirror() //
+        nfcViewModel.checkNoiseRewindAvailability()
     }
     
     func startAppGroupMirror() {
@@ -475,6 +781,15 @@ private extension ContentView {
         wasBlocked = blocked
 
         if blocked { showCoachMarks = false }
+        
+        if ended {
+            completedSessionDuration = nfcViewModel.elapsedTime
+            completedSessionModeName = nfcViewModel.selectedMode?.name ?? "Focus"
+
+            if completedSessionDuration >= 20 * 60 {
+                showSessionComplete = true
+            }
+        }
 
         switch tourPhase {
         case .extendedPreStart where started:
@@ -483,13 +798,12 @@ private extension ContentView {
             showCoachMarks = true
 
         case .extendedRunning where ended:
-            tourPhase = .extendedPostStop
-            coachStep = 0
-            showCoachMarks = true
-            DispatchQueue.main.async {
-                if showPostSessionJournalPrompt.wrappedValue {
-                    nfcViewModel.activeAlert = .reflectionPrompt
-                }
+            if completedSessionDuration >= 20 * 60 {
+                tourPhase = .extendedPostStop
+                coachStep = 0
+                showCoachMarks = true
+            } else {
+                routeSessionReflectionToSignal()
             }
 
         default:
@@ -501,39 +815,101 @@ private extension ContentView {
     func mirrorOnceFromAppGroup() {
         let ud = JNShared.suite
         let blocked = ud.bool(forKey: SharedKeys.isAppsBlockedKey)
-        let modeStr = ud.string(forKey: SharedKeys.activeModeIdKey)
+
+        if let t = nfcViewModel.lastLocalModeChangeAt, Date().timeIntervalSince(t) < 1.0 {
+            return
+        }
+
+        var newSelected: Mode? = nil
+        if blocked {
+            if let s = ud.string(forKey: SharedKeys.activeModeIdKey),
+               let id = UUID(uuidString: s),
+               let m = nfcViewModel.modes.first(where: { $0.id == id }) {
+                newSelected = m
+            }
+        } else {
+            if let s = ud.string(forKey: SharedKeys.preferredModeIdKey),
+               let id = UUID(uuidString: s),
+               let m = nfcViewModel.modes.first(where: { $0.id == id }) {
+                newSelected = m
+            } else if let saved = UserDefaults.standard.string(forKey: "selectedModeID"),
+                      let m = nfcViewModel.modes.first(where: { $0.id.uuidString == saved }) {
+                newSelected = m
+            }
+        }
 
         var changed = false
         if blocked != nfcViewModel.isAppsBlocked {
             nfcViewModel.isAppsBlocked = blocked
             changed = true
         }
-        if let modeStr, let uuid = UUID(uuidString: modeStr),
-           let m = nfcViewModel.modes.first(where: { $0.id == uuid }),
-           nfcViewModel.selectedMode?.id != m.id {
+        if let m = newSelected, nfcViewModel.selectedMode?.id != m.id {
             nfcViewModel.selectedMode = m
             changed = true
         }
-        if changed {
-            Task { await nfcViewModel.foregroundResync() }
-        }
+        if changed { Task { await nfcViewModel.foregroundResync() } }
     }
 
-    // 🔹 Centralized presenter
-    func presentVoiceJournal() {
-        lastPresentedSheet = .voiceJournal
-        nfcViewModel.showVoiceJournal = true
-        activeSheet = .voiceJournal
+    func routeSessionReflectionToSignal() {
+        let shouldDismissSummary = showSessionComplete
+        showSessionComplete = false
+        showHistoryCongrats = false
+        showCoachMarks = false
+        activeSheet = nil
+
+        if tourPhase == .extendedPostStop || tourPhase == .extendedRunning {
+            tourPhase = .extendedFinished
+        }
+
+        if shouldDismissSummary {
+            DispatchQueue.main.async {
+                selectedTab = .capture
+            }
+        } else {
+            selectedTab = .capture
+        }
+    }
+}
+
+private extension ContentView {
+    func alertForUnified(_ unifiedAlert: UnifiedAlert) -> Alert {
+        switch unifiedAlert {
+        case .error(let alertItem):
+            return Alert(
+                title: alertItem.title,
+                message: alertItem.message,
+                dismissButton: .default(Text("OK"), action: alertItem.dismissAction)
+            )
+        }
     }
 }
 
 // MARK: - Colors & auth
 private extension ContentView {
+    var zapHeroTitle: String {
+        nfcViewModel.isAppsBlocked ? "Phone Zapped" : "Zap to Block"
+    }
+
+    var zapHeroSubtitle: String {
+        nfcViewModel.isAppsBlocked ? paddedElapsedTime : "Distractions"
+    }
+
+    var paddedElapsedTime: String {
+        let totalSeconds = Int(nfcViewModel.elapsedTime)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
     var backgroundColor: Color {
         nfcViewModel.isAppsBlocked ? .white : Color(#colorLiteral(red: 0.082, green: 0.082, blue: 0.082, alpha: 1.0))
     }
     var foregroundColor: Color {
         nfcViewModel.isAppsBlocked ? .black : .white
+    }
+    var heroSubtitleColor: Color {
+        nfcViewModel.isAppsBlocked ? Color.black.opacity(0.16) : Color.white.opacity(0.12)
     }
     
     func requestAuthorization() {
@@ -560,52 +936,8 @@ private extension ContentView {
     }
 }
 
-// MARK: - Bottom bar section (uses unified sheet)
+// MARK: - Shared wrappers
 extension ContentView {
-    struct HistorySectionView: View {
-        @EnvironmentObject var nfcViewModel: NFCViewModel
-        @Binding var activeSheet: ActiveSheet?
-        var body: some View {
-            VStack {
-                Spacer()
-                Color.black
-                    .frame(height: 160)
-                    .clipShape(
-                        RoundedCorner(radius: 20, corners: [.topLeft, .topRight])
-                    )
-                    .overlay(
-                        VStack(spacing: 8) {
-                            Capsule()
-                                .fill(Color.gray.opacity(0.4))
-                                .frame(width: 36, height: 5)
-                                .padding(.top, 10)
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("HISTORY")
-                                        .font(.custom("Technology-Bold", size: 36))
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                }
-                                ContentView.StreakBadge(streak: nfcViewModel.currentStreak)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 10)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    )
-                    .onTapGesture { activeSheet = .sessionHistory }
-                    .gesture(
-                        DragGesture(minimumDistance: 20)
-                            .onEnded { value in
-                                if value.translation.height < 0 { activeSheet = .sessionHistory }
-                            }
-                    )
-            }
-            .frame(maxWidth: .infinity)
-            .edgesIgnoringSafeArea(.bottom)
-        }
-    }
-    
     struct HistoryWrapperView<Content: View>: View {
         @Binding var showCongrats: Bool
         let content: () -> Content
@@ -617,5 +949,99 @@ extension ContentView {
                     Text("You’ve completed your first guided session and review.")
                 }
         }
+    }
+}
+
+struct SessionCompleteCard: View {
+    let modeName: String
+    let duration: TimeInterval
+    let signalBoost: Int
+    let onReflect: () -> Void
+    let onDone: () -> Void
+
+    var formattedDuration: String {
+        let totalMinutes = Int(duration / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m protected"
+        } else {
+            return "\(minutes)m protected"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+
+            Capsule()
+                .fill(Color.secondary.opacity(0.25))
+                .frame(width: 42, height: 5)
+                .padding(.top, 8)
+
+            VStack(spacing: 8) {
+                Text("Session Complete")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(1.2)
+
+                Text(modeName)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+
+            VStack(spacing: 6) {
+                Text(formattedDuration)
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundColor(.primary)
+
+                Text("Your focus was protected.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 6) {
+                Text("Signal Strengthened")
+                    .font(.system(size: 18, weight: .semibold))
+
+                Text("+\(signalBoost)% stronger signal")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 22)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color.primary.opacity(0.06))
+            )
+
+            HStack(spacing: 12) {
+                Button("Reflect") {
+                    onReflect()
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                )
+
+                Button("Done") {
+                    onDone()
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.primary)
+                )
+                .foregroundColor(Color(UIColor.systemBackground))
+            }
+            .padding(.top, 4)
+        }
+        .padding(28)
     }
 }
