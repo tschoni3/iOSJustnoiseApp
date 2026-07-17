@@ -8,21 +8,19 @@ import SwiftUI
 import Combine
 import FamilyControls
 import ManagedSettings
-import OSLog
 import ActivityKit
-// ⬇️ Removed: import DeviceActivity
+import OSLog
+
+private let JNLog = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "scheduling")
 
 // Rename our alert enum to UnifiedAlert to avoid conflicts.
 enum UnifiedAlert: Identifiable {
     case error(AlertItem)
-    case reflectionPrompt
 
     var id: String {
         switch self {
         case .error(let alertItem):
             return "error_\(alertItem.id.uuidString)"
-        case .reflectionPrompt:
-            return "reflectionPrompt"
         }
     }
 }
@@ -32,8 +30,30 @@ enum ScanningPurpose {
     case sessionToggle
 }
 
+enum DotLevel: Int, Codable {
+    case empty
+    case light
+    case medium
+    case dense
+}
+
+private enum DotDensityThresholds {
+    static let lightMinutes = 15.0
+    static let goodMinutes = 120.0
+    static let greatMinutes = 360.0
+}
+
+struct DaySummary: Identifiable, Hashable {
+    var id: Date { Calendar.current.startOfDay(for: date) }
+    let date: Date
+    let totalFocus: TimeInterval
+    let hasReflection: Bool
+    let dotLevel: DotLevel
+}
+
 class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var message: String?
+    @Published var journalHistory: [JournalEntry] = []
     @Published var sessionHistory: [Session] = []
     @Published var isAppsBlocked: Bool = false
     @Published var elapsedTime: TimeInterval = 0
@@ -42,6 +62,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var activeAlert: UnifiedAlert?  // Unified alert state
     @Published var pendingInterruptedSummary: Bool = false
     @Published var isHydrated: Bool = false
+    @Published var lastLocalModeChangeAt: Date?
+    @Published var pendingDisableScheduleId: UUID? = nil
+    @Published var showNoiseRewindCard: Bool = false
+    private let lastNoiseRewindSeenWeekStartKey = "jn_last_noise_rewind_seen_week_start"
+    
 
     @Published var currentStreak: Int = 0
     @Published var longestStreak: Int = UserDefaults.standard.integer(forKey: "jn_longest_streak")
@@ -50,6 +75,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     // Guard to avoid saving while restoring from disk
     private var isRestoring: Bool = false
+    private var isMutatingSchedules: Bool = false
 
     @Published var modes: [Mode] = [] {
         didSet { if !isRestoring { saveModes() } }
@@ -62,7 +88,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     // Emergency Unzap tokens
     @Published var emergencyUnzapCount: Int {
-        didSet { UserDefaults.standard.set(emergencyUnzapCount, forKey: emergencyUnzapKey) }
+        didSet { UserDefaults.standard.set(emergencyUnzapCount, forKey: SharedKeys.emergencyUnzapKey) }
     }
 
     private let authorizedTagUIDs: Set<String> = [
@@ -76,32 +102,41 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     var store = ManagedSettingsStore()
     private var sessionStartDate: Date?
     private var unauthorizedTagDetected = false
-    private let activeModeIdKey = "activeModeId"
     private let selectedModeKey = "selectedModeID"
+    private let scheduleStore = ScheduleStore()
 
     var scanningPurpose: ScanningPurpose?
     private let logger = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "NFCViewModel")
     @Published var liveActivity: Activity<SessionAttributes>?
 
-    // Keys
-    private let activationKey = "isActivated"
-    private let appGroupID = "group.stilltschoni.Noise"
-    private let sessionActiveKey = "isAppsBlocked"
-    private let sessionStartKey = "sessionStartDate"
     private let emergencyUnzapKey = "emergencyUnzapCount"
-
-    // Streak keys
-    private let longestStreakKey = "jn_longest_streak"
-    private let lastStreakCalcKey = "jn_last_streak_calc_yyyyMMdd"
 
     private let cal = Calendar.current
 
-    private var sharedDefaults: UserDefaults? {
-        UserDefaults(suiteName: appGroupID)
+    private var sharedDefaults: UserDefaults { JNShared.suite }
+
+    private func writeShared(_ key: String, _ value: Any?) {
+        sharedDefaults.set(value, forKey: key)
+        sharedDefaults.synchronize()
     }
 
     // 🔗 POSTHOG: link reflections to sessions
     @Published var currentSessionId: String? = nil
+
+    // MARK: - ✅ Companion Chat Storage (MVP)
+    @Published var companionMessages: [CompanionMessage] = []
+
+    private let companionMessagesKey = "jn_companion_messages_v1"
+    private let activeSessionIdKey = "jn_active_session_id_v1"
+    private let journalHistoryKey = "jn_journal_history_v1"
+
+    /// Only messages for the currently running session (for the in-session UI)
+    var currentSessionCompanionMessages: [CompanionMessage] {
+        guard let sid = currentSessionId else { return [] }
+        return companionMessages
+            .filter { $0.sessionId == sid }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
 
     // MARK: - Init
     override init() {
@@ -138,12 +173,21 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         loadModes()              // load modes (don’t auto-pick here)
         loadTranscriptions()
         loadSessions()
+        loadJournalHistory()
         loadActivationStatus()
+        loadSchedules()
         loadSelectedMode()       // restore last user choice if possible
+
+        // ✅ Companion
+        loadCompanionMessages()
+        loadActiveSessionIdIfAny()
+
         isRestoring = false      // from now on, saves are allowed
 
         // Mirror last known state
-        restoreBlockingState()
+        Task { @MainActor in
+            self.restoreBlockingState()
+        }
 
         // Streaks & daily tick
         recalcStreaks()
@@ -151,9 +195,9 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
         // Sticky activation — never regress after real activation
         if !isActivated {
-            if let shared = sharedDefaults?.object(forKey: activationKey) as? Bool, shared {
+            if let shared = sharedDefaults.object(forKey: SharedKeys.activationKey) as? Bool, shared {
                 isActivated = true
-            } else if UserDefaults.standard.bool(forKey: activationKey) {
+            } else if UserDefaults.standard.bool(forKey: SharedKeys.activationKey) {
                 isActivated = true
             }
             if isActivated { saveActivationStatus() }
@@ -161,25 +205,50 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
         isHydrated = true
         logger.info("Hydration completed. UI may proceed.")
+
+        reconcileLiveActivityWithState()
+    }
+
+    private func reconcileLiveActivityWithState() {
+        Task { @MainActor in
+            let isRunning = JNShared.suite.bool(forKey: SharedKeys.isAppsBlockedKey)
+
+            if isRunning {
+                if let modeIdString = JNShared.suite.string(forKey: SharedKeys.activeModeIdKey),
+                   let modeId = UUID(uuidString: modeIdString),
+                   let restoredMode = self.modes.first(where: { $0.id == modeId }),
+                   self.selectedMode?.id != restoredMode.id {
+                    self.selectedMode = restoredMode
+                }
+
+                if Activity<SessionAttributes>.activities.isEmpty {
+                    startLiveActivity()
+                } else if let existing = Activity<SessionAttributes>.activities.first {
+                    self.liveActivity = existing
+                }
+            } else {
+                endLiveActivity()
+            }
+        }
     }
 
     // MARK: - Activation
     func loadActivationStatus() {
-        if let shared = sharedDefaults?.object(forKey: activationKey) as? Bool, shared {
+        if let shared = sharedDefaults.object(forKey: SharedKeys.activationKey) as? Bool, shared {
             isActivated = true
-        } else if UserDefaults.standard.bool(forKey: activationKey) {
+        } else if UserDefaults.standard.bool(forKey: SharedKeys.activationKey) {
             isActivated = true
         }
     }
 
     func saveActivationStatus() {
-        UserDefaults.standard.set(isActivated, forKey: activationKey)
-        sharedDefaults?.set(isActivated, forKey: activationKey)
-        sharedDefaults?.synchronize()
+        UserDefaults.standard.set(isActivated, forKey: SharedKeys.activationKey)
+        sharedDefaults.set(isActivated, forKey: SharedKeys.activationKey)
+        sharedDefaults.synchronize()
     }
 
     // MARK: - Emergency Unzap
-    func useEmergencyUnzap() {
+    @MainActor func useEmergencyUnzap() {
         guard isAppsBlocked else {
             setError(.unknown(description: "No active focus session to unlock."))
             return
@@ -193,28 +262,32 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     }
 
     // MARK: - Restore state
-    func restoreBlockingState() {
-        guard sharedDefaults?.bool(forKey: sessionActiveKey) == true else { return }
+    @MainActor func restoreBlockingState() {
+        guard sharedDefaults.bool(forKey: SharedKeys.isAppsBlockedKey) else { return }
 
-        // Recover selected mode for an *active* session (fallback if not already set)
         if selectedMode == nil {
-            if let modeIdString = sharedDefaults?.string(forKey: activeModeIdKey),
+            if let modeIdString = sharedDefaults.string(forKey: SharedKeys.activeModeIdKey),
                let modeId = UUID(uuidString: modeIdString),
                let restoredMode = modes.first(where: { $0.id == modeId }) {
                 selectedMode = restoredMode
             }
         }
 
+        // ✅ Restore current session id (if app died mid-session)
+        if currentSessionId == nil {
+            loadActiveSessionIdIfAny()
+        }
+
         isAppsBlocked = true
 
-        if let savedStart = sharedDefaults?.object(forKey: sessionStartKey) as? Date,
+        if let savedStart = sharedDefaults.object(forKey: SharedKeys.sessionStartKey) as? Date,
            savedStart <= Date() {
             sessionStartDate = savedStart
             resumeTimer()
             logger.info("Restored blocking state at \(savedStart), mode: \(self.selectedMode?.name ?? "nil")")
         } else {
             pendingInterruptedSummary = true
-            logger.warning("Active session without valid start date -> will show 'Session Interrupted' UI.")
+            logger.warning("Active session without valid start date → will show 'Session Interrupted' UI.")
         }
 
         if !isActivated {
@@ -223,12 +296,14 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
-    private func resumeTimer() {
+    @MainActor private func resumeTimer() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async { self.updateElapsedTime() }
+        updateElapsedTime()
+        let newTimer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateElapsedTime()
         }
+        RunLoop.main.add(newTimer, forMode: .common)
+        timer = newTimer
         self.logger.info("Timer resumed from saved session start date.")
     }
 
@@ -362,7 +437,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
-    func toggleAppBlocking() {
+    @MainActor func toggleAppBlocking() {
         if isAppsBlocked {
             if let startDate = sessionStartDate {
                 let elapsed = Date().timeIntervalSince(startDate)
@@ -381,13 +456,19 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             }
             unblockApplications()
         } else {
-            blockApplications()
+            Task {
+                do {
+                    try await ensureAuthorizationAndSelection()
+                    self.blockApplications()
+                } catch {
+                    self.setError(.unknown(description: error.localizedDescription))
+                }
+            }
         }
     }
 
     // MARK: - Start/Stop (manual start still allowed)
-    func blockApplications() {
-        // ⬇️ Removed: scheduling startAt parameter
+    @MainActor func blockApplications() {
         guard let mode = selectedMode else { setError(.invalidModeSelection); return }
         guard !selectionIsEmpty(mode.selectedApps) else { setError(.invalidModeSelection); return }
 
@@ -400,16 +481,23 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             mode.selectedApps.categoryTokens, except: []
         )
 
+        let now = Date()
+        sessionStartDate = now
+        elapsedTime = 0
         isAppsBlocked = true
-        sessionStartDate = Date()
-        sharedDefaults?.set(true, forKey: sessionActiveKey)
-        sharedDefaults?.set(sessionStartDate, forKey: sessionStartKey)
-        sharedDefaults?.set(mode.id.uuidString, forKey: activeModeIdKey)
-        startTimer(using: sessionStartDate!)
+        writeShared(SharedKeys.isAppsBlockedKey, true)
+        writeShared(SharedKeys.sessionStartKey, now)
+        writeShared(SharedKeys.activeModeIdKey, mode.id.uuidString)
+        writeShared(SharedKeys.shieldOwnerKey, "app")
+        startTimer(using: now)
         startLiveActivity()
 
+        // ✅ Make a stable session id for companion linking
         let sid = UUID().uuidString
         currentSessionId = sid
+        sharedDefaults.set(sid, forKey: activeSessionIdKey)
+        sharedDefaults.synchronize()
+
         Analytics.capture("focus_session_started", props: [
             "timestamp": Date().timeIntervalSince1970,
             "session_id": sid,
@@ -419,7 +507,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         logger.info("Blocking applied. Start: \(self.sessionStartDate!), mode: \(mode.name)")
     }
 
-    func unblockApplications() {
+    @MainActor func unblockApplications() {
         let modeName = selectedMode?.name ?? "unknown"
         let sid = currentSessionId ?? UUID().uuidString
         let durationSec: Int = {
@@ -439,36 +527,69 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         store.shield.webDomainCategories = nil
 
         isAppsBlocked = false
-        sharedDefaults?.set(false, forKey: sessionActiveKey)
-        sharedDefaults?.removeObject(forKey: sessionStartKey)
-        sharedDefaults?.removeObject(forKey: activeModeIdKey)
-
-        // ⬇️ Removed: JNOverride/manual grace logic tied to schedules
+        sharedDefaults.set(false, forKey: SharedKeys.isAppsBlockedKey)
+        sharedDefaults.removeObject(forKey: SharedKeys.sessionStartKey)
+        sharedDefaults.removeObject(forKey: SharedKeys.activeModeIdKey)
+        sharedDefaults.removeObject(forKey: SharedKeys.shieldOwnerKey)
+        sharedDefaults.removeObject(forKey: activeSessionIdKey) // ✅ clear
+        sharedDefaults.synchronize()
 
         stopTimerAndSaveSession()
         endLiveActivity()
         currentSessionId = nil
 
+        if let sm = selectedMode {
+            JNShared.suite.set(sm.id.uuidString, forKey: SharedKeys.preferredModeIdKey)
+            JNShared.suite.synchronize()
+        }
+
+        if let activeIdStr = JNShared.suite.string(forKey: SharedKeys.activeScheduleIdKey),
+           let activeId = UUID(uuidString: activeIdStr),
+           let idx = schedules.firstIndex(where: { $0.id == activeId }) {
+            var s = schedules[idx]
+            if s.repeatWeekdays.isEmpty {
+                if s.isEnabled { s.isEnabled = false }
+                schedules[idx] = s
+                saveSchedules()
+                DeviceActivityBridge.stop(scheduleId: s.id)
+            }
+        }
+
+        if let pendingId = pendingDisableScheduleId,
+           let idx = schedules.firstIndex(where: { $0.id == pendingId }) {
+            if schedules[idx].isEnabled {
+                schedules[idx].isEnabled = false
+                saveSchedules()
+                DeviceActivityBridge.stop(scheduleId: pendingId)
+            }
+            pendingDisableScheduleId = nil
+        }
+
         logger.info("All apps, categories, and web domains unblocked.")
     }
 
     // MARK: - Timer
-    private func startTimer(using start: Date) {
+    @MainActor private func startTimer(using start: Date) {
         sessionStartDate = start
+        updateElapsedTime()
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            DispatchQueue.main.async { self.updateElapsedTime() }
+        let newTimer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateElapsedTime()
         }
+        RunLoop.main.add(newTimer, forMode: .common)
+        timer = newTimer
         self.logger.info("Timer started.")
     }
 
-    private func updateElapsedTime() {
+    @MainActor private func updateElapsedTime() {
         if let startDate = sessionStartDate {
-            self.elapsedTime = Date().timeIntervalSince(startDate)
+            self.elapsedTime = max(0, Date().timeIntervalSince(startDate))
+        } else {
+            self.elapsedTime = 0
         }
     }
 
-    private func stopTimerAndSaveSession() {
+    @MainActor private func stopTimerAndSaveSession() {
         timer?.invalidate()
         timer = nil
         updateElapsedTime()
@@ -479,80 +600,215 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         self.logger.info("Timer stopped. Session saved.")
         sessionStartDate = nil
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            let shouldShow = UserDefaults.standard.object(forKey: "showPostSessionJournalPrompt") as? Bool ?? true
-            if shouldShow {
-                self.activeAlert = UnifiedAlert.reflectionPrompt
-                self.logger.info("activeAlert set to reflectionPrompt")
-            } else {
-                self.logger.info("reflectionPrompt suppressed by user preference")
-            }
-        }
+      
     }
 
     @Published var schedules: [Schedule] = [] { didSet { saveSchedules() } }
 
     func loadSchedules() {
-        if let data = UserDefaults.standard.data(forKey: "schedules"),
-           let saved = try? JSONDecoder().decode([Schedule].self, from: data) {
-            schedules = saved
-        }
+        schedules = scheduleStore.load()
     }
 
     func saveSchedules() {
-        if let data = try? JSONEncoder().encode(schedules) {
-            UserDefaults.standard.set(data, forKey: "schedules")
-        }
+        scheduleStore.save(schedules)
+        if isMutatingSchedules { return }
+        DeviceActivityBridge.rebalanceArming(schedules: schedules, allModes: modes, isSessionRunning: isAppsBlocked)
     }
 
     func deleteSchedule(at offsets: IndexSet) {
-        schedules.remove(atOffsets: offsets)
+        let ids = offsets.compactMap { $0 < schedules.count ? schedules[$0].id : nil }
+        deleteSchedules(byIDs: ids)
+    }
+
+    func addSchedule(_ schedule: Schedule) {
+        schedules.append(schedule)
         saveSchedules()
+    }
+
+    func updateSchedule(_ schedule: Schedule) {
+        if let idx = schedules.firstIndex(where: { $0.id == schedule.id }) {
+            schedules[idx] = schedule
+        } else {
+            schedules.append(schedule)
+        }
+        saveSchedules()
+    }
+
+    func clearLastFireIfRearming(_ scheduleId: UUID) {
+        if let idx = schedules.firstIndex(where: { $0.id == scheduleId }),
+           schedules[idx].lastFireDate != nil {
+            schedules[idx].lastFireDate = nil
+            saveSchedules()
+        }
+    }
+
+    func deleteSchedules(byIDs ids: [UUID]) {
+        guard !ids.isEmpty else { return }
+
+        let suite = JNShared.suite
+        let activeIdStr = suite.string(forKey: SharedKeys.activeScheduleIdKey)
+        let activeId = activeIdStr.flatMap(UUID.init(uuidString:))
+        let owner = suite.string(forKey: SharedKeys.shieldOwnerKey)
+        let isRunning = suite.bool(forKey: SharedKeys.isAppsBlockedKey)
+
+        for id in ids {
+            if let a = activeId, a == id, isRunning, owner == "app" {
+                pendingDisableScheduleId = id
+                continue
+            }
+            DeviceActivityBridge.stop(scheduleId: id)
+
+            if let a = activeId, a == id, !isRunning {
+                SharedSelectionBridge.clearActiveSelection()
+                suite.removeObject(forKey: SharedKeys.plannedStartKey)
+            }
+        }
+        suite.synchronize()
+
+        isMutatingSchedules = true
+        schedules.removeAll { ids.contains($0.id) }
+        saveSchedules()
+        isMutatingSchedules = false
+
+        DeviceActivityBridge.rebalanceArming(schedules: schedules, allModes: modes, isSessionRunning: isAppsBlocked)
     }
 
     @MainActor
     func foregroundResync() async {
         let ud = JNShared.suite
-        let blocked = ud.bool(forKey: SharedKeys.isAppsBlockedKey)
-        if blocked != isAppsBlocked { isAppsBlocked = blocked }
 
-        if let modeStr = ud.string(forKey: SharedKeys.activeModeIdKey),
-           let uuid = UUID(uuidString: modeStr),
-           let m = modes.first(where: { $0.id == uuid }),
-           selectedMode?.id != m.id {
-            selectedMode = m
+        let blocked      = ud.bool(forKey: SharedKeys.isAppsBlockedKey)
+        let planned      = ud.integer(forKey: SharedKeys.plannedStartKey)
+        let hasStartDate = (ud.object(forKey: SharedKeys.sessionStartKey) != nil)
+        let lastApply    = ud.integer(forKey: SharedKeys.lastApplyEpochKey)
+
+        logger.info("RESYNC ▶︎ blocked=\(blocked, privacy: .public) planned=\(planned, privacy: .public) lastApply=\(lastApply, privacy: .public) hasStartDate=\(hasStartDate, privacy: .public)")
+
+        if blocked, sessionStartDate == nil {
+            if let start = ud.object(forKey: SharedKeys.sessionStartKey) as? Date {
+                let skewAllowance: TimeInterval = 2
+                if start <= Date().addingTimeInterval(skewAllowance) {
+                    sessionStartDate = start
+                    resumeTimer()
+                    ud.set("app", forKey: SharedKeys.shieldOwnerKey)
+                    ud.synchronize()
+                    logger.info("RESYNC ▶︎ adopted sessionStart and ownership transferred to app")
+                } else {
+                    isAppsBlocked = false
+                    logger.error("RESYNC ⚠️ start in future → ignoring adopt, clearing UI block")
+                }
+            } else {
+                pendingInterruptedSummary = true
+                logger.error("RESYNC ⚠️ blocked=true but no sessionStartKey")
+            }
+        }
+
+        if blocked {
+            if let modeIdString = ud.string(forKey: SharedKeys.activeModeIdKey),
+               let modeId = UUID(uuidString: modeIdString),
+               let restoredMode = modes.first(where: { $0.id == modeId }),
+               selectedMode?.id != restoredMode.id {
+                selectedMode = restoredMode
+            }
+        }
+
+        // ✅ Restore active session id for companion
+        if blocked, currentSessionId == nil {
+            loadActiveSessionIdIfAny()
+        }
+
+        if blocked {
+            if Activity<SessionAttributes>.activities.isEmpty {
+                startLiveActivity()
+            } else if let existing = Activity<SessionAttributes>.activities.first {
+                self.liveActivity = existing
+            }
+        } else {
+            endLiveActivity()
         }
 
         loadSchedules()
+        consumeScheduleFireMarkers()
+    }
+
+    @MainActor
+    func consumeScheduleFireMarkers() {
+        let suite = JNShared.suite
+
+        guard
+            let idStr = suite.string(forKey: SharedKeys.lastFiredScheduleIdKey),
+            let firedId = UUID(uuidString: idStr)
+        else {
+            return
+        }
+
+        let firedEpoch = suite.integer(forKey: SharedKeys.lastFiredEpochKey)
+        let firedDate = Date(timeIntervalSince1970: TimeInterval(firedEpoch))
+
+        if let idx = schedules.firstIndex(where: { $0.id == firedId }) {
+            var s = schedules[idx]
+            s.lastFireDate = firedDate
+
+            if s.repeatWeekdays.isEmpty {
+                if s.isEnabled { s.isEnabled = false }
+                schedules[idx] = s
+                saveSchedules()
+                DeviceActivityBridge.stop(scheduleId: s.id)
+            } else {
+                schedules[idx] = s
+                saveSchedules()
+            }
+        }
+
+        suite.removeObject(forKey: SharedKeys.lastFiredScheduleIdKey)
+        suite.removeObject(forKey: SharedKeys.lastFiredEpochKey)
+        suite.synchronize()
     }
 
     // MARK: - Live Activity
     func startLiveActivity() {
-        if ActivityAuthorizationInfo().areActivitiesEnabled {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        Task {
+            if let existing = Activity<SessionAttributes>.activities.first {
+                await MainActor.run { self.liveActivity = existing }
+                return
+            }
+
             let attributes = SessionAttributes(modeName: selectedMode?.name ?? "JustNoise")
             let initialContentState = SessionAttributes.ContentState(startDate: sessionStartDate ?? Date())
-            Task {
-                do {
-                    let requested = try Activity<SessionAttributes>.request(
-                        attributes: attributes,
-                        content: ActivityContent(state: initialContentState, staleDate: nil)
-                    )
-                    await MainActor.run { self.liveActivity = requested }
-                    print("Started Live Activity: \(String(describing: self.liveActivity))")
-                } catch {
-                    print("Error starting Live Activity: \(error.localizedDescription)")
-                }
+            do {
+                let requested = try await Activity<SessionAttributes>.request(
+                    attributes: attributes,
+                    content: ActivityContent(state: initialContentState, staleDate: nil)
+                )
+                await MainActor.run { self.liveActivity = requested }
+                print("Started Live Activity: \(String(describing: self.liveActivity))")
+            } catch {
+                print("Error starting Live Activity: \(error.localizedDescription)")
             }
         }
     }
 
     func endLiveActivity() {
-        Task { @MainActor in
-            if let liveActivity = self.liveActivity {
-                await liveActivity.end(nil, dismissalPolicy: .immediate)
-                self.liveActivity = nil
-                print("Ended Live Activity")
+        Task {
+            if let remembered = await MainActor.run(body: { self.liveActivity }) {
+                let finalState = SessionAttributes.ContentState(startDate: Date())
+                await remembered.end(
+                    ActivityContent(state: finalState, staleDate: nil),
+                    dismissalPolicy: .immediate
+                )
             }
+
+            for activity in Activity<SessionAttributes>.activities {
+                let finalState = SessionAttributes.ContentState(startDate: Date())
+                await activity.end(
+                    ActivityContent(state: finalState, staleDate: nil),
+                    dismissalPolicy: .immediate
+                )
+            }
+
+            await MainActor.run { self.liveActivity = nil }
+            print("Ended all SessionActivities (defensive cleanup)")
         }
     }
 
@@ -564,6 +820,92 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         return String(format: "%d:%02d:%02d", hours, minutes, seconds)
     }
 
+    // MARK: - ✅ Companion helpers
+    func addCompanionUserMessage(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let msg = CompanionMessage(
+            role: .user,
+            text: trimmed,
+            createdAt: Date(),
+            sessionId: currentSessionId
+        )
+        companionMessages.append(msg)
+        saveCompanionMessages()
+    }
+
+    func addCompanionAssistantMessage(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let msg = CompanionMessage(
+            role: .assistant,
+            text: trimmed,
+            createdAt: Date(),
+            sessionId: currentSessionId
+        )
+        companionMessages.append(msg)
+        saveCompanionMessages()
+    }
+
+    func companionMessages(forDay date: Date) -> [CompanionMessage] {
+        let start = Calendar.current.startOfDay(for: date)
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+
+        return companionMessages
+            .filter { $0.createdAt >= start && $0.createdAt < end }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private func loadCompanionMessages() {
+        guard let data = UserDefaults.standard.data(forKey: companionMessagesKey) else { return }
+        do {
+            companionMessages = try JSONDecoder().decode([CompanionMessage].self, from: data)
+        } catch {
+            logger.error("Failed to decode companionMessages: \(error.localizedDescription)")
+            companionMessages = []
+        }
+    }
+
+    private func saveCompanionMessages() {
+        do {
+            let data = try JSONEncoder().encode(companionMessages)
+            UserDefaults.standard.set(data, forKey: companionMessagesKey)
+        } catch {
+            logger.error("Failed to encode companionMessages: \(error.localizedDescription)")
+        }
+    }
+
+    private func loadActiveSessionIdIfAny() {
+        if let sid = sharedDefaults.string(forKey: activeSessionIdKey), !sid.isEmpty {
+            currentSessionId = sid
+        }
+    }
+    
+    @Published var isCompanionRequestInFlight: Bool = false
+
+    func requestCompanionReply(
+        userMessage: String,
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        _ = userMessage
+        isCompanionRequestInFlight = false
+        completion(
+            .failure(
+                NSError(
+                    domain: "Companion",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Companion chat is no longer available."]
+                )
+            )
+        )
+    }
+    func companionMessages(forSessionId sessionId: String) -> [CompanionMessage] {
+        companionMessages
+            .filter { $0.sessionId == sessionId }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
     // MARK: - Alerts & Errors
     private func showAlertWith(message: String) {
         let alertItem = AlertItem(
@@ -610,6 +952,109 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
+    // MARK: - Noise Rewind Availability
+
+    func checkNoiseRewindAvailability() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-forceNoiseRewindCard") {
+            showNoiseRewindCard = !isAppsBlocked
+            return
+        }
+        #endif
+
+        let lastSeen = UserDefaults.standard.object(forKey: lastNoiseRewindSeenWeekStartKey) as? Date
+
+        showNoiseRewindCard = NoiseRewindWeeklyInsightGenerator.shouldShowNoiseRewind(
+            sessions: sessionHistory,
+            referenceDate: Date(),
+            lastSeenWeekStart: lastSeen,
+            isSessionActive: isAppsBlocked
+        )
+    }
+
+    func markNoiseRewindSeen() {
+        var cal = Calendar.current
+        cal.firstWeekday = 1 // Sunday
+
+        let todayWeekday = cal.component(.weekday, from: Date())
+        let startOfToday = cal.startOfDay(for: Date())
+
+        let currentSunday = cal.date(
+            byAdding: .day,
+            value: -(todayWeekday - 1),
+            to: startOfToday
+        )!
+
+        let previousSunday = cal.date(
+            byAdding: .day,
+            value: -7,
+            to: currentSunday
+        )!
+
+        UserDefaults.standard.set(previousSunday, forKey: lastNoiseRewindSeenWeekStartKey)
+
+        showNoiseRewindCard = false
+    }
+
+    func dismissNoiseRewindCardForNow() {
+        showNoiseRewindCard = false
+    }
+    // MARK: - Signal Snapshot
+
+    var signalScoreResult: SignalNoiseScoreResult {
+        SignalNoiseScorer.computeSignalNoise(
+            sessions: sessionHistory,
+            reflections: journalHistory,
+            targetDay: Date()
+        )
+    }
+
+    var signalState: SignalAttentionState {
+        signalScoreResult.state
+    }
+
+    var signalLabel: String {
+        switch signalState {
+        case .drift:
+            return "The Overthinker"
+        case .builder:
+            return "The Builder"
+        case .guardian:
+            return "The Heremit"
+        }
+    }
+
+    var signalStrength: Double {
+        min(1.0, max(0.0, signalScoreResult.finalScore))
+    }
+    
+    
+    func calculateSessionSignalBoost(for duration: TimeInterval) -> Int {
+        let minutes = duration / 60
+
+        switch minutes {
+        case 0..<5:
+            return 0
+        case 5..<20:
+            return 3
+        case 20..<45:
+            return 8
+        case 45..<90:
+            return 16
+        case 90..<180:
+            return 24
+        default:
+            return 35
+        }
+    }
+    
+    var weeklyNoiseRewindInsight: NoiseRewindWeeklyInsight? {
+        NoiseRewindWeeklyInsightGenerator.generate(
+            sessions: sessionHistory,
+            journals: journalHistory,
+            referenceDate: Date()
+        )
+    }
     // MARK: - Modes & Sessions
     func loadModes() {
         if let data = UserDefaults.standard.data(forKey: "modes") {
@@ -632,12 +1077,23 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     }
 
     func saveSelectedMode() {
-        if let selectedMode = selectedMode {
-            UserDefaults.standard.set(selectedMode.id.uuidString, forKey: selectedModeKey)
+        guard let selectedMode else { return }
+        UserDefaults.standard.set(selectedMode.id.uuidString, forKey: selectedModeKey)
+
+        if !isAppsBlocked && !isRestoring {
+            JNShared.suite.set(selectedMode.id.uuidString, forKey: SharedKeys.preferredModeIdKey)
+            JNShared.suite.synchronize()
+            lastLocalModeChangeAt = Date()
         }
     }
 
     func loadSelectedMode() {
+        if let prefStr = JNShared.suite.string(forKey: SharedKeys.preferredModeIdKey),
+           let prefId = UUID(uuidString: prefStr),
+           let pref = modes.first(where: { $0.id == prefId }) {
+            selectedMode = pref
+            return
+        }
         // 1) Try by persisted UUID
         if let savedID = UserDefaults.standard.string(forKey: selectedModeKey),
            let mode = modes.first(where: { $0.id.uuidString == savedID }) {
@@ -721,12 +1177,14 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             sessionHistory = savedSessions
         }
         recalcStreaks()
+        checkNoiseRewindAvailability()
     }
 
     func saveSessions() {
         if let data = try? JSONEncoder().encode(sessionHistory) {
             UserDefaults.standard.set(data, forKey: "sessionHistory")
         }
+        checkNoiseRewindAvailability()
     }
 
     func deleteSession(_ session: Session) {
@@ -736,18 +1194,275 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
+    // MARK: - Journal History
+    func loadJournalHistory() {
+        if let data = UserDefaults.standard.data(forKey: journalHistoryKey),
+           let saved = try? JSONDecoder().decode([JournalEntry].self, from: data) {
+            journalHistory = saved.sorted { $0.createdAt < $1.createdAt }
+        } else {
+            journalHistory = []
+        }
+    }
+
+    func saveJournalHistory() {
+        if let data = try? JSONEncoder().encode(journalHistory) {
+            UserDefaults.standard.set(data, forKey: journalHistoryKey)
+        }
+    }
+
+    func deleteJournalEntry(_ entry: JournalEntry) {
+        if let index = journalHistory.firstIndex(where: { $0.id == entry.id }) {
+            journalHistory.remove(at: index)
+            saveJournalHistory()
+        }
+    }
+
+    func journalEntries(forDay date: Date) -> [JournalEntry] {
+        let start = Calendar.current.startOfDay(for: date)
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+
+        return journalHistory
+            .filter { $0.createdAt >= start && $0.createdAt < end }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private func latestRecentlyEndedSessionIndex(maxAge: TimeInterval = 20 * 60) -> Int? {
+        let now = Date()
+
+        return sessionHistory.indices
+            .filter { idx in
+                let end = sessionHistory[idx].startDate.addingTimeInterval(max(0, sessionHistory[idx].duration))
+                return end <= now && now.timeIntervalSince(end) <= maxAge
+            }
+            .max { lhs, rhs in
+                let lEnd = sessionHistory[lhs].startDate.addingTimeInterval(max(0, sessionHistory[lhs].duration))
+                let rEnd = sessionHistory[rhs].startDate.addingTimeInterval(max(0, sessionHistory[rhs].duration))
+                return lEnd < rEnd
+            }
+    }
+    func saveWeeklyReflectionToHistory(
+        text: String,
+        prompt: String,
+        weekStart: Date,
+        weekEnd: Date
+    ) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let transcription = TranscriptionResponse(
+            notetitle: "Weekly Reflection",
+            overview: prompt,
+            actionsteps: "",
+            challenges: "",
+            transcript: trimmed,
+            sentiment: "Reflective",
+            aifeedback: trimmed
+        )
+
+        saveTranscription(transcription)
+        saveJournalEntry(transcription: transcription)
+    }
+
+    @discardableResult
+    func saveJournalEntry(
+        transcription: TranscriptionResponse,
+        audioURL: URL? = nil
+    ) -> JournalEntry {
+        var linkedSessionId: UUID? = nil
+
+        // Optional compatibility link:
+        // if the user reflects shortly after a session ended,
+        // link it to that session and attach transcription if still empty.
+        if let idx = latestRecentlyEndedSessionIndex() {
+            linkedSessionId = sessionHistory[idx].id
+
+            if sessionHistory[idx].transcription == nil {
+                sessionHistory[idx].transcription = transcription
+            }
+            if sessionHistory[idx].audioFileURL == nil, let audioURL {
+                sessionHistory[idx].audioFileURL = audioURL
+            }
+            saveSessions()
+        }
+
+        let entry = JournalEntry(
+            createdAt: Date(),
+            modeName: selectedMode?.name,
+            transcription: transcription,
+            audioFileURL: audioURL,
+            linkedSessionId: linkedSessionId
+        )
+
+        journalHistory.append(entry)
+        journalHistory.sort { $0.createdAt < $1.createdAt }
+        saveJournalHistory()
+
+        logger.info("Saved standalone journal entry.")
+        return entry
+    }
+
+    // Legacy helper kept temporarily so old calls do not break.
+    // But stop using this in VoiceJournalView.
     func addTranscriptionToLatestSession(transcription: TranscriptionResponse, audioURL: URL? = nil) {
-        guard !sessionHistory.isEmpty else {
-            self.logger.warning("No session available to attach transcription.")
-            return
+        _ = saveJournalEntry(transcription: transcription, audioURL: audioURL)
+    }
+
+    // MARK: - Dot System (Day-based)
+    private let microSessionThresholdSec: TimeInterval = 60
+    private let meaningfulSessionThresholdSec: TimeInterval = 5 * 60
+
+    private struct DaySlice {
+        let date: Date
+        let duration: TimeInterval
+        let isMeaningful: Bool
+        let hasReflection: Bool
+    }
+
+    private func splitSessionByDay(_ session: Session) -> [DaySlice] {
+        let cal = Calendar.current
+        let start = session.startDate
+        let end = session.startDate.addingTimeInterval(session.duration)
+
+        var slices: [DaySlice] = []
+        var cursor = start
+
+        let reflected = (session.transcription != nil || session.audioFileURL != nil)
+
+        while cursor < end {
+            let dayStart = cal.startOfDay(for: cursor)
+            let nextDayStart = cal.date(byAdding: .day, value: 1, to: dayStart)!
+
+            let sliceEnd = min(end, nextDayStart)
+            let sliceDuration = sliceEnd.timeIntervalSince(cursor)
+
+            if sliceDuration > 0 {
+                let includedDuration = sliceDuration < microSessionThresholdSec ? 0 : sliceDuration
+                let meaningful = includedDuration >= meaningfulSessionThresholdSec
+
+                slices.append(
+                    DaySlice(
+                        date: dayStart,
+                        duration: includedDuration,
+                        isMeaningful: meaningful,
+                        hasReflection: reflected
+                    )
+                )
+            }
+
+            cursor = sliceEnd
         }
-        let last = sessionHistory.count - 1
-        sessionHistory[last].transcription = transcription
-        if let audioURL = audioURL {
-            sessionHistory[last].audioFileURL = audioURL
+
+        return slices
+    }
+
+    func dotLevel(
+        totalMinutes: Double,
+        meaningfulSessions: Int,
+        hasReflection: Bool
+    ) -> DotLevel {
+        _ = meaningfulSessions
+        _ = hasReflection
+
+        if totalMinutes >= DotDensityThresholds.greatMinutes { return .dense }
+        if totalMinutes >= DotDensityThresholds.goodMinutes { return .medium }
+        if totalMinutes >= DotDensityThresholds.lightMinutes { return .light }
+
+        return .empty
+    }
+
+    func generateYearSummaries() -> [DaySummary] {
+        let cal = Calendar.current
+        let now = Date()
+
+        let year = cal.component(.year, from: now)
+        let startOfYear = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+
+        let totalDays = cal.range(of: .day, in: .year, for: now)!.count
+
+        var slicesByDay: [Date: [DaySlice]] = [:]
+
+        for session in sessionHistory {
+            let slices = splitSessionByDay(session)
+            for slice in slices {
+                slicesByDay[slice.date, default: []].append(slice)
+            }
         }
-        saveSessions()
-        self.logger.info("Transcription attached to latest session\(audioURL != nil ? " with audio." : ".")")
+
+        return (0..<totalDays).compactMap { offset in
+            guard let date = cal.date(byAdding: .day, value: offset, to: startOfYear) else { return nil }
+
+            let slices = slicesByDay[date] ?? []
+            let totalSeconds = slices.reduce(0) { $0 + $1.duration }
+            let totalMinutes = totalSeconds / 60
+
+            let hasReflection = slices.contains { $0.hasReflection }
+            let meaningfulSessions = slices.filter { $0.isMeaningful }.count
+
+            let level = dotLevel(
+                totalMinutes: totalMinutes,
+                meaningfulSessions: meaningfulSessions,
+                hasReflection: hasReflection
+            )
+
+            return DaySummary(
+                date: date,
+                totalFocus: totalSeconds,
+                hasReflection: hasReflection,
+                dotLevel: level
+            )
+        }
+    }
+
+    func generate90DaySummaries() -> [DaySummary] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+
+        let pastDays = 60
+        let futureDays = 29
+
+        let start = cal.date(byAdding: .day, value: -pastDays, to: today)!
+        let end = cal.date(byAdding: .day, value: futureDays, to: today)!
+
+        var slicesByDay: [Date: [DaySlice]] = [:]
+
+        for session in sessionHistory {
+            let slices = splitSessionByDay(session)
+            for slice in slices {
+                slicesByDay[slice.date, default: []].append(slice)
+            }
+        }
+
+        var summaries: [DaySummary] = []
+        var date = start
+
+        while date <= end {
+            let slices = slicesByDay[date] ?? []
+
+            let totalSeconds = slices.reduce(0) { $0 + $1.duration }
+            let totalMinutes = totalSeconds / 60
+
+            let hasReflection = slices.contains { $0.hasReflection }
+            let meaningfulSessions = slices.filter { $0.isMeaningful }.count
+
+            let level = dotLevel(
+                totalMinutes: totalMinutes,
+                meaningfulSessions: meaningfulSessions,
+                hasReflection: hasReflection
+            )
+
+            summaries.append(
+                DaySummary(
+                    date: date,
+                    totalFocus: totalSeconds,
+                    hasReflection: hasReflection,
+                    dotLevel: level
+                )
+            )
+
+            date = cal.date(byAdding: .day, value: 1, to: date)!
+        }
+
+        return summaries
     }
 }
 
@@ -779,11 +1494,11 @@ private extension NFCViewModel {
         currentStreak = count
         if currentStreak > longestStreak {
             longestStreak = currentStreak
-            UserDefaults.standard.set(longestStreak, forKey: longestStreakKey)
+            UserDefaults.standard.set(longestStreak, forKey: SharedKeys.longestStreakKey)
         }
 
         let fmt = DateFormatter(); fmt.dateFormat = "yyyyMMdd"
-        UserDefaults.standard.set(fmt.string(from: today), forKey: lastStreakCalcKey)
+        UserDefaults.standard.set(fmt.string(from: today), forKey: SharedKeys.lastStreakCalcKey)
     }
 
     func startDayTick() {
@@ -829,5 +1544,31 @@ private extension Sequence where Element: Hashable {
     func uniqued() -> [Element] {
         var seen = Set<Element>()
         return self.filter { seen.insert($0).inserted }
+    }
+}
+
+private struct ScheduleStore {
+    private let suite = JNShared.suite
+    private let key = SharedKeys.allSchedulesKey
+    private let legacyKey = "schedules"
+
+    func load() -> [Schedule] {
+        if let data = suite.data(forKey: key),
+           let arr = try? JSONDecoder().decode([Schedule].self, from: data) {
+            return arr
+        }
+        if let legacy = UserDefaults.standard.data(forKey: legacyKey),
+           let arr = try? JSONDecoder().decode([Schedule].self, from: legacy) {
+            save(arr)
+            UserDefaults.standard.removeObject(forKey: legacyKey)
+            return arr
+        }
+        return []
+    }
+
+    func save(_ schedules: [Schedule]) {
+        let data = try? JSONEncoder().encode(schedules)
+        suite.set(data, forKey: key)
+        suite.synchronize()
     }
 }

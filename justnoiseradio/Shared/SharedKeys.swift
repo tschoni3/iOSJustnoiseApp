@@ -1,4 +1,4 @@
-// SharedKeys.swift  (Target Membership: App ✅, Extension ✅)
+// SharedKeys.swift  (App ✅, Extension ✅)
 import Foundation
 import FamilyControls
 import DeviceActivity
@@ -6,30 +6,47 @@ import DeviceActivity
 enum SharedKeys {
     static let appGroupID           = "group.stilltschoni.Noise"
 
-    // Payload consumed by the monitor at fire time
-    static let selectionDataKey     = "jn_active_selection_data"   // Data(FamilyActivitySelection)
-    static let activeModeIdKey      = "activeModeId"               // String(UUID)
-    static let activeScheduleIdKey  = "activeScheduleId"           // String(UUID)
-
-    // Optional mirrored session state
+    // 🔗 Cross-process (App ↔ Extension)
+    static let selectionDataKey     = "jn_active_selection_data"
+    static let activeModeIdKey      = "activeModeId"
+    static let activeScheduleIdKey  = "activeScheduleId"
     static let isAppsBlockedKey     = "isAppsBlocked"
     static let sessionStartKey      = "sessionStartDate"
+    static let plannedStartKey      = "jn_planned_start_epoch"
+    static let lastApplyEpochKey    = "jn_last_apply_epoch"
+    static let allowedWeekdaysKey   = "jn_allowed_wd"
+    static let preferredModeIdKey   = "jn_preferred_mode_id" // ✅ NEW
+
+
+    // ✅ NEW: fired markers (extension writes, app consumes)
+    static let lastFiredScheduleIdKey = "jn_last_fired_schedule_id"
+    static let lastFiredEpochKey      = "jn_last_fired_epoch"
+    
+    static let lastEndedScheduleIdKey = "jn_last_ended_schedule_id"
+    static let lastEndedEpochKey      = "jn_last_ended_epoch"
+    static let shieldOwnerKey = "jn_shield_owner"  // "app" | "ext" | nil
+
+
+    // 💡 App-only (local persistence)
+    static let activationKey        = "isActivated"
+    static let emergencyUnzapKey    = "emergencyUnzapCount"
+    static let longestStreakKey     = "jn_longest_streak"
+    static let lastStreakCalcKey    = "jn_last_streak_calc_yyyyMMdd"
+    static let allSchedulesKey      = "jn_all_schedules_data"
 }
 
-// Shared activity name (used by App + Extension)
 enum JNActivityName {
     static let interval = DeviceActivityName("jn.interval")
 }
 
-// App group UserDefaults handle
 struct JNShared {
     static var suite: UserDefaults { UserDefaults(suiteName: SharedKeys.appGroupID)! }
 }
 
+
 struct SharedSelectionBridge {
     private static var suite: UserDefaults { JNShared.suite }
 
-    /// Write the active selection with only primitives so the extension can read it.
     static func writeActiveSelection(
         modeId: UUID,
         selection: FamilyActivitySelection,

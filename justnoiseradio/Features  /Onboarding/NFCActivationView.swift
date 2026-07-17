@@ -16,31 +16,38 @@ struct NFCActivationView: View {
                 VStack(spacing: 16) {
                     Spacer()
 
-                    // Central Circular Button (Consistent with ContentView)
-                    NFCScanButton(
-                        action: {
+                    Image("zap_button")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 220, height: 220)
+                        .opacity(1.0)
+                        .onTapGesture {
                             isScanning = true
                             nfcViewModel.startScanning(purpose: .activation)
-                        },
-                        isBlocked: nfcViewModel.isActivated
-                    )
-                    .frame(width: 200, height: 200)
-                    .padding(.vertical, 40)
-                    // Ensure any internal icon/label inside the button inherits readable tint
-                    .tint(foregroundColor)
+                        }
+                        .frame(width: 240, height: 240)
+                        .padding(.vertical, 40)
+                        .accessibilityLabel("Zap button")
 
                     if !nfcViewModel.isActivated {
-                        Text("Tap your Zap to get started with JustNoise.")
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                            // Safety net in case parent env gets overridden
-                            .foregroundStyle(foregroundColor)
+                        VStack(spacing: 8) {
+                            Text("Tap the button on your screen to start.")
+                                .font(.title)
+                                .fontWeight(.semibold)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(foregroundColor)
+
+                            Text("Then hold your Zap near your phone to connect.")
+                                .font(.body)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(foregroundColor.opacity(0.8))
+                        }
+                        .padding(.horizontal)
                     }
 
                     Spacer()
 
                     if !nfcViewModel.isActivated {
-                        // Purchase NFC Tag Button
                         Button(action: {
                             if let url = URL(string: "https://store.justnoise.shop/products/thezap") {
                                 UIApplication.shared.open(url)
@@ -48,7 +55,6 @@ struct NFCActivationView: View {
                         }) {
                             Text("Don't have a Zap? Purchase one here.")
                                 .font(.subheadline)
-                                // Use tint so it adjusts with color scheme, but also force contrast
                                 .foregroundStyle(foregroundColor)
                                 .underline()
                         }
@@ -61,16 +67,10 @@ struct NFCActivationView: View {
                 .padding()
             }
             .navigationBarTitle("Activate Zap", displayMode: .inline)
-            // Make the *environment color scheme* match our background so .primary text is always readable.
-            // Light scheme => black text on white bg. Dark scheme => white text on black bg.
             .environment(\.colorScheme, nfcViewModel.isActivated ? .dark : .light)
-
-            // Keep toolbar readable and consistent
             .toolbarBackground(backgroundColor, for: .navigationBar)
             .toolbarColorScheme(nfcViewModel.isActivated ? .dark : .light, for: .navigationBar)
             .tint(foregroundColor)
-
-            // Unified alert using activeAlert from the view model.
             .alert(item: $nfcViewModel.activeAlert) { unifiedAlert in
                 switch unifiedAlert {
                 case .error(let alertItem):
@@ -81,14 +81,7 @@ struct NFCActivationView: View {
                             isScanning = false
                         })
                     )
-                case .reflectionPrompt:
-                    return Alert(
-                        title: Text(""),
-                        message: nil,
-                        dismissButton: .default(Text("OK"), action: {
-                            isScanning = false
-                        })
-                    )
+                    
                 }
             }
             .onChange(of: nfcViewModel.isActivated) { _, newValue in
@@ -105,4 +98,9 @@ struct NFCActivationView: View {
     var foregroundColor: Color {
         nfcViewModel.isActivated ? .white : .black
     }
+}
+
+#Preview {
+    NFCActivationView()
+        .environmentObject(NFCViewModel())
 }

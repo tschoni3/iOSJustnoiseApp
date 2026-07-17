@@ -1,7 +1,4 @@
-//
-//  Schedule.swift
-//  
-
+// Schedule.swift
 import Foundation
 
 typealias Weekday = Int

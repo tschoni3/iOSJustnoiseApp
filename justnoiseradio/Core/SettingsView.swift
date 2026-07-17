@@ -12,6 +12,8 @@ struct SettingsView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.openURL) private var openURL
+
+    var showsDoneButton: Bool = true
     
     @AppStorage("userName") var userName: String = ""
     @AppStorage("userLanguage") var userLanguage: String = "Auto detect"
@@ -194,9 +196,15 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .navigationBarItems(trailing: Button("Done") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .toolbar {
+                if showsDoneButton {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    }
+                }
+            }
             .alert("Error", isPresented: .constant(deleteError != nil)) {
                 Button("OK") { deleteError = nil }
             } message: { Text(deleteError ?? "") }

@@ -20,10 +20,9 @@ class AudioPlayerManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     
     private func startPlayback(url: URL) {
         do {
-            // Configure audio session and force output to speaker
+            // Let the system honor connected headphone and AirPlay routes for playback.
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-            try audioSession.overrideOutputAudioPort(.speaker) // Force audio to play on speaker
+            try audioSession.setCategory(.playback, mode: .default)
             try audioSession.setActive(true)
 
             // Initialize and play audio

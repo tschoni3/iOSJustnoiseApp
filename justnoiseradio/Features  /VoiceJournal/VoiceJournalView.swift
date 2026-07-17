@@ -6,7 +6,6 @@
 import SwiftUI
 import AVFoundation
 import PostHog   // ✅ Import PostHog to use Analytics
-// Make sure you also created Analytics.swift in your project
 
 enum JournalMode: String, CaseIterable {
     case voice = "Voice"
@@ -17,6 +16,7 @@ struct VoiceJournalView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @Environment(\.dismiss) private var dismiss
 
+    var dismissOnEnd: Bool = true
     var onFlowEnded: () -> Void = {}
 
     @StateObject private var audioRecorder = AudioRecorder()
@@ -28,8 +28,13 @@ struct VoiceJournalView: View {
     @State private var showProcessingScreen = false
     @State private var errorMessage: String?
 
+    // Recording limits
     private let minimumRecordingDuration: TimeInterval = 5.0
+    private let maxRecordingDuration: TimeInterval = 60.0
+
     @State private var recordingStartTime: Date? = nil
+    @State private var elapsedRecordingTime: TimeInterval = 0
+    @State private var recordingTimer: Timer? = nil
 
     @State private var journalMode: JournalMode = .voice
     @State private var textInput: String = ""
@@ -38,13 +43,13 @@ struct VoiceJournalView: View {
 
     @AppStorage("userName") var userName: String = ""
 
-    @State private var uploadTask: URLSessionDataTask?
-    @State private var reflectionStartTime: Date? = nil  // ← NEW: start of journaling (both modes)
-
+    @State private var uploadTask: Task<Void, Never>?
+    @State private var reflectionStartTime: Date? = nil  // start of journaling (both modes)
 
     var body: some View {
         ZStack {
-            Color(red: 21/255, green: 21/255, blue: 21/255).edgesIgnoringSafeArea(.all)
+            Color(red: 21/255, green: 21/255, blue: 21/255)
+                .edgesIgnoringSafeArea(.all)
 
             if showProcessingScreen {
                 ProcessingView(onCancel: cancelProcessing)
@@ -61,7 +66,7 @@ struct VoiceJournalView: View {
                         .pickerStyle(.segmented)
                         .padding(.horizontal, 24)
                         .padding(.top, 12)
-                        .disabled(isRecording)
+                        .disabled(isRecording || isProcessing)
                     }
 
                     if journalMode == .voice {
@@ -96,29 +101,42 @@ struct VoiceJournalView: View {
                         Spacer()
 
                         if isRecording {
-                            VStack(spacing: 20) {
+                            VStack(spacing: 12) {
                                 Text("Listening Noise")
                                     .foregroundColor(.white)
                                     .font(.title2.bold())
-                                    .padding(.bottom, 40)
+
+                                // 60 sec limit indicator
+                                Text("\(max(0, Int(maxRecordingDuration - elapsedRecordingTime))) sec left (max 60s)")
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .font(.headline)
+                                    .animation(.easeInOut, value: elapsedRecordingTime)
+
+                                Spacer().frame(height: 28)
 
                                 GeometryReader { geometry in
                                     ZStack {
                                         Button(action: { cancelRecording() }) {
                                             Image(systemName: "xmark.circle.fill")
-                                                .resizable().frame(width: 50, height: 50)
+                                                .resizable()
+                                                .frame(width: 50, height: 50)
                                                 .foregroundColor(.white)
                                         }
-                                        .position(x: geometry.size.width / 2,
-                                                  y: geometry.size.height / 2)
+                                        .position(
+                                            x: geometry.size.width / 2,
+                                            y: geometry.size.height / 2
+                                        )
 
                                         Button(action: { sendRecording() }) {
                                             Image(systemName: "paperplane.circle.fill")
-                                                .resizable().frame(width: 50, height: 50)
+                                                .resizable()
+                                                .frame(width: 50, height: 50)
                                                 .foregroundColor(.white)
                                         }
-                                        .position(x: geometry.size.width - 60,
-                                                  y: geometry.size.height / 2)
+                                        .position(
+                                            x: geometry.size.width - 60,
+                                            y: geometry.size.height / 2
+                                        )
                                     }
                                 }
                                 .frame(height: 70)
@@ -138,7 +156,9 @@ struct VoiceJournalView: View {
                             ZStack(alignment: .topLeading) {
                                 RoundedRectangle(cornerRadius: 16)
                                     .fill(Color(red: 37/255, green: 37/255, blue: 38/255))
-                                if textInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                if textInput
+                                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                                    .isEmpty {
                                     Text(examplePlaceholder)
                                         .foregroundColor(.white.opacity(0.35))
                                         .font(.body)
@@ -156,7 +176,9 @@ struct VoiceJournalView: View {
 
                             HStack {
                                 Text("\(textInput.count) chars")
-                                    .foregroundColor(textInput.count < minimumTextCharacters ? .red : .gray)
+                                    .foregroundColor(
+                                        textInput.count < minimumTextCharacters ? .red : .gray
+                                    )
                                     .font(.caption)
                                 Spacer()
                                 Button {
@@ -168,11 +190,21 @@ struct VoiceJournalView: View {
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 10)
-                                    .background(RoundedRectangle(cornerRadius: 24)
-                                        .stroke(Color.white, lineWidth: 1))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 24)
+                                            .stroke(Color.white, lineWidth: 1)
+                                    )
                                 }
-                                .disabled(textInput.trimmingCharacters(in: .whitespacesAndNewlines).count < minimumTextCharacters)
-                                .opacity(textInput.trimmingCharacters(in: .whitespacesAndNewlines).count < minimumTextCharacters ? 0.5 : 1.0)
+                                .disabled(
+                                    textInput
+                                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                                        .count < minimumTextCharacters
+                                )
+                                .opacity(
+                                    textInput
+                                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                                        .count < minimumTextCharacters ? 0.5 : 1.0
+                                )
                             }
                             .padding(.horizontal, 24)
                             .padding(.bottom, 12)
@@ -195,8 +227,17 @@ struct VoiceJournalView: View {
                 "timestamp": Date().timeIntervalSince1970,
                 "session_id": nfcViewModel.currentSessionId ?? ""
             ])
-            if reflectionStartTime == nil { reflectionStartTime = Date() }
-
+        }
+        .onDisappear {
+            // Cleanup if user leaves mid-record
+            recordingTimer?.invalidate()
+            recordingTimer = nil
+            if isRecording {
+                audioRecorder.stopRecording { _ in }
+                isRecording = false
+            }
+            reflectionStartTime = nil
+            recordingStartTime = nil
         }
         .toolbar {
             if journalMode == .text && textEditorFocused {
@@ -225,13 +266,25 @@ struct VoiceJournalView: View {
             )
             .environmentObject(nfcViewModel)
         }
-        .alert(isPresented: Binding<Bool>(
-            get: { self.errorMessage != nil },
-            set: { if !$0 { self.errorMessage = nil } }
-        )) {
-            Alert(title: Text("Error"),
-                  message: Text(errorMessage ?? ""),
-                  dismissButton: .default(Text("OK")))
+        .alert(
+            isPresented: Binding<Bool>(
+                get: { self.errorMessage != nil },
+                set: { if !$0 { self.errorMessage = nil } }
+            )
+        ) {
+            Alert(
+                title: Text("Error"),
+                message: Text(errorMessage ?? ""),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func markReflectionStartIfNeeded() {
+        if reflectionStartTime == nil {
+            reflectionStartTime = Date()
         }
     }
 
@@ -242,26 +295,56 @@ struct VoiceJournalView: View {
             self.errorMessage = "Please select a mode before starting a voice journal."
             return
         }
-        audioRecorder.startRecording()
+
+        // mark journaling start
+        markReflectionStartIfNeeded()
+
+        do {
+            try audioRecorder.startRecording()
+        } catch {
+            self.errorMessage = error.localizedDescription
+            return
+        }
+
         isRecording = true
         recordingStartTime = Date()
-        if reflectionStartTime == nil { reflectionStartTime = recordingStartTime } // ← ensure non-nil
+        elapsedRecordingTime = 0
+
+        // Start timer for 60s cap
+        recordingTimer?.invalidate()
+        recordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            guard let start = recordingStartTime else { return }
+            let elapsed = Date().timeIntervalSince(start)
+            elapsedRecordingTime = elapsed
+
+            if elapsed >= maxRecordingDuration {
+                // Auto-stop at 60s
+                stopRecording()
+            }
+        }
+
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     private func stopRecording() {
+        // Stop timer
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+
         audioRecorder.stopRecording { result in
             DispatchQueue.main.async {
                 self.isRecording = false
+                let duration = self.checkRecordingDuration()
+
+                if duration < self.minimumRecordingDuration {
+                    self.errorMessage = "That was too short. Please record at least 5 seconds."
+                    return
+                }
+
                 switch result {
                 case .success(let url):
-                    let duration = checkRecordingDuration()
-                    if duration < minimumRecordingDuration {
-                        self.errorMessage = "That was too short. Please record at least 5 seconds."
-                        return
-                    }
                     self.showProcessingScreen = true
-                    uploadAudio(url: url)
+                    self.uploadAudio(url: url)
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -271,25 +354,38 @@ struct VoiceJournalView: View {
     }
 
     private func cancelRecording() {
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+
         audioRecorder.stopRecording { _ in
-            DispatchQueue.main.async { self.isRecording = false }
+            DispatchQueue.main.async {
+                self.isRecording = false
+                self.recordingStartTime = nil
+                self.elapsedRecordingTime = 0
+            }
         }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     private func sendRecording() {
+        // User taps send manually → stop & upload
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+
         audioRecorder.stopRecording { result in
             DispatchQueue.main.async {
                 self.isRecording = false
+                let duration = self.checkRecordingDuration()
+
+                if duration < self.minimumRecordingDuration {
+                    self.errorMessage = "That was too short. Please record at least 5 seconds."
+                    return
+                }
+
                 switch result {
                 case .success(let url):
-                    let duration = checkRecordingDuration()
-                    if duration < minimumRecordingDuration {
-                        self.errorMessage = "That was too short. Please record at least 5 seconds."
-                        return
-                    }
                     self.showProcessingScreen = true
-                    uploadAudio(url: url)
+                    self.uploadAudio(url: url)
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -315,21 +411,13 @@ struct VoiceJournalView: View {
             return
         }
 
-        let endpoint = "https://swift-5e8ce9b2e6d0.herokuapp.com/transcribe"
-        guard let requestURL = URL(string: endpoint) else {
-            self.errorMessage = "Invalid backend URL."
-            self.isProcessing = false
-            self.showProcessingScreen = false
-            return
-        }
-
-        var request = URLRequest(url: requestURL)
+        var request = URLRequest(url: JustNoiseBackend.transcribeURL)
         request.httpMethod = "POST"
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         let selectedModeName = nfcViewModel.selectedMode?.name ?? "Default"
-        let selectedLanguage = UserDefaults.standard.string(forKey: "userLanguage") ?? ""
+        let selectedLanguage = UserDefaults.standard.string(forKey: "userLanguage") ?? "en"
 
         var body = Data()
         let filename = "voicejournal.wav"
@@ -348,10 +436,18 @@ struct VoiceJournalView: View {
 
         request.httpBody = body
 
-        uploadTask = URLSession.shared.dataTask(with: request) { data, _, error in
-            handleServerResponse(data: data, error: error, audioURL: url)
+        uploadTask = Task {
+            do {
+                let (data, _) = try await JustNoiseBackend.data(for: request)
+                guard Task.isCancelled == false else { return }
+                handleServerResponse(data: data, error: nil, audioURL: url)
+            } catch is CancellationError {
+                return
+            } catch {
+                guard Task.isCancelled == false else { return }
+                handleServerResponse(data: nil, error: error, audioURL: url)
+            }
         }
-        uploadTask?.resume()
     }
 
     // MARK: - Upload: Text
@@ -366,28 +462,20 @@ struct VoiceJournalView: View {
             self.errorMessage = "Write at least \(minimumTextCharacters) characters."
             return
         }
-        
-        if reflectionStartTime == nil { reflectionStartTime = Date() } // ← NEW
 
+        // mark journaling start
+        markReflectionStartIfNeeded()
 
         isProcessing = true
         showProcessingScreen = true
 
-        let endpoint = "https://swift-5e8ce9b2e6d0.herokuapp.com/transcribe"
-        guard let requestURL = URL(string: endpoint) else {
-            self.errorMessage = "Invalid backend URL."
-            self.isProcessing = false
-            self.showProcessingScreen = false
-            return
-        }
-
-        var request = URLRequest(url: requestURL)
+        var request = URLRequest(url: JustNoiseBackend.transcribeURL)
         request.httpMethod = "POST"
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         let selectedModeName = nfcViewModel.selectedMode?.name ?? "Default"
-        let selectedLanguage = UserDefaults.standard.string(forKey: "userLanguage") ?? ""
+        let selectedLanguage = UserDefaults.standard.string(forKey: "userLanguage") ?? "en"
 
         var body = Data()
         body.append(formField(named: "text", value: trimmed, boundary: boundary))
@@ -398,10 +486,18 @@ struct VoiceJournalView: View {
 
         request.httpBody = body
 
-        uploadTask = URLSession.shared.dataTask(with: request) { data, _, error in
-            handleServerResponse(data: data, error: error, audioURL: nil)
+        uploadTask = Task {
+            do {
+                let (data, _) = try await JustNoiseBackend.data(for: request)
+                guard Task.isCancelled == false else { return }
+                handleServerResponse(data: data, error: nil, audioURL: nil)
+            } catch is CancellationError {
+                return
+            } catch {
+                guard Task.isCancelled == false else { return }
+                handleServerResponse(data: nil, error: error, audioURL: nil)
+            }
         }
-        uploadTask?.resume()
     }
 
     // MARK: - Shared networking helpers
@@ -424,43 +520,48 @@ struct VoiceJournalView: View {
                 self.errorMessage = error.localizedDescription
                 return
             }
+
             guard let data = data else {
                 self.errorMessage = "No data received from server."
                 return
             }
+
             do {
                 let decoder = JSONDecoder()
                 let transcription = try decoder.decode(TranscriptionResponse.self, from: data)
+
                 self.transcriptionResult = transcription
                 self.nfcViewModel.saveTranscription(transcription)
 
-                // 💾 Track reflection_saved (both voice & text)
                 let start = self.reflectionStartTime ?? self.recordingStartTime ?? Date()
                 let duration = Date().timeIntervalSince(start)
+
                 Analytics.capture("reflection_saved", props: [
                     "timestamp": Date().timeIntervalSince1970,
                     "session_id": self.nfcViewModel.currentSessionId ?? "",
                     "journal_duration_sec": Int(duration),
                     "has_audio": (audioURL != nil)
                 ])
-                // Reset for next time
+
                 self.reflectionStartTime = nil
                 self.recordingStartTime = nil
+                self.elapsedRecordingTime = 0
 
                 if let audioURL = audioURL {
-                    saveAudioFile(url: audioURL) { savedURL in
-                        if let savedURL = savedURL {
-                            self.nfcViewModel.addTranscriptionToLatestSession(
-                                transcription: transcription,
-                                audioURL: savedURL
-                            )
-                        } else {
+                    self.saveAudioFile(url: audioURL) { savedURL in
+                        guard let savedURL = savedURL else {
                             self.errorMessage = "Failed to save audio file."
+                            return
                         }
+
+                        self.nfcViewModel.saveJournalEntry(
+                            transcription: transcription,
+                            audioURL: savedURL
+                        )
                         self.showOverlay = true
                     }
                 } else {
-                    self.nfcViewModel.addTranscriptionToLatestSession(transcription: transcription)
+                    self.nfcViewModel.saveJournalEntry(transcription: transcription)
                     self.textInput = ""
                     self.showOverlay = true
                 }
@@ -501,10 +602,13 @@ struct VoiceJournalView: View {
     }
 
     // MARK: - Flow Termination
+
     private func endFlow() {
         nfcViewModel.showVoiceJournal = false
         onFlowEnded()
-        dismiss()
+        if dismissOnEnd {
+            dismiss()
+        }
     }
 
     private var examplePlaceholder: String {
@@ -514,7 +618,6 @@ struct VoiceJournalView: View {
     }
 }
 
-
 // MARK: - ProcessingView (inlined so it's always in scope)
 struct ProcessingView: View {
     var onCancel: () -> Void
@@ -523,21 +626,21 @@ struct ProcessingView: View {
     var body: some View {
         VStack {
             Spacer()
-            
+
             VStack(spacing: 30) {
                 Text("Turning down the noise... Clarity is on the way.")
                     .foregroundColor(.white)
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-                
+
                 // Progress Bar
                 ZStack(alignment: .leading) {
                     Rectangle()
                         .frame(height: 8)
                         .foregroundColor(Color(red: 37/255, green: 37/255, blue: 38/255))
                         .cornerRadius(4)
-                    
+
                     GeometryReader { geometry in
                         Rectangle()
                             .fill(
@@ -573,9 +676,9 @@ struct ProcessingView: View {
                     startAnimation(screenWidth: UIScreen.main.bounds.width - 80)
                 }
             }
-            
+
             Spacer()
-            
+
             Button(action: {
                 onCancel()
             }) {
@@ -601,7 +704,7 @@ struct ProcessingView: View {
         .edgesIgnoringSafeArea(.all)
         .transition(.opacity)
     }
-    
+
     private func startAnimation(screenWidth: CGFloat) {
         gradientOffset = -screenWidth
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -611,4 +714,3 @@ struct ProcessingView: View {
         }
     }
 }
-
