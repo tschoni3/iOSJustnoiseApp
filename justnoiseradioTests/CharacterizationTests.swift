@@ -370,3 +370,83 @@ final class NoiseRewindCharacterizationTests: XCTestCase {
         )
     }
 }
+
+final class ScheduleStoreCharacterizationTests: XCTestCase {
+    private var sharedDefaults: UserDefaults!
+    private var legacyDefaults: UserDefaults!
+    private var sharedSuiteName: String!
+    private var legacySuiteName: String!
+
+    override func setUp() {
+        super.setUp()
+        sharedSuiteName = "ScheduleStoreTests.shared.\(UUID().uuidString)"
+        legacySuiteName = "ScheduleStoreTests.legacy.\(UUID().uuidString)"
+        sharedDefaults = UserDefaults(suiteName: sharedSuiteName)
+        legacyDefaults = UserDefaults(suiteName: legacySuiteName)
+        sharedDefaults.removePersistentDomain(forName: sharedSuiteName)
+        legacyDefaults.removePersistentDomain(forName: legacySuiteName)
+    }
+
+    override func tearDown() {
+        sharedDefaults.removePersistentDomain(forName: sharedSuiteName)
+        legacyDefaults.removePersistentDomain(forName: legacySuiteName)
+        sharedDefaults = nil
+        legacyDefaults = nil
+        sharedSuiteName = nil
+        legacySuiteName = nil
+        super.tearDown()
+    }
+
+    func testLegacySchedulesMigrateToTheSharedSourceOfTruth() throws {
+        let schedule = Schedule(
+            id: try XCTUnwrap(UUID(uuidString: "66666666-6666-6666-6666-666666666666")),
+            name: "Deep Work",
+            modeId: try XCTUnwrap(UUID(uuidString: "77777777-7777-7777-7777-777777777777")),
+            date: Date(timeIntervalSinceReferenceDate: 12_345),
+            repeatWeekdays: [2, 4, 6]
+        )
+        legacyDefaults.set(
+            try JSONEncoder().encode([schedule]),
+            forKey: SharedKeys.legacySchedulesKey
+        )
+
+        let store = ScheduleStore(
+            sharedDefaults: sharedDefaults,
+            legacyDefaults: legacyDefaults
+        )
+        let loaded = store.load()
+
+        XCTAssertEqual(loaded, [schedule])
+        XCTAssertNil(legacyDefaults.data(forKey: SharedKeys.legacySchedulesKey))
+        XCTAssertNotNil(sharedDefaults.data(forKey: SharedKeys.allSchedulesKey))
+        XCTAssertEqual(store.load(), [schedule])
+    }
+
+    func testSharedSchedulesTakePrecedenceOverStaleLegacyData() throws {
+        let sharedSchedule = Schedule(
+            id: try XCTUnwrap(UUID(uuidString: "88888888-8888-8888-8888-888888888888")),
+            name: "Shared",
+            modeId: try XCTUnwrap(UUID(uuidString: "99999999-9999-9999-9999-999999999999")),
+            date: Date(timeIntervalSinceReferenceDate: 20_000)
+        )
+        let staleSchedule = Schedule(
+            id: try XCTUnwrap(UUID(uuidString: "AAAAAAAA-1111-1111-1111-111111111111")),
+            name: "Legacy",
+            modeId: try XCTUnwrap(UUID(uuidString: "BBBBBBBB-1111-1111-1111-111111111111")),
+            date: Date(timeIntervalSinceReferenceDate: 10_000)
+        )
+        let store = ScheduleStore(
+            sharedDefaults: sharedDefaults,
+            legacyDefaults: legacyDefaults
+        )
+
+        store.save([sharedSchedule])
+        legacyDefaults.set(
+            try JSONEncoder().encode([staleSchedule]),
+            forKey: SharedKeys.legacySchedulesKey
+        )
+
+        XCTAssertEqual(store.load(), [sharedSchedule])
+        XCTAssertNotNil(legacyDefaults.data(forKey: SharedKeys.legacySchedulesKey))
+    }
+}

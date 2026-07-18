@@ -1222,29 +1222,3 @@ private extension NFCViewModel {
         }
     }
 }
-
-private struct ScheduleStore {
-    private let suite = JNShared.suite
-    private let key = SharedKeys.allSchedulesKey
-    private let legacyKey = "schedules"
-
-    func load() -> [Schedule] {
-        if let data = suite.data(forKey: key),
-           let arr = try? JSONDecoder().decode([Schedule].self, from: data) {
-            return arr
-        }
-        if let legacy = UserDefaults.standard.data(forKey: legacyKey),
-           let arr = try? JSONDecoder().decode([Schedule].self, from: legacy) {
-            save(arr)
-            UserDefaults.standard.removeObject(forKey: legacyKey)
-            return arr
-        }
-        return []
-    }
-
-    func save(_ schedules: [Schedule]) {
-        let data = try? JSONEncoder().encode(schedules)
-        suite.set(data, forKey: key)
-        suite.synchronize()
-    }
-}
