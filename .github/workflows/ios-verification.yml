@@ -44,13 +44,13 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Show toolchain
         run: xcodebuild -version
 
       - name: Restore Swift package cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ runner.temp }}/justnoise-source-packages
@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload failed test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: justnoise-test-results
           path: ${{ runner.temp }}/justnoise-test-results.xcresult
