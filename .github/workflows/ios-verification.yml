@@ -41,10 +41,6 @@ jobs:
     name: Release build and tests
     runs-on: macos-26
     timeout-minutes: 45
-    env:
-      DERIVED_DATA_PATH: ${{ runner.temp }}/justnoise-derived-data
-      SPM_CACHE_PATH: ${{ runner.temp }}/justnoise-source-packages
-      RESULT_BUNDLE_PATH: ${{ runner.temp }}/justnoise-test-results.xcresult
 
     steps:
       - name: Check out repository
@@ -57,13 +53,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.SPM_CACHE_PATH }}
+            ${{ runner.temp }}/justnoise-source-packages
             ~/Library/Caches/org.swift.swiftpm
           key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('justnoise.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             swiftpm-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build and test
+        env:
+          DERIVED_DATA_PATH: ${{ runner.temp }}/justnoise-derived-data
+          SPM_CACHE_PATH: ${{ runner.temp }}/justnoise-source-packages
+          RESULT_BUNDLE_PATH: ${{ runner.temp }}/justnoise-test-results.xcresult
         run: bash scripts/verify-ios.sh
 
       - name: Upload failed test results
@@ -71,6 +71,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: justnoise-test-results
-          path: ${{ env.RESULT_BUNDLE_PATH }}
+          path: ${{ runner.temp }}/justnoise-test-results.xcresult
           if-no-files-found: ignore
           retention-days: 7
