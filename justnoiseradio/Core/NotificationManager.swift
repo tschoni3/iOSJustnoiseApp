@@ -49,16 +49,6 @@ private enum NQuota {
 }
 
 // MARK: - Lightweight stores
-private struct ScheduleStore {
-    static func load() -> [Schedule] {
-        guard let data = UserDefaults.standard.data(forKey: "schedules"),
-              let saved = try? JSONDecoder().decode([Schedule].self, from: data) else {
-            return []
-        }
-        return saved.filter { $0.isEnabled }
-    }
-}
-
 private struct ModeNameStore {
     struct Item: Codable { let id: UUID; let name: String }
     static func name(for id: UUID) -> String? {
@@ -80,7 +70,7 @@ private struct ModeNameStore {
 private struct PreferredContextPicker {
     static func scheduleDefiningPreferredNow() -> Schedule? {
         let cal = Calendar.current
-        let schedules = ScheduleStore.load()
+        let schedules = ScheduleStore().load().filter(\.isEnabled)
         
         let repeating = schedules.filter { !$0.repeatWeekdays.isEmpty }
         if let s = repeating.sorted(by: {
@@ -240,7 +230,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     // MARK: - Preferred session time
     func syncPreferredTimeFromSchedules() {
         let cal = Calendar.current
-        let schedules = ScheduleStore.load()
+        let schedules = ScheduleStore().load().filter(\.isEnabled)
 
         let repeating = schedules.filter { !$0.repeatWeekdays.isEmpty }
         if let date = repeating

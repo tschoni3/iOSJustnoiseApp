@@ -30,6 +30,7 @@ enum SharedKeys {
     static let activationKey        = "isActivated"
     static let emergencyUnzapKey    = "emergencyUnzapCount"
     static let allSchedulesKey      = "jn_all_schedules_data"
+    static let legacySchedulesKey   = "schedules"
 }
 
 enum JNActivityName {
