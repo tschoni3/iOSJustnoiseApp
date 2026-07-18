@@ -12,7 +12,6 @@ struct SchedulesView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @State private var showingNewSchedule = false
     @State private var editingSchedule: Schedule?
-    @State private var lastEditedScheduleId: UUID?
 
     var body: some View {
         NavigationStack {
@@ -63,7 +62,6 @@ struct SchedulesView: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            lastEditedScheduleId = schedule.id
                             editingSchedule = schedule
                         }
                     }
@@ -89,11 +87,9 @@ struct SchedulesView: View {
             }
             // Edit
             .sheet(item: $editingSchedule, onDismiss: {
-                // ❗️No direct sync of the edited schedule here.
-                // NewScheduleView(update) already called saveSchedules() → rebalanceArming()
+                // The model's schedules observer has already persisted and rebalanced the edit.
                 nfcViewModel.consumeScheduleFireMarkers()
                 resyncNudges()
-                lastEditedScheduleId = nil
             }) { schedule in
                 NewScheduleView(editingSchedule: schedule)
                     .environmentObject(nfcViewModel)
@@ -123,11 +119,9 @@ struct SchedulesView: View {
             // Enable → clear old fire stamp (so UI shows upcoming), persist, and LET REBALANCER PICK THE WINNER.
             nfcViewModel.schedules[idx].isEnabled = true
             nfcViewModel.clearLastFireIfRearming(schedule.id)
-            nfcViewModel.saveSchedules()   // saveSchedules() → DeviceActivityBridge.rebalanceArming(...)
         } else {
             // Disable → persist; rebalancer will stop current and choose next (or clear if none).
             nfcViewModel.schedules[idx].isEnabled = false
-            nfcViewModel.saveSchedules()
         }
 
         // No direct DeviceActivityBridge.sync(...) here. That is the whole fix.

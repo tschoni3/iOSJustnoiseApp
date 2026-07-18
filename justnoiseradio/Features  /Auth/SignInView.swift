@@ -4,7 +4,6 @@ import SwiftUI
 import AuthenticationServices
 import Supabase
 import GoogleSignIn
-import GoogleSignInSwift
 
 // MARK: - String Extension for Validations
 extension String {

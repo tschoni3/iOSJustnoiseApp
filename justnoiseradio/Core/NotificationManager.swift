@@ -121,15 +121,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    func cancelAllScheduledSmartNotifications() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: [
-                NIDs.preSessionNudge,
-                NIDs.streakSave
-            ]
-        )
-    }
-
     func cancelNoiseRewindNotifications() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: ["noise-rewind-ready"]
@@ -204,8 +195,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             UNNotificationRequest(identifier: NIDs.streakSave, content: content, trigger: trigger)
         )
     }
-
-    func refreshStreakSaveForToday(hasSessionToday: Bool) { /* noop */ }
 
     // MARK: - Delegate
     func userNotificationCenter(_ center: UNUserNotificationCenter,

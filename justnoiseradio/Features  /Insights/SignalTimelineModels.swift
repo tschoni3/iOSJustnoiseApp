@@ -1,50 +1,12 @@
 import Foundation
 
-enum SignalInsightType: String, Codable, CaseIterable, Hashable {
+enum SignalInsightType: String, Codable, Hashable {
     case gem
     case action
     case question
     case pattern
     case contradiction
 
-    var title: String {
-        switch self {
-        case .gem:
-            return "Gem"
-        case .action:
-            return "Action"
-        case .question:
-            return "Question"
-        case .pattern:
-            return "Pattern"
-        case .contradiction:
-            return "Contradiction"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .gem:
-            return "💎"
-        case .action:
-            return "⚡"
-        case .question:
-            return "❓"
-        case .pattern:
-            return "〰"
-        case .contradiction:
-            return "↔"
-        }
-    }
-
-    var isReflective: Bool {
-        switch self {
-        case .gem, .question, .pattern, .contradiction:
-            return true
-        case .action:
-            return false
-        }
-    }
 }
 
 enum SignalInsightOrigin: String, Codable, Hashable {

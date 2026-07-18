@@ -11,8 +11,6 @@ import ManagedSettings
 import ActivityKit
 import OSLog
 
-private let JNLog = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "scheduling")
-
 // Rename our alert enum to UnifiedAlert to avoid conflicts.
 enum UnifiedAlert: Identifiable {
     case error(AlertItem)
@@ -47,31 +45,22 @@ struct DaySummary: Identifiable, Hashable {
     var id: Date { Calendar.current.startOfDay(for: date) }
     let date: Date
     let totalFocus: TimeInterval
-    let hasReflection: Bool
     let dotLevel: DotLevel
 }
 
 class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
-    @Published var message: String?
     @Published var journalHistory: [JournalEntry] = []
     @Published var sessionHistory: [Session] = []
     @Published var isAppsBlocked: Bool = false
     @Published var elapsedTime: TimeInterval = 0
     @Published var isActivated: Bool = false
-    @Published var showSubscriptionOffer: Bool = false
     @Published var activeAlert: UnifiedAlert?  // Unified alert state
-    @Published var pendingInterruptedSummary: Bool = false
     @Published var isHydrated: Bool = false
     @Published var lastLocalModeChangeAt: Date?
     @Published var pendingDisableScheduleId: UUID? = nil
     @Published var showNoiseRewindCard: Bool = false
     private let lastNoiseRewindSeenWeekStartKey = "jn_last_noise_rewind_seen_week_start"
     
-
-    @Published var currentStreak: Int = 0
-    @Published var longestStreak: Int = UserDefaults.standard.integer(forKey: "jn_longest_streak")
-
-    private var dayTickTimer: Timer?
 
     // Guard to avoid saving while restoring from disk
     private var isRestoring: Bool = false
@@ -83,9 +72,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var selectedMode: Mode? {
         didSet { if !isRestoring { saveSelectedMode() } }
     }
-    @Published var showVoiceJournal: Bool = false
-    @Published var transcriptionHistory: [TranscriptionResponse] = []
-
     // Emergency Unzap tokens
     @Published var emergencyUnzapCount: Int {
         didSet { UserDefaults.standard.set(emergencyUnzapCount, forKey: SharedKeys.emergencyUnzapKey) }
@@ -111,8 +97,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     private let emergencyUnzapKey = "emergencyUnzapCount"
 
-    private let cal = Calendar.current
-
     private var sharedDefaults: UserDefaults { JNShared.suite }
 
     private func writeShared(_ key: String, _ value: Any?) {
@@ -120,23 +104,10 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         sharedDefaults.synchronize()
     }
 
-    // 🔗 POSTHOG: link reflections to sessions
-    @Published var currentSessionId: String? = nil
-
-    // MARK: - ✅ Companion Chat Storage (MVP)
-    @Published var companionMessages: [CompanionMessage] = []
-
-    private let companionMessagesKey = "jn_companion_messages_v1"
+    // Stable PostHog correlation ID for focus start/end, persisted across relaunch.
+    private var currentSessionId: String?
     private let activeSessionIdKey = "jn_active_session_id_v1"
     private let journalHistoryKey = "jn_journal_history_v1"
-
-    /// Only messages for the currently running session (for the in-session UI)
-    var currentSessionCompanionMessages: [CompanionMessage] {
-        guard let sid = currentSessionId else { return [] }
-        return companionMessages
-            .filter { $0.sessionId == sid }
-            .sorted { $0.createdAt < $1.createdAt }
-    }
 
     // MARK: - Init
     override init() {
@@ -171,15 +142,12 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         isRestoring = true
         // 💧 Single, deterministic load path
         loadModes()              // load modes (don’t auto-pick here)
-        loadTranscriptions()
         loadSessions()
         loadJournalHistory()
         loadActivationStatus()
         loadSchedules()
         loadSelectedMode()       // restore last user choice if possible
 
-        // ✅ Companion
-        loadCompanionMessages()
         loadActiveSessionIdIfAny()
 
         isRestoring = false      // from now on, saves are allowed
@@ -188,10 +156,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         Task { @MainActor in
             self.restoreBlockingState()
         }
-
-        // Streaks & daily tick
-        recalcStreaks()
-        startDayTick()
 
         // Sticky activation — never regress after real activation
         if !isActivated {
@@ -273,7 +237,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             }
         }
 
-        // ✅ Restore current session id (if app died mid-session)
+        // Restore analytics session correlation if the app died mid-session.
         if currentSessionId == nil {
             loadActiveSessionIdIfAny()
         }
@@ -286,8 +250,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             resumeTimer()
             logger.info("Restored blocking state at \(savedStart), mode: \(self.selectedMode?.name ?? "nil")")
         } else {
-            pendingInterruptedSummary = true
-            logger.warning("Active session without valid start date → will show 'Session Interrupted' UI.")
+            logger.warning("Active session has no valid start date.")
         }
 
         if !isActivated {
@@ -492,7 +455,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         startTimer(using: now)
         startLiveActivity()
 
-        // ✅ Make a stable session id for companion linking
+        // Keep one stable analytics ID across the focus start/end pair.
         let sid = UUID().uuidString
         currentSessionId = sid
         sharedDefaults.set(sid, forKey: activeSessionIdKey)
@@ -550,7 +513,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             if s.repeatWeekdays.isEmpty {
                 if s.isEnabled { s.isEnabled = false }
                 schedules[idx] = s
-                saveSchedules()
                 DeviceActivityBridge.stop(scheduleId: s.id)
             }
         }
@@ -559,7 +521,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
            let idx = schedules.firstIndex(where: { $0.id == pendingId }) {
             if schedules[idx].isEnabled {
                 schedules[idx].isEnabled = false
-                saveSchedules()
                 DeviceActivityBridge.stop(scheduleId: pendingId)
             }
             pendingDisableScheduleId = nil
@@ -596,7 +557,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         let sessionObj = Session(startDate: sessionStartDate ?? Date(), duration: elapsedTime, modeName: selectedMode?.name)
         sessionHistory.append(sessionObj)
         saveSessions()
-        recalcStreaks()
         self.logger.info("Timer stopped. Session saved.")
         sessionStartDate = nil
 
@@ -622,7 +582,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     func addSchedule(_ schedule: Schedule) {
         schedules.append(schedule)
-        saveSchedules()
     }
 
     func updateSchedule(_ schedule: Schedule) {
@@ -631,14 +590,12 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         } else {
             schedules.append(schedule)
         }
-        saveSchedules()
     }
 
     func clearLastFireIfRearming(_ scheduleId: UUID) {
         if let idx = schedules.firstIndex(where: { $0.id == scheduleId }),
            schedules[idx].lastFireDate != nil {
             schedules[idx].lastFireDate = nil
-            saveSchedules()
         }
     }
 
@@ -659,7 +616,9 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             DeviceActivityBridge.stop(scheduleId: id)
 
             if let a = activeId, a == id, !isRunning {
-                SharedSelectionBridge.clearActiveSelection()
+                suite.removeObject(forKey: SharedKeys.selectionDataKey)
+                suite.removeObject(forKey: SharedKeys.activeModeIdKey)
+                suite.removeObject(forKey: SharedKeys.activeScheduleIdKey)
                 suite.removeObject(forKey: SharedKeys.plannedStartKey)
             }
         }
@@ -667,7 +626,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
         isMutatingSchedules = true
         schedules.removeAll { ids.contains($0.id) }
-        saveSchedules()
         isMutatingSchedules = false
 
         DeviceActivityBridge.rebalanceArming(schedules: schedules, allModes: modes, isSessionRunning: isAppsBlocked)
@@ -698,7 +656,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
                     logger.error("RESYNC ⚠️ start in future → ignoring adopt, clearing UI block")
                 }
             } else {
-                pendingInterruptedSummary = true
                 logger.error("RESYNC ⚠️ blocked=true but no sessionStartKey")
             }
         }
@@ -712,7 +669,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             }
         }
 
-        // ✅ Restore active session id for companion
+        // Restore analytics session correlation after returning to foreground.
         if blocked, currentSessionId == nil {
             loadActiveSessionIdIfAny()
         }
@@ -752,11 +709,9 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             if s.repeatWeekdays.isEmpty {
                 if s.isEnabled { s.isEnabled = false }
                 schedules[idx] = s
-                saveSchedules()
                 DeviceActivityBridge.stop(scheduleId: s.id)
             } else {
                 schedules[idx] = s
-                saveSchedules()
             }
         }
 
@@ -812,100 +767,12 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
     }
 
-    func formattedElapsedTime() -> String {
-        let totalSeconds = Int(elapsedTime)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let seconds = totalSeconds % 60
-        return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-    }
-
-    // MARK: - ✅ Companion helpers
-    func addCompanionUserMessage(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        let msg = CompanionMessage(
-            role: .user,
-            text: trimmed,
-            createdAt: Date(),
-            sessionId: currentSessionId
-        )
-        companionMessages.append(msg)
-        saveCompanionMessages()
-    }
-
-    func addCompanionAssistantMessage(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        let msg = CompanionMessage(
-            role: .assistant,
-            text: trimmed,
-            createdAt: Date(),
-            sessionId: currentSessionId
-        )
-        companionMessages.append(msg)
-        saveCompanionMessages()
-    }
-
-    func companionMessages(forDay date: Date) -> [CompanionMessage] {
-        let start = Calendar.current.startOfDay(for: date)
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
-
-        return companionMessages
-            .filter { $0.createdAt >= start && $0.createdAt < end }
-            .sorted { $0.createdAt < $1.createdAt }
-    }
-
-    private func loadCompanionMessages() {
-        guard let data = UserDefaults.standard.data(forKey: companionMessagesKey) else { return }
-        do {
-            companionMessages = try JSONDecoder().decode([CompanionMessage].self, from: data)
-        } catch {
-            logger.error("Failed to decode companionMessages: \(error.localizedDescription)")
-            companionMessages = []
-        }
-    }
-
-    private func saveCompanionMessages() {
-        do {
-            let data = try JSONEncoder().encode(companionMessages)
-            UserDefaults.standard.set(data, forKey: companionMessagesKey)
-        } catch {
-            logger.error("Failed to encode companionMessages: \(error.localizedDescription)")
-        }
-    }
-
     private func loadActiveSessionIdIfAny() {
         if let sid = sharedDefaults.string(forKey: activeSessionIdKey), !sid.isEmpty {
             currentSessionId = sid
         }
     }
-    
-    @Published var isCompanionRequestInFlight: Bool = false
 
-    func requestCompanionReply(
-        userMessage: String,
-        completion: @escaping (Result<String, Error>) -> Void
-    ) {
-        _ = userMessage
-        isCompanionRequestInFlight = false
-        completion(
-            .failure(
-                NSError(
-                    domain: "Companion",
-                    code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "Companion chat is no longer available."]
-                )
-            )
-        )
-    }
-    func companionMessages(forSessionId sessionId: String) -> [CompanionMessage] {
-        companionMessages
-            .filter { $0.sessionId == sessionId }
-            .sorted { $0.createdAt < $1.createdAt }
-    }
     // MARK: - Alerts & Errors
     private func showAlertWith(message: String) {
         let alertItem = AlertItem(
@@ -934,19 +801,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     private func analyticsErrorKey(_ e: AppError) -> String {
         switch e {
-        case .audioRecordingFailed:        return "audio_recording_failed"
-        case .audioUploadFailed:           return "audio_upload_failed"
-        case .transcriptionDecodingFailed: return "transcription_failed"
-        case .fileSavingFailed:            return "file_saving_failed"
         case .nfcSessionFailed:            return "nfc_session_failed"
         case .invalidModeSelection:        return "invalid_mode_selection"
-        case .networkUnavailable:          return "network_unavailable"
         case .unauthorizedNFCTag:          return "unauthorized_tag"
         case .nfcNotAvailable:             return "nfc_not_available"
-        case .activationSessionTimeout:    return "activation_session_timeout"
-        case .blockingSessionTimeout:      return "blocking_session_timeout"
         case .alreadyActivated:            return "already_activated"
-        case .nfcSessionTimeout:           return "nfc_session_timeout"
         case .invalidNFCTag:               return "invalid_nfc_tag"
         case .unknown:                     return "unknown"
         }
@@ -999,36 +858,8 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     func dismissNoiseRewindCardForNow() {
         showNoiseRewindCard = false
     }
-    // MARK: - Signal Snapshot
+    // MARK: - Signal Summary
 
-    var signalScoreResult: SignalNoiseScoreResult {
-        SignalNoiseScorer.computeSignalNoise(
-            sessions: sessionHistory,
-            reflections: journalHistory,
-            targetDay: Date()
-        )
-    }
-
-    var signalState: SignalAttentionState {
-        signalScoreResult.state
-    }
-
-    var signalLabel: String {
-        switch signalState {
-        case .drift:
-            return "The Overthinker"
-        case .builder:
-            return "The Builder"
-        case .guardian:
-            return "The Heremit"
-        }
-    }
-
-    var signalStrength: Double {
-        min(1.0, max(0.0, signalScoreResult.finalScore))
-    }
-    
-    
     func calculateSessionSignalBoost(for duration: TimeInterval) -> Int {
         let minutes = duration / 60
 
@@ -1119,22 +950,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     func addMode(_ mode: Mode) {
         modes.append(mode)
-        saveModes()
     }
 
     func updateMode(_ mode: Mode) {
         if let index = modes.firstIndex(where: { $0.id == mode.id }) {
             modes[index] = mode
-            saveModes()
-        }
-    }
-
-    func deleteMode(at offsets: IndexSet) {
-        modes.remove(atOffsets: offsets)
-        saveModes()
-        // If we deleted the selected one, pick a safe fallback
-        if let sm = selectedMode, !modes.contains(where: { $0.id == sm.id }) {
-            selectedMode = modes.first
         }
     }
 
@@ -1151,32 +971,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         saveModes()
     }
 
-    // MARK: - Reflection & Transcriptions
-    func handleReflectionResponse(startReflecting: Bool) {
-        activeAlert = nil
-        if startReflecting { showVoiceJournal = true }
-    }
-
-    func saveTranscription(_ transcription: TranscriptionResponse) {
-        transcriptionHistory.append(transcription)
-        if let encoded = try? JSONEncoder().encode(transcriptionHistory) {
-            UserDefaults.standard.set(encoded, forKey: "transcriptionHistory")
-        }
-    }
-
-    func loadTranscriptions() {
-        if let savedData = UserDefaults.standard.data(forKey: "transcriptionHistory"),
-           let savedTranscriptions = try? JSONDecoder().decode([TranscriptionResponse].self, from: savedData) {
-            transcriptionHistory = savedTranscriptions
-        }
-    }
-
     func loadSessions() {
         if let data = UserDefaults.standard.data(forKey: "sessionHistory"),
            let savedSessions = try? JSONDecoder().decode([Session].self, from: data) {
             sessionHistory = savedSessions
         }
-        recalcStreaks()
         checkNoiseRewindAvailability()
     }
 
@@ -1185,13 +984,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             UserDefaults.standard.set(data, forKey: "sessionHistory")
         }
         checkNoiseRewindAvailability()
-    }
-
-    func deleteSession(_ session: Session) {
-        if let index = sessionHistory.firstIndex(where: { $0.id == session.id }) {
-            sessionHistory.remove(at: index)
-            saveSessions()
-        }
     }
 
     // MARK: - Journal History
@@ -1208,22 +1000,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         if let data = try? JSONEncoder().encode(journalHistory) {
             UserDefaults.standard.set(data, forKey: journalHistoryKey)
         }
-    }
-
-    func deleteJournalEntry(_ entry: JournalEntry) {
-        if let index = journalHistory.firstIndex(where: { $0.id == entry.id }) {
-            journalHistory.remove(at: index)
-            saveJournalHistory()
-        }
-    }
-
-    func journalEntries(forDay date: Date) -> [JournalEntry] {
-        let start = Calendar.current.startOfDay(for: date)
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
-
-        return journalHistory
-            .filter { $0.createdAt >= start && $0.createdAt < end }
-            .sorted { $0.createdAt < $1.createdAt }
     }
 
     private func latestRecentlyEndedSessionIndex(maxAge: TimeInterval = 20 * 60) -> Int? {
@@ -1259,7 +1035,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             aifeedback: trimmed
         )
 
-        saveTranscription(transcription)
         saveJournalEntry(transcription: transcription)
     }
 
@@ -1301,21 +1076,12 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         return entry
     }
 
-    // Legacy helper kept temporarily so old calls do not break.
-    // But stop using this in VoiceJournalView.
-    func addTranscriptionToLatestSession(transcription: TranscriptionResponse, audioURL: URL? = nil) {
-        _ = saveJournalEntry(transcription: transcription, audioURL: audioURL)
-    }
-
     // MARK: - Dot System (Day-based)
     private let microSessionThresholdSec: TimeInterval = 60
-    private let meaningfulSessionThresholdSec: TimeInterval = 5 * 60
 
     private struct DaySlice {
         let date: Date
         let duration: TimeInterval
-        let isMeaningful: Bool
-        let hasReflection: Bool
     }
 
     private func splitSessionByDay(_ session: Session) -> [DaySlice] {
@@ -1326,8 +1092,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         var slices: [DaySlice] = []
         var cursor = start
 
-        let reflected = (session.transcription != nil || session.audioFileURL != nil)
-
         while cursor < end {
             let dayStart = cal.startOfDay(for: cursor)
             let nextDayStart = cal.date(byAdding: .day, value: 1, to: dayStart)!
@@ -1337,14 +1101,10 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
             if sliceDuration > 0 {
                 let includedDuration = sliceDuration < microSessionThresholdSec ? 0 : sliceDuration
-                let meaningful = includedDuration >= meaningfulSessionThresholdSec
-
                 slices.append(
                     DaySlice(
                         date: dayStart,
-                        duration: includedDuration,
-                        isMeaningful: meaningful,
-                        hasReflection: reflected
+                        duration: includedDuration
                     )
                 )
             }
@@ -1355,14 +1115,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         return slices
     }
 
-    func dotLevel(
-        totalMinutes: Double,
-        meaningfulSessions: Int,
-        hasReflection: Bool
-    ) -> DotLevel {
-        _ = meaningfulSessions
-        _ = hasReflection
-
+    func dotLevel(totalMinutes: Double) -> DotLevel {
         if totalMinutes >= DotDensityThresholds.greatMinutes { return .dense }
         if totalMinutes >= DotDensityThresholds.goodMinutes { return .medium }
         if totalMinutes >= DotDensityThresholds.lightMinutes { return .light }
@@ -1395,19 +1148,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             let totalSeconds = slices.reduce(0) { $0 + $1.duration }
             let totalMinutes = totalSeconds / 60
 
-            let hasReflection = slices.contains { $0.hasReflection }
-            let meaningfulSessions = slices.filter { $0.isMeaningful }.count
-
-            let level = dotLevel(
-                totalMinutes: totalMinutes,
-                meaningfulSessions: meaningfulSessions,
-                hasReflection: hasReflection
-            )
+            let level = dotLevel(totalMinutes: totalMinutes)
 
             return DaySummary(
                 date: date,
                 totalFocus: totalSeconds,
-                hasReflection: hasReflection,
                 dotLevel: level
             )
         }
@@ -1441,20 +1186,12 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             let totalSeconds = slices.reduce(0) { $0 + $1.duration }
             let totalMinutes = totalSeconds / 60
 
-            let hasReflection = slices.contains { $0.hasReflection }
-            let meaningfulSessions = slices.filter { $0.isMeaningful }.count
-
-            let level = dotLevel(
-                totalMinutes: totalMinutes,
-                meaningfulSessions: meaningfulSessions,
-                hasReflection: hasReflection
-            )
+            let level = dotLevel(totalMinutes: totalMinutes)
 
             summaries.append(
                 DaySummary(
                     date: date,
                     totalFocus: totalSeconds,
-                    hasReflection: hasReflection,
                     dotLevel: level
                 )
             )
@@ -1463,59 +1200,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
 
         return summaries
-    }
-}
-
-// MARK: - 🔥 Streaks (helpers)
-private extension NFCViewModel {
-    func uniqueSessionDays() -> [Date] {
-        sessionHistory
-            .map { cal.startOfDay(for: $0.startDate) }
-            .uniqued()
-            .sorted()
-    }
-
-    func hasSession(on day: Date) -> Bool {
-        let sod = cal.startOfDay(for: day)
-        return sessionHistory.contains { cal.isDate(cal.startOfDay(for: $0.startDate), inSameDayAs: sod) }
-    }
-
-    func recalcStreaks(now: Date = Date()) {
-        let today = cal.startOfDay(for: now)
-        var count = 0
-        var cursor = today
-
-        while hasSession(on: cursor) {
-            count += 1
-            guard let prev = cal.date(byAdding: .day, value: -1, to: cursor) else { break }
-            cursor = prev
-        }
-
-        currentStreak = count
-        if currentStreak > longestStreak {
-            longestStreak = currentStreak
-            UserDefaults.standard.set(longestStreak, forKey: SharedKeys.longestStreakKey)
-        }
-
-        let fmt = DateFormatter(); fmt.dateFormat = "yyyyMMdd"
-        UserDefaults.standard.set(fmt.string(from: today), forKey: SharedKeys.lastStreakCalcKey)
-    }
-
-    func startDayTick() {
-        dayTickTimer?.invalidate()
-        var lastDay = cal.startOfDay(for: Date())
-        dayTickTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            let nowDay = self.cal.startOfDay(for: Date())
-            if nowDay != lastDay {
-                lastDay = nowDay
-                self.recalcStreaks(now: Date())
-            }
-        }
-    }
-
-    var hasSessionToday: Bool {
-        hasSession(on: Date())
     }
 }
 
@@ -1536,14 +1220,6 @@ private extension NFCViewModel {
         if let sm = selectedMode, selectionIsEmpty(sm.selectedApps) {
             throw AppError.invalidModeSelection
         }
-    }
-}
-
-// MARK: - Small utility
-private extension Sequence where Element: Hashable {
-    func uniqued() -> [Element] {
-        var seen = Set<Element>()
-        return self.filter { seen.insert($0).inserted }
     }
 }
 

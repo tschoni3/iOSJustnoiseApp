@@ -23,13 +23,12 @@ enum AudioRecorderError: LocalizedError {
     }
 }
 
-class AudioRecorder: NSObject, ObservableObject {
+class AudioRecorder: ObservableObject {
     private var audioRecorder: AVAudioRecorder?
     private var recordingSession: AVAudioSession!
     private var recordingURL: URL?
     
-    override init() {
-        super.init()
+    init() {
         recordingSession = AVAudioSession.sharedInstance()
     }
     
@@ -64,7 +63,6 @@ class AudioRecorder: NSObject, ObservableObject {
         let destinationURL = documentsDirectory.appendingPathComponent(filename)
 
         let recorder = try AVAudioRecorder(url: destinationURL, settings: settings)
-        recorder.delegate = self
         recorder.isMeteringEnabled = true
         recorder.prepareToRecord()
 
@@ -108,8 +106,4 @@ class AudioRecorder: NSObject, ObservableObject {
         let normalized = (combinedPower - floor) / abs(floor)
         return CGFloat(min(max(pow(normalized, 1.05), 0), 1))
     }
-}
-
-extension AudioRecorder: AVAudioRecorderDelegate {
-    // Implement delegate methods if needed
 }

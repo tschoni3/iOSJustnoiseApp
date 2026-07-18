@@ -458,20 +458,6 @@ private extension NoiseRewindWeeklyView {
         return formatter.string(from: date)
     }
 
-    var protectedAttentionTitle: String {
-        let totalMinutes = Int(insight.totalProtectedDuration / 60)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-
-        if hours > 0 {
-            return "\(hours) hours of protected attention"
-        } else if minutes > 0 {
-            return "\(minutes) minutes of protected attention"
-        } else {
-            return "This Week protected attention"
-        }
-    }
-
     func formattedDuration(_ duration: TimeInterval) -> String {
         let totalMinutes = Int(duration / 60)
         let hours = totalMinutes / 60

@@ -3,34 +3,20 @@
 //
 import Foundation
 import DeviceActivity
-import FamilyControls
 import OSLog
 
 // MARK: - Loggers
 private let BRIDGE_LOG = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "bridge")
 private let SCHED      = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "schedule.arm")
 
-enum BridgeError: Error { case notApproved }
-
 enum DeviceActivityBridge {
 
     // MARK: - Coalescing / State
     private static let queue = DispatchQueue(label: "devactivity.rearm", qos: .userInitiated)
     private static var pendingWork: DispatchWorkItem?
-    private static var lastArmedScheduleId: UUID?
-    private static var lastArmedEpoch: Int = 0
 
     /// Minimum seconds the start time must be in the future to avoid framework flakiness
     private static let minLeadSeconds: TimeInterval = 90
-
-    // MARK: Authorization
-    static func ensureAuthorization() async throws {
-        let center = AuthorizationCenter.shared
-        if center.authorizationStatus != .approved {
-            try await center.requestAuthorization(for: .individual)
-        }
-        guard center.authorizationStatus == .approved else { throw BridgeError.notApproved }
-    }
 
     // MARK: Next fire calculation (with lead-time guard)
     private static func nextFireDate(for schedule: Schedule, now: Date = Date()) -> Date {
@@ -130,8 +116,6 @@ enum DeviceActivityBridge {
                     repeats: !schedule.repeatWeekdays.isEmpty
                 )
             )
-            lastArmedScheduleId = schedule.id
-            lastArmedEpoch      = fireEpoch
             SCHED.info("ARM ✅ fire=\(fire.timeIntervalSince1970, privacy: .public) start=\(startHour):\(startMin) end=\(endHour):\(endMin) repeats=\(!schedule.repeatWeekdays.isEmpty)")
         } catch {
             BRIDGE_LOG.error("ARM ❌ \(String(describing: error), privacy: .public)")
@@ -150,8 +134,6 @@ enum DeviceActivityBridge {
         suite.removeObject(forKey: SharedKeys.lastApplyEpochKey)
         suite.synchronize()
 
-        lastArmedScheduleId = nil
-        lastArmedEpoch      = 0
     }
 
     // MARK: - Coordinator: pick & arm the earliest upcoming enabled schedule
@@ -225,8 +207,6 @@ enum DeviceActivityBridge {
                 }
             }
 
-            lastArmedScheduleId = pick.schedule.id
-            lastArmedEpoch      = desiredEpoch
             return
         }
 

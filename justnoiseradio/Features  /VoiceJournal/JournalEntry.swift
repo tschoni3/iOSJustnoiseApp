@@ -31,17 +31,6 @@ struct JournalEntry: Identifiable, Codable, Hashable {
         self.linkedSessionId = linkedSessionId
     }
 
-    var previewText: String {
-        let title = transcription.notetitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let overview = transcription.overview.trimmingCharacters(in: .whitespacesAndNewlines)
-        let transcript = transcription.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if !title.isEmpty { return title }
-        if !overview.isEmpty { return overview }
-        if !transcript.isEmpty { return transcript }
-        return "Voice Reflection"
-    }
-
     var hasContent: Bool {
         !transcription.notetitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
         !transcription.overview.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||

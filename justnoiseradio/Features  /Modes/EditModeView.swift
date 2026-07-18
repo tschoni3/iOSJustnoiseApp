@@ -115,7 +115,6 @@ struct EditModeView: View {
     private func deleteMode() {
         if let index = nfcViewModel.modes.firstIndex(where: { $0.id == mode.id }) {
             nfcViewModel.modes.remove(at: index)
-            nfcViewModel.saveModes() // Save changes
             presentationMode.wrappedValue.dismiss() // Close the screen
         }
     }

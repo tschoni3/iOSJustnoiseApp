@@ -7,17 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		321A54642D53808200A3053D /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54632D53808200A3053D /* Auth */; };
-		321A54662D53808200A3053D /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54652D53808200A3053D /* Functions */; };
-		321A54682D53808200A3053D /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54672D53808200A3053D /* PostgREST */; };
-		321A546A2D53808200A3053D /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54692D53808200A3053D /* Realtime */; };
-		321A546C2D53808200A3053D /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 321A546B2D53808200A3053D /* Storage */; };
 		321A546E2D53808200A3053D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 321A546D2D53808200A3053D /* Supabase */; };
 		321A54732D539C9800A3053D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54722D539C9800A3053D /* GoogleSignIn */; };
-		321A54752D539C9800A3053D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 321A54742D539C9800A3053D /* GoogleSignInSwift */; };
-		322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 322A29FA2D94B67E00616706 /* Journaling.mp4 */; };
-		32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */; };
-		32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 32580DB22D4A9F05008D6AF5 /* Localizable.strings */; };
 		3299258F2F25FC1500A8060D /* AppIconJN.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3299258E2F25FC1500A8060D /* AppIconJN.icon */; };
 		32A08AB82EB630E100832674 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D48D262D42F4790057C8AA /* ManagedSettings.framework */; };
 		32A08AB92EB630EF00832674 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32A08AA12EB6274300832674 /* FamilyControls.framework */; };
@@ -34,13 +25,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		32A08AC72EB73AFD00832674 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 323C09E32CC504200094A28A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 32A08AA92EB6308D00832674;
-			remoteInfo = JustNoiseFocusMonitor;
-		};
 		32A08ACA2EB7402C00832674 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 323C09E32CC504200094A28A /* Project object */;
@@ -78,25 +62,11 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		328D2E1A2D4161510061D029 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		321413C02EB488AD004998BD /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
-		321413EE2EB4F8B1004998BD /* ManagedApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedApp.framework; path = System/Library/Frameworks/ManagedApp.framework; sourceTree = SDKROOT; };
-		322A29FA2D94B67E00616706 /* Journaling.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Journaling.mp4; sourceTree = "<group>"; };
 		323C09EB2CC504200094A28A /* justnoiseradio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = justnoiseradio.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = Thank_You_Video.mp4; sourceTree = "<group>"; };
-		32580DB32D4A9F05008D6AF5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		3299258E2F25FC1500A8060D /* AppIconJN.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIconJN.icon; sourceTree = "<group>"; };
 		32A08AA12EB6274300832674 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = System/Library/Frameworks/FamilyControls.framework; sourceTree = SDKROOT; };
 		32A08AAA2EB6308D00832674 /* JustNoiseFocusMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustNoiseFocusMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -135,16 +105,9 @@
 		32A08AE62EB799A000832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseWidget" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Shared/SharedKeys.swift,
+				"Features  /History/SessionAttributes.swift",
 			);
 			target = 32F603132CD9E1E2000222C5 /* JustNoiseWidget */;
-		};
-		32A08AE72EB799A000832674 /* Exceptions for "justnoiseradio" folder in "ShieldConfigurationExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Shared/SharedKeys.swift,
-			);
-			target = 32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */;
 		};
 		32D48D352D42F47A0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "ShieldConfigurationExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -152,15 +115,6 @@
 				Info.plist,
 			);
 			target = 32D48D232D42F4790057C8AA /* ShieldConfigurationExtension */;
-		};
-		32D48D4B2D43141F0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "justnoiseradio" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				IconShield.png,
-				ShieldConfigurationExtension.swift,
-				zap_button.png,
-			);
-			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
 		};
 		32F6032B2CD9E1E3000222C5 /* Exceptions for "JustNoiseWidget" folder in "JustNoiseWidget" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -177,7 +131,6 @@
 			exceptions = (
 				323C0A272CC504800094A28A /* Exceptions for "justnoiseradio" folder in "justnoiseradio" target */,
 				32A08AE62EB799A000832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseWidget" target */,
-				32A08AE72EB799A000832674 /* Exceptions for "justnoiseradio" folder in "ShieldConfigurationExtension" target */,
 				32A08ABB2EB6319700832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseFocusMonitor" target */,
 			);
 			path = justnoiseradio;
@@ -194,7 +147,6 @@
 		32D48D2A2D42F47A0057C8AA /* ShieldConfigurationExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				32D48D4B2D43141F0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "justnoiseradio" target */,
 				32D48D352D42F47A0057C8AA /* Exceptions for "ShieldConfigurationExtension" folder in "ShieldConfigurationExtension" target */,
 			);
 			path = ShieldConfigurationExtension;
@@ -215,14 +167,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				321A54682D53808200A3053D /* PostgREST in Frameworks */,
-				321A54662D53808200A3053D /* Functions in Frameworks */,
 				321A546E2D53808200A3053D /* Supabase in Frameworks */,
-				321A54752D539C9800A3053D /* GoogleSignInSwift in Frameworks */,
-				321A54642D53808200A3053D /* Auth in Frameworks */,
-				321A546C2D53808200A3053D /* Storage in Frameworks */,
 				32B7E0E22EAE69C2009F6BBC /* PostHog in Frameworks */,
-				321A546A2D53808200A3053D /* Realtime in Frameworks */,
 				321A54732D539C9800A3053D /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -259,7 +205,6 @@
 		323C09E22CC504200094A28A = {
 			isa = PBXGroup;
 			children = (
-				32580DB22D4A9F05008D6AF5 /* Localizable.strings */,
 				32F603342CD9E237000222C5 /* JustNoiseWidgetExtension.entitlements */,
 				323C09ED2CC504200094A28A /* justnoiseradio */,
 				32F603172CD9E1E2000222C5 /* JustNoiseWidget */,
@@ -268,10 +213,8 @@
 				32D48D252D42F4790057C8AA /* Frameworks */,
 				323C09EC2CC504200094A28A /* Products */,
 				32BD0C262D662AA700A46265 /* JN_video1.mp4 */,
-				322A29FA2D94B67E00616706 /* Journaling.mp4 */,
 				32BD0C272D662AA700A46265 /* JN_video2.mp4 */,
 				32BD0C282D662AA700A46265 /* JN_video3.mp4 */,
-				32429DD52D8DFE4200CE6713 /* Thank_You_Video.mp4 */,
 				3299258E2F25FC1500A8060D /* AppIconJN.icon */,
 			);
 			sourceTree = "<group>";
@@ -291,7 +234,6 @@
 			isa = PBXGroup;
 			children = (
 				32A08AA12EB6274300832674 /* FamilyControls.framework */,
-				321413EE2EB4F8B1004998BD /* ManagedApp.framework */,
 				32D48D262D42F4790057C8AA /* ManagedSettings.framework */,
 				32D48D282D42F47A0057C8AA /* ManagedSettingsUI.framework */,
 				321413C02EB488AD004998BD /* DeviceActivity.framework */,
@@ -310,14 +252,12 @@
 				323C09E82CC504200094A28A /* Frameworks */,
 				323C09E92CC504200094A28A /* Resources */,
 				3207184C2CCA71D000774537 /* Embed Foundation Extensions */,
-				328D2E1A2D4161510061D029 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				32F603262CD9E1E3000222C5 /* PBXTargetDependency */,
 				32D48D302D42F47A0057C8AA /* PBXTargetDependency */,
-				32A08AC82EB73AFD00832674 /* PBXTargetDependency */,
 				32A08ACB2EB7402C00832674 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
@@ -325,14 +265,8 @@
 			);
 			name = justnoiseradio;
 			packageProductDependencies = (
-				321A54632D53808200A3053D /* Auth */,
-				321A54652D53808200A3053D /* Functions */,
-				321A54672D53808200A3053D /* PostgREST */,
-				321A54692D53808200A3053D /* Realtime */,
-				321A546B2D53808200A3053D /* Storage */,
 				321A546D2D53808200A3053D /* Supabase */,
 				321A54722D539C9800A3053D /* GoogleSignIn */,
-				321A54742D539C9800A3053D /* GoogleSignInSwift */,
 				32B7E0E12EAE69C2009F6BBC /* PostHog */,
 			);
 			productName = justnoiseradio;
@@ -465,9 +399,6 @@
 				32BD0C2A2D662AA700A46265 /* JN_video3.mp4 in Resources */,
 				3299258F2F25FC1500A8060D /* AppIconJN.icon in Resources */,
 				32BD0C2B2D662AA700A46265 /* JN_video1.mp4 in Resources */,
-				32580DB42D4A9F05008D6AF5 /* Localizable.strings in Resources */,
-				322A29FB2D94B67E00616706 /* Journaling.mp4 in Resources */,
-				32429DD62D8DFE4200CE6713 /* Thank_You_Video.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -526,11 +457,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		32A08AC82EB73AFD00832674 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
-			targetProxy = 32A08AC72EB73AFD00832674 /* PBXContainerItemProxy */;
-		};
 		32A08ACB2EB7402C00832674 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
@@ -547,17 +473,6 @@
 			targetProxy = 32F603252CD9E1E3000222C5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin PBXVariantGroup section */
-		32580DB22D4A9F05008D6AF5 /* Localizable.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				32580DB32D4A9F05008D6AF5 /* en */,
-			);
-			name = Localizable.strings;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		323C0A0D2CC504210094A28A /* Debug */ = {
@@ -694,7 +609,6 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"justnoiseradio/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = justnoiseradio/Info.plist;
@@ -738,7 +652,6 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"justnoiseradio/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = justnoiseradio/Info.plist;
@@ -1051,31 +964,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		321A54632D53808200A3053D /* Auth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Auth;
-		};
-		321A54652D53808200A3053D /* Functions */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Functions;
-		};
-		321A54672D53808200A3053D /* PostgREST */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = PostgREST;
-		};
-		321A54692D53808200A3053D /* Realtime */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Realtime;
-		};
-		321A546B2D53808200A3053D /* Storage */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Storage;
-		};
 		321A546D2D53808200A3053D /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 32FA68482D5379ED003D4740 /* XCRemoteSwiftPackageReference "supabase-swift" */;
@@ -1085,11 +973,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 321A54712D539C5400A3053D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
-		};
-		321A54742D539C9800A3053D /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 321A54712D539C5400A3053D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignInSwift;
 		};
 		32B7E0E12EAE69C2009F6BBC /* PostHog */ = {
 			isa = XCSwiftPackageProductDependency;

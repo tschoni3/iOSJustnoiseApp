@@ -167,35 +167,6 @@ struct CaptureClip: Identifiable, Codable, Hashable {
         )
     }
 
-    func updatingSourceModeName(_ name: String?) -> CaptureClip {
-        CaptureClip(
-            id: id,
-            createdAt: createdAt,
-            duration: duration,
-            audioFileURL: audioFileURL,
-            sourceModeName: name ?? sourceModeName,
-            extraction: extraction,
-            analysisState: analysisState,
-            analysisUpdatedAt: analysisUpdatedAt,
-            lastDecisionBlockReason: lastDecisionBlockReason,
-            retryAfter: retryAfter,
-            lastErrorMessage: lastErrorMessage,
-            transcript: transcript,
-            sourceLanguage: sourceLanguage,
-            summary: summary,
-            themes: themes,
-            category: category,
-            emotion: emotion,
-            intensity: intensity,
-            tension: tension,
-            desire: desire,
-            avoidedAction: avoidedAction,
-            currentState: currentState,
-            processingStatus: processingStatus,
-            processedAt: processedAt
-        )
-    }
-
     func updatingAnalysis(
         extraction: SignalExtraction,
         sourceModeName: String?,

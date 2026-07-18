@@ -11,9 +11,6 @@ struct SettingsView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) var presentationMode
-    @Environment(\.openURL) private var openURL
-
-    var showsDoneButton: Bool = true
     
     @AppStorage("userName") var userName: String = ""
     @AppStorage("userLanguage") var userLanguage: String = "Auto detect"
@@ -197,11 +194,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .toolbar {
-                if showsDoneButton {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            presentationMode.wrappedValue.dismiss()
-                        }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        presentationMode.wrappedValue.dismiss()
                     }
                 }
             }

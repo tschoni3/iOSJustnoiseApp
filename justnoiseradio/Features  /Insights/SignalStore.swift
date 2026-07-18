@@ -332,13 +332,6 @@ final class SignalStore: NSObject, ObservableObject {
             .max()
     }
 
-    func comment(for captureID: UUID) -> SignalComment? {
-        signalMemoryState.comments
-            .filter { $0.anchorCaptureId == captureID }
-            .sorted { $0.createdAt > $1.createdAt }
-            .first
-    }
-
     private func enqueueSignalAnalysisJob(
         clipID: UUID,
         selectedModeName: String?
