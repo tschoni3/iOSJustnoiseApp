@@ -1,0 +1,76 @@
+name: iOS verification
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ios-verification.yml"
+      - "scripts/verify-ios.sh"
+      - "justnoise.xcodeproj/**"
+      - "justnoiseradio/**"
+      - "justnoiseradioTests/**"
+      - "JustnoiseWidget/**"
+      - "JustNoiseFocusMonitor/**"
+      - "ShieldConfigurationExtension/**"
+      - "*.entitlements"
+      - "AppIconJN.icon/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ios-verification.yml"
+      - "scripts/verify-ios.sh"
+      - "justnoise.xcodeproj/**"
+      - "justnoiseradio/**"
+      - "justnoiseradioTests/**"
+      - "JustnoiseWidget/**"
+      - "JustNoiseFocusMonitor/**"
+      - "ShieldConfigurationExtension/**"
+      - "*.entitlements"
+      - "AppIconJN.icon/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Release build and tests
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DERIVED_DATA_PATH: ${{ runner.temp }}/justnoise-derived-data
+      SPM_CACHE_PATH: ${{ runner.temp }}/justnoise-source-packages
+      RESULT_BUNDLE_PATH: ${{ runner.temp }}/justnoise-test-results.xcresult
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Restore Swift package cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.SPM_CACHE_PATH }}
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('justnoise.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build and test
+        run: bash scripts/verify-ios.sh
+
+      - name: Upload failed test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: justnoise-test-results
+          path: ${{ env.RESULT_BUNDLE_PATH }}
+          if-no-files-found: ignore
+          retention-days: 7
