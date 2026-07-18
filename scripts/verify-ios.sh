@@ -10,18 +10,23 @@ SPM_CACHE_PATH="${SPM_CACHE_PATH:-${HOME}/Library/Caches/JustNoise/SourcePackage
 RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-${TMPDIR:-/tmp}/justnoise-test-results.xcresult}"
 
 find_simulator_id() {
-  xcodebuild "${common_arguments[@]}" -showdestinations 2>/dev/null | awk '
+  local destinations
+  destinations="$(xcodebuild "${common_arguments[@]}" -showdestinations 2>/dev/null || true)"
+
+  awk '
     /platform:iOS Simulator/ && /name:iPhone/ {
       if (match($0, /\([0-9A-F-]+\)/)) {
         print substr($0, RSTART + 1, RLENGTH - 2)
         exit
       }
-      if (match($0, /id:[0-9A-F-]+/)) {
-        print substr($0, RSTART + 3, RLENGTH - 3)
+      if (match($0, /id:[[:space:]]*[0-9A-Fa-f-]+/)) {
+        id = substr($0, RSTART, RLENGTH)
+        sub(/^id:[[:space:]]*/, "", id)
+        print id
         exit
       }
     }
-  '
+  ' <<< "${destinations}"
 }
 
 command -v xcodebuild >/dev/null || {
@@ -48,10 +53,24 @@ xcodebuild \
   -onlyUsePackageVersionsFromResolvedFile
 
 # `-showdestinations` filters out runtimes older than the app's deployment target.
-SIMULATOR_ID="${IOS_SIMULATOR_ID:-$(find_simulator_id)}"
+SIMULATOR_ID="${IOS_SIMULATOR_ID:-}"
+if [[ -z "${SIMULATOR_ID}" ]]; then
+  for attempt in 1 2 3 4 5 6; do
+    SIMULATOR_ID="$(find_simulator_id)"
+    [[ -n "${SIMULATOR_ID}" ]] && break
+
+    if [[ "${attempt}" -lt 6 ]]; then
+      echo "==> Waiting for CoreSimulator (${attempt}/6)"
+      sleep 5
+    fi
+  done
+fi
+
 if [[ -z "${SIMULATOR_ID}" ]]; then
   echo "error: no compatible iPhone simulator was found" >&2
   echo "Install an iOS simulator runtime in Xcode, or set IOS_SIMULATOR_ID." >&2
+  xcrun simctl list devices available >&2 || true
+  xcodebuild "${common_arguments[@]}" -showdestinations >&2 || true
   exit 1
 fi
 
