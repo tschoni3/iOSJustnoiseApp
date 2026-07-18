@@ -46,17 +46,6 @@ private extension UIColor {
 final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     // MARK: Branding & Copy
-    private let quotes: [String] = [
-        "Flow like water, steady and sure. Distractions fade, clarity endures.",
-        "Stay focused and never give up.",
-        "Your concentration is your superpower.",
-        "Mindfulness brings clarity and peace.",
-        "Stay the course, your goals await."
-    ]
-
-    /// Keep quote stable for the lifetime of the extension process to avoid UI flicker.
-    private lazy var stableQuote: String = quotes.randomElement() ?? "Stay focused and never give up."
-
     /// Asset name (make sure **target membership** includes the extension).
     private let iconAssetName = "zap_button"
 
@@ -64,7 +53,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     private let bgColor              = UIColor(hex: "#18181A")        // deep charcoal
     private let titleColor           = UIColor(white: 1.0, alpha: 1.0)
     private let subtitleColor        = UIColor(white: 0.78, alpha: 1.0)
-    private let primaryButtonBGColor = UIColor(hex: "#D7FA00")        // brand yellow
+    private let primaryButtonBGColor = UIColor.white
     private let primaryButtonText    = UIColor(white: 0.05, alpha: 1.0)
 
     // MARK: Helpers
@@ -78,13 +67,8 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         ShieldConfiguration.Label(text: "THIS IS JUSTNOISE", color: titleColor)
     }
 
-    private func makeSubtitle() -> ShieldConfiguration.Label {
-        let text =
-        """
-        Your phone is currently Zapped. To access apps, tap your Zap.
-
-        “\(stableQuote)”
-        """
+    private func makeSubtitle(itemName: String) -> ShieldConfiguration.Label {
+        let text = "\(itemName) is currently Zapped.\nTap your Zap to access it."
         return ShieldConfiguration.Label(text: text, color: subtitleColor)
     }
 
@@ -94,15 +78,22 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     /// Central builder so all shield contexts look identical.
     /// **Key change:** We set `backgroundBlurStyle: .dark` so the background actually renders dark.
-    private func buildConfig() -> ShieldConfiguration {
+    private func buildConfig(itemName: String?, fallbackName: String) -> ShieldConfiguration {
         SHIELDLOG.info("Building ShieldConfiguration (dark blur + explicit colors)")
+        let trimmedName = itemName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName: String
+        if let trimmedName, trimmedName.isEmpty == false {
+            resolvedName = trimmedName
+        } else {
+            resolvedName = fallbackName
+        }
 
         return ShieldConfiguration(
             backgroundBlurStyle: .dark,                 // <- THIS makes the background dark
             backgroundColor: bgColor,                   // tints the blur with your brand charcoal
             icon: makeIcon(),
             title: makeTitle(),
-            subtitle: makeSubtitle(),
+            subtitle: makeSubtitle(itemName: resolvedName),
             primaryButtonLabel: makePrimaryButton(),
             primaryButtonBackgroundColor: primaryButtonBGColor,
             secondaryButtonLabel: nil
@@ -111,11 +102,18 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     // MARK: - ShieldConfigurationDataSource
     override func configuration(shielding application: Application) -> ShieldConfiguration {
-        buildConfig() }
+        buildConfig(itemName: application.localizedDisplayName, fallbackName: "This app")
+    }
 
-    override func configuration(shielding application: Application, in category: ActivityCategory) -> ShieldConfiguration { buildConfig() }
+    override func configuration(shielding application: Application, in category: ActivityCategory) -> ShieldConfiguration {
+        buildConfig(itemName: application.localizedDisplayName, fallbackName: "This app")
+    }
 
-    override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration { buildConfig() }
+    override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration {
+        buildConfig(itemName: webDomain.domain, fallbackName: "This website")
+    }
 
-    override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration { buildConfig() }
+    override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration {
+        buildConfig(itemName: webDomain.domain, fallbackName: "This website")
+    }
 }
