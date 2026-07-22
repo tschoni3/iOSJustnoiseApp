@@ -113,7 +113,7 @@
 		32A08AE62EB799A000832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseWidget" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Features  /History/SessionAttributes.swift",
+				Features/History/SessionAttributes.swift,
 			);
 			target = 32F603132CD9E1E2000222C5 /* JustNoiseWidget */;
 		};
