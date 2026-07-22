@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Justnoise Gate 0</string>
+    <string name="gate_title">Android restriction feasibility</string>
+    <string name="gate_status_unknown">Checking capability…</string>
+    <string name="target_label">App to test</string>
+    <string name="target_placeholder">Select a launchable app</string>
+    <string name="refresh_apps">Refresh app list</string>
+    <string name="disclosure_title">Accessibility disclosure</string>
+    <string name="accessibility_disclosure">Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It observes window-change events and reads the foreground package identifier so it can compare that identifier with the one app you selected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes. Foreground event contents are not retained or sent anywhere. The selected app, consent version, enforcement state, and a keyed Zap digest stay only on this device. You can withdraw below, disable the service in Accessibility settings, Force Stop, or uninstall at any time.</string>
+    <string name="consent_checkbox">I understand this disclosure and choose to test the Accessibility capability.</string>
+    <string name="open_accessibility_settings">Continue to Accessibility settings</string>
+    <string name="zap_title">Local Zap pairing</string>
+    <string name="zap_explanation">Pairing stores only an Android Keystore HMAC digest. Raw NDEF text and the NFC tag identifier are never stored or logged.</string>
+    <string name="pair_zap">Pair or replace test Zap</string>
+    <string name="scan_zap">Scan Zap to start or stop</string>
+    <string name="withdraw">Withdraw consent and clear Gate 0 data</string>
+    <string name="open_app_info">Open App info / Force Stop</string>
+    <string name="status_consent_required">Consent required. The service will refuse to run.</string>
+    <string name="status_target_required">Select a non-protected launchable app.</string>
+    <string name="status_zap_required">Pair a real NDEF text Zap.</string>
+    <string name="status_permission_required">Accessibility is unavailable or disabled.</string>
+    <string name="status_idle">Idle. Enforcement is available but not active.</string>
+    <string name="status_active">Active. The selected app should be intercepted.</string>
+    <string name="status_recovery_required">Recovery required. Justnoise is not claiming active enforcement.</string>
+    <string name="status_pairing">Hold a real NDEF text Zap near the phone to pair it.</string>
+    <string name="status_scanning">Hold the paired Zap near the phone. This scan handles one tag only.</string>
+    <string name="status_nfc_unavailable">NFC is unavailable or disabled.</string>
+    <string name="status_pair_success">Zap paired locally. No raw payload was retained.</string>
+    <string name="status_scan_unauthorized">That Zap is not authorized. State did not change.</string>
+    <string name="status_scan_invalid">The tag is not one strict UTF-8 NDEF text record. State did not change.</string>
+    <string name="status_start_failed">Start failed. Check target, consent, and service recovery.</string>
+    <string name="status_started">Session started.</string>
+    <string name="status_stopped">Session stopped and the overlay was cleared.</string>
+    <string name="status_stop_guard">Wait at least three seconds before stopping.</string>
+    <string name="status_no_change">Scan caused no state change.</string>
+    <string name="status_withdrawn">Consent and all Gate 0 configuration were cleared.</string>
+    <string name="accessibility_service_label">Justnoise Gate 0 foreground-package check</string>
+    <string name="accessibility_service_description">Compares window-state package identifiers with one locally selected app and shows a Justnoise-owned interruption overlay. It cannot retrieve window content.</string>
+    <string name="shield_title">THIS IS JUSTNOISE</string>
+    <string name="shield_message_fallback">This app is currently Zapped.\nTap your Zap to access it.</string>
+    <string name="shield_open_justnoise">Keep going</string>
+    <string name="shield_disable_service">Disable Accessibility</string>
+    <string name="shield_app_info">App info / Force Stop</string>
+    <string name="shield_home">Go Home</string>
+</resources>

@@ -1,0 +1,111 @@
+name: Android Gate 0
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/android-gate0.yml"
+      - "docs/ANDROID_GATE_0.md"
+      - "product/behavior/portable-fixtures.v1.json"
+      - "product/copy/**"
+      - "product/design/**"
+      - "scripts/verify-product-contracts.sh"
+      - "spikes/android-gate0/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/android-gate0.yml"
+      - "docs/ANDROID_GATE_0.md"
+      - "product/behavior/portable-fixtures.v1.json"
+      - "product/copy/**"
+      - "product/design/**"
+      - "scripts/verify-product-contracts.sh"
+      - "spikes/android-gate0/**"
+  workflow_dispatch:
+
+concurrency:
+  group: android-gate0-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Static policy, JVM tests, lint, and APKs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 9.5.0
+        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Install Android SDK 36 for CI only
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Bootstrap the standard wrapper
+        run: >-
+          gradle --project-dir spikes/android-gate0 wrapper
+          --gradle-version 9.5.0
+          --distribution-type bin
+          --gradle-distribution-sha256-sum 940e623ea98e40ea9ad398770a6ebb91a61c0869d394dda81aa86b0f4f0025e7
+
+      - name: Validate Gradle wrapper checksums
+        uses: gradle/actions/wrapper-validation@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+
+      - name: Upload generated wrapper for repository bootstrap
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-gate0-gradle-wrapper
+          path: |
+            spikes/android-gate0/gradlew
+            spikes/android-gate0/gradlew.bat
+            spikes/android-gate0/gradle/wrapper/gradle-wrapper.jar
+            spikes/android-gate0/gradle/wrapper/gradle-wrapper.properties
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify static policy boundary and shared contracts
+        run: bash spikes/android-gate0/scripts/verify-static-policy.sh
+
+      - name: Run JVM tests, lint, and build testable APKs
+        working-directory: spikes/android-gate0
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+
+      - name: Collect APKs and checksums
+        run: |
+          mkdir -p "$RUNNER_TEMP/android-gate0-debug"
+          find spikes/android-gate0/app/build/outputs/apk -type f -name '*.apk' -exec cp {} "$RUNNER_TEMP/android-gate0-debug/" \;
+          cd "$RUNNER_TEMP/android-gate0-debug"
+          sha256sum --binary *.apk > SHA256SUMS
+
+      - name: Upload debug APKs and checksums
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-gate0-debug
+          path: ${{ runner.temp }}/android-gate0-debug
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test and lint reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-gate0-reports
+          path: |
+            spikes/android-gate0/app/build/reports
+            spikes/android-gate0/app/build/test-results
+            spikes/android-gate0/app/build/intermediates/lint*
+          if-no-files-found: ignore
+          retention-days: 14
