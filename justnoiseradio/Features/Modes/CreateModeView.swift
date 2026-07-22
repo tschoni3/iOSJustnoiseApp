@@ -74,6 +74,6 @@ struct CreateModeView: View {
     
     // Computed Property to Determine if Save Button Should be Disabled
     private var isSaveDisabled: Bool {
-        modeName.trimmingCharacters(in: .whitespaces).isEmpty || (selection.applicationTokens.isEmpty && selection.categoryTokens.isEmpty)
+        modeName.trimmingCharacters(in: .whitespaces).isEmpty || !selection.hasBlockingTargets
     }
 }

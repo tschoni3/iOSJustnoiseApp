@@ -30,8 +30,6 @@ struct FamilyActivityPickerView: View {
     }
 
     private var isSelectionEmpty: Bool {
-        mode.selectedApps.applicationTokens.isEmpty &&
-        mode.selectedApps.categoryTokens.isEmpty &&
-        mode.selectedApps.webDomainTokens.isEmpty
+        !mode.selectedApps.hasBlockingTargets
     }
 }

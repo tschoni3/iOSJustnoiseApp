@@ -105,7 +105,7 @@ struct NewScheduleView: View {
 
     // MARK: - Actions
     private func save() {
-        guard let mode = selectedModeResolved else { return }
+        guard let mode = selectedModeResolved, mode.selectedApps.hasBlockingTargets else { return }
 
         var saveDate = trimSeconds(date)
 

@@ -137,8 +137,17 @@ enum DeviceActivityBridge {
     }
 
     // MARK: - Coordinator: pick & arm the earliest upcoming enabled schedule
-    private static func pickEarliestEnabled(_ schedules: [Schedule], now: Date = Date()) -> (schedule: Schedule, fire: Date)? {
-        let enabled = schedules.filter { $0.isEnabled }
+    private static func pickEarliestEnabled(
+        _ schedules: [Schedule],
+        allModes: [Mode],
+        now: Date = Date()
+    ) -> (schedule: Schedule, fire: Date)? {
+        let validModeIDs = Set(
+            allModes
+                .filter { $0.selectedApps.hasBlockingTargets }
+                .map(\.id)
+        )
+        let enabled = schedules.filter { $0.isEnabled && validModeIDs.contains($0.modeId) }
         guard !enabled.isEmpty else { return nil }
         var best: (Schedule, Date)? = nil
         for s in enabled {
@@ -176,7 +185,7 @@ enum DeviceActivityBridge {
         let suite = JNShared.suite
 
         // Pick candidate
-        guard let pick = pickEarliestEnabled(schedules, now: now) else {
+        guard let pick = pickEarliestEnabled(schedules, allModes: allModes, now: now) else {
             // Nothing to arm → ensure we’re stopped and cleared.
             clearArmMarkersAndStop()
             return
