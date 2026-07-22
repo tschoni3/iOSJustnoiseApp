@@ -12,8 +12,57 @@ private let SCHED      = Logger(subsystem: "com.stilltschoni.justnoiseradioapp",
 enum DeviceActivityBridge {
 
     // MARK: - Coalescing / State
-    private static let queue = DispatchQueue(label: "devactivity.rearm", qos: .userInitiated)
+    private static let queueSpecificKey = DispatchSpecificKey<UInt8>()
+    private static let queue: DispatchQueue = {
+        let queue = DispatchQueue(label: "devactivity.rearm", qos: .userInitiated)
+        queue.setSpecific(key: queueSpecificKey, value: 1)
+        return queue
+    }()
     private static var pendingWork: DispatchWorkItem?
+    private static var accountBoundaryGeneration: UInt64 = 0
+    private static var isAccountDeletionQuiesced = false
+
+    /// Prevent a debounced schedule write from re-arming monitoring after account deletion
+    /// has already begun. Waiting on the serial queue also lets any in-flight rebalance finish
+    /// before the cleanup allowlist removes its app-group state.
+    static func quiesceForAccountDeletion() {
+        // Establish the cross-process fail-closed boundary first. A monitor callback
+        // already in flight will observe this before its next mutation and self-clear.
+        let suite = JNShared.suite
+        AccountDeletionDeviceActivitySentinel(defaults: suite).establish()
+
+        withQueueState {
+            isAccountDeletionQuiesced = true
+            accountBoundaryGeneration &+= 1
+            pendingWork?.cancel()
+            pendingWork = nil
+        }
+        DeviceActivityCenter().stopMonitoring([JNActivityName.interval])
+    }
+
+    /// A deleted account stays unable to re-arm schedules for the remainder of its session.
+    /// A later authenticated container explicitly opens a fresh process boundary.
+    static func resumeAfterAccountSignIn() {
+        withQueueState {
+            let suite = JNShared.suite
+            AccountDeletionDeviceActivitySentinel(defaults: suite)
+                .clearForAuthenticatedResume()
+            isAccountDeletionQuiesced = false
+        }
+    }
+
+    private static var accountBoundaryIsQuiesced: Bool {
+        isAccountDeletionQuiesced
+            || JNShared.suite.bool(forKey: SharedKeys.accountDeletionQuiescenceKey)
+    }
+
+    private static func withQueueState(_ operation: () -> Void) {
+        if DispatchQueue.getSpecific(key: queueSpecificKey) != nil {
+            operation()
+        } else {
+            queue.sync(execute: operation)
+        }
+    }
 
     /// Minimum seconds the start time must be in the future to avoid framework flakiness
     private static let minLeadSeconds: TimeInterval = 90
@@ -67,6 +116,11 @@ enum DeviceActivityBridge {
     // DeviceActivityBridge.swift — replace the entire `sync(...)` body with this version
 
     private static func sync(schedule: Schedule, allModes: [Mode], overrideFire: Date? = nil) {
+        guard accountBoundaryIsQuiesced == false else {
+            BRIDGE_LOG.info("ARM ⏸️ account deletion boundary is quiesced")
+            return
+        }
+
         let center = DeviceActivityCenter()
 
         let cal  = Calendar.current
@@ -92,6 +146,11 @@ enum DeviceActivityBridge {
 
         suite.synchronize()
 
+        guard accountBoundaryIsQuiesced == false else {
+            clearArmMarkersAndStop()
+            return
+        }
+
         // Narrow window: fire .. fire+20m (clamped to same day)
         let endCandidate = cal.date(byAdding: .minute, value: 20, to: fire)!
         let startHour = cal.component(.hour,   from: fire)
@@ -108,6 +167,10 @@ enum DeviceActivityBridge {
         let intervalEnd   = DateComponents(hour: endHour,   minute: endMin,   second: 0)
 
         do {
+            guard accountBoundaryIsQuiesced == false else {
+                clearArmMarkersAndStop()
+                return
+            }
             try center.startMonitoring(
                 JNActivityName.interval,
                 during: DeviceActivitySchedule(
@@ -173,14 +236,32 @@ enum DeviceActivityBridge {
 
         // Debounce rapid callers (unchanged)
         queue.async {
+            guard accountBoundaryIsQuiesced == false else {
+                BRIDGE_LOG.info("REBALANCE ⏸️ account deletion boundary is quiesced")
+                return
+            }
+
+            let generation = accountBoundaryGeneration
             pendingWork?.cancel()
-            let work = DispatchWorkItem { _rebalanceArmingCoalesced(schedules: schedules, allModes: allModes) }
+            let work = DispatchWorkItem {
+                guard accountBoundaryIsQuiesced == false,
+                      generation == accountBoundaryGeneration else {
+                    BRIDGE_LOG.info("REBALANCE ⏸️ stale account-boundary work discarded")
+                    return
+                }
+                _rebalanceArmingCoalesced(schedules: schedules, allModes: allModes)
+            }
             pendingWork = work
             queue.asyncAfter(deadline: .now() + 0.30, execute: work)
         }
     }
 
     private static func _rebalanceArmingCoalesced(schedules: [Schedule], allModes: [Mode]) {
+        guard accountBoundaryIsQuiesced == false else {
+            BRIDGE_LOG.info("REBALANCE ⏸️ account deletion boundary is quiesced")
+            return
+        }
+
         let now = Date()
         let suite = JNShared.suite
 
@@ -208,9 +289,14 @@ enum DeviceActivityBridge {
                     let oldData = suite.data(forKey: SharedKeys.selectionDataKey)
                     if oldData != newData { needsUpdate = true }
                     if needsUpdate {
+                        guard accountBoundaryIsQuiesced == false else { return }
                         suite.set(newData, forKey: SharedKeys.selectionDataKey)
                         suite.set(mode.id.uuidString, forKey: SharedKeys.activeModeIdKey)
                         suite.synchronize()
+                        guard accountBoundaryIsQuiesced == false else {
+                            clearArmMarkersAndStop()
+                            return
+                        }
                         SCHED.info("REBALANCE 🔄 refreshed selection for unchanged schedule/time")
                     }
                 }

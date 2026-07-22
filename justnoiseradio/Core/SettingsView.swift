@@ -9,6 +9,7 @@ import Supabase
 
 struct SettingsView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
+    @EnvironmentObject var signalStore: SignalStore
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @Environment(\.presentationMode) var presentationMode
     
@@ -207,6 +208,7 @@ struct SettingsView: View {
     }
 
     // MARK: - Delete Flow
+    @MainActor
     private func deleteAccountFlow() async {
         guard !isDeleting else { return }
         isDeleting = true
@@ -214,17 +216,20 @@ struct SettingsView: View {
 
         do {
             let token = await SupabaseManager.shared.currentAccessToken()
-            print("DELETE using token isNil:", token == nil)
-            try await deleter.deleteAccount(accessToken: token)
+            let signedIn = $isSignedIn
+            let coordinator = AccountDeletionCoordinator(
+                remoteDeleter: deleter,
+                cleaner: LocalAccountDataCleaner(),
+                systemEffects: LiveAccountDeletionSystemEffects(
+                    nfcViewModel: nfcViewModel,
+                    signalStore: signalStore
+                ),
+                identityResetter: LiveAccountDeletionIdentityResetter(),
+                authSignOut: LiveAccountDeletionAuthSignOut(),
+                setSignedOut: { signedIn.wrappedValue = false }
+            )
 
-            // local clean-up if you cached anything
-            UserDefaults.standard.removeObject(forKey: "sessionHistory")
-            UserDefaults.standard.removeObject(forKey: "transcriptionHistory")
-            UserDefaults.standard.synchronize()
-
-            // sign out and go back to auth
-            try? await SupabaseManager.shared.client.auth.signOut()
-            isSignedIn = false
+            try await coordinator.deleteAccount(accessToken: token)
             presentationMode.wrappedValue.dismiss()
         } catch {
             deleteError = error.localizedDescription
@@ -236,6 +241,7 @@ struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()
             .environmentObject(NFCViewModel())
+            .environmentObject(SignalStore())
             .environmentObject(SubscriptionManager())
     }
 }

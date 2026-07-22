@@ -48,6 +48,69 @@ struct DaySummary: Identifiable, Hashable {
     let dotLevel: DotLevel
 }
 
+struct NFCInstallationStateProvider {
+    let isActivated: () -> Bool
+    let emergencyUnzapCount: () -> Int
+
+    static let live = NFCInstallationStateProvider(
+        isActivated: {
+            if let shared = JNShared.suite.object(forKey: SharedKeys.activationKey) as? Bool,
+               shared {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: SharedKeys.activationKey)
+        },
+        emergencyUnzapCount: {
+            UserDefaults.standard.object(forKey: SharedKeys.emergencyUnzapKey) as? Int ?? 5
+        }
+    )
+}
+
+struct SessionLiveActivityHandle {
+    let id: String
+    let activity: Activity<SessionAttributes>?
+    let endImmediately: () async -> Void
+
+    static func live(_ activity: Activity<SessionAttributes>) -> SessionLiveActivityHandle {
+        SessionLiveActivityHandle(
+            id: activity.id,
+            activity: activity,
+            endImmediately: {
+                let finalState = SessionAttributes.ContentState(startDate: Date())
+                await activity.end(
+                    ActivityContent(state: finalState, staleDate: nil),
+                    dismissalPolicy: .immediate
+                )
+            }
+        )
+    }
+}
+
+struct SessionLiveActivityClient {
+    let areActivitiesEnabled: () -> Bool
+    let existingActivities: () -> [SessionLiveActivityHandle]
+    let request: (
+        _ attributes: SessionAttributes,
+        _ content: ActivityContent<SessionAttributes.ContentState>
+    ) async throws -> SessionLiveActivityHandle
+
+    static let live = SessionLiveActivityClient(
+        areActivitiesEnabled: {
+            ActivityAuthorizationInfo().areActivitiesEnabled
+        },
+        existingActivities: {
+            Activity<SessionAttributes>.activities.map(SessionLiveActivityHandle.live)
+        },
+        request: { attributes, content in
+            let activity = try await Activity<SessionAttributes>.request(
+                attributes: attributes,
+                content: content
+            )
+            return SessionLiveActivityHandle.live(activity)
+        }
+    )
+}
+
 class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     @Published var journalHistory: [JournalEntry] = []
     @Published var sessionHistory: [Session] = []
@@ -97,6 +160,14 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     var scanningPurpose: ScanningPurpose?
     private let logger = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "NFCViewModel")
     @Published var liveActivity: Activity<SessionAttributes>?
+    private(set) var currentLiveActivityHandleID: String?
+    private var currentLiveActivityHandle: SessionLiveActivityHandle?
+    private var liveActivityCreationTask: Task<Void, Never>?
+    private var liveActivityGeneration: UInt64 = 0
+    private var isLiveActivityAccountBoundaryQuiesced = false
+
+    private let installationStateProvider: NFCInstallationStateProvider
+    private let liveActivityClient: SessionLiveActivityClient
 
     private let emergencyUnzapKey = "emergencyUnzapCount"
 
@@ -114,11 +185,23 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
     // MARK: - Init
     override init() {
-        // Load emergency tokens from storage, default = 5
-        let savedEmergency = UserDefaults.standard.object(forKey: emergencyUnzapKey) as? Int
-        self.emergencyUnzapCount = savedEmergency ?? 5
+        let installationStateProvider = NFCInstallationStateProvider.live
+        self.installationStateProvider = installationStateProvider
+        liveActivityClient = .live
+        emergencyUnzapCount = installationStateProvider.emergencyUnzapCount()
         super.init()
-        // ⛔️ Do NOT load here — wait for protected data (see hydrateOnLaunch()).
+        // ⛔️ Do NOT load account data here — wait for protected data.
+    }
+
+    init(
+        installationStateProvider: NFCInstallationStateProvider,
+        liveActivityClient: SessionLiveActivityClient
+    ) {
+        self.installationStateProvider = installationStateProvider
+        self.liveActivityClient = liveActivityClient
+        emergencyUnzapCount = installationStateProvider.emergencyUnzapCount()
+        super.init()
+        // Testable cold-start path; account data remains unhydrated until explicitly asked.
     }
 
     /// Entry point called by the App on first scene .task
@@ -134,6 +217,62 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             return
         }
         _performHydration()
+    }
+
+    @MainActor
+    func quiesceForAccountDeletion() {
+        isLiveActivityAccountBoundaryQuiesced = true
+        invalidatePendingLiveActivityCreation()
+
+        session?.invalidate()
+        session = nil
+        scanningPurpose = nil
+        unauthorizedTagDetected = false
+
+        timer?.invalidate()
+        timer = nil
+        sessionStartDate = nil
+        currentSessionId = nil
+        elapsedTime = 0
+        isAppsBlocked = false
+
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIApplication.protectedDataDidBecomeAvailableNotification,
+            object: nil
+        )
+    }
+
+    @MainActor
+    func resetInMemoryStateForAccountDeletion() {
+        quiesceForAccountDeletion()
+
+        // These values belong to the installation, not the deleted account. Read only
+        // this narrow provider so a cold cleanup retry does not hydrate account data.
+        isActivated = installationStateProvider.isActivated()
+        emergencyUnzapCount = installationStateProvider.emergencyUnzapCount()
+
+        isRestoring = true
+        modes = Self.defaultModes()
+        selectedMode = modes.first
+        isRestoring = false
+
+        isMutatingSchedules = true
+        schedules = []
+        isMutatingSchedules = false
+
+        journalHistory = []
+        sessionHistory = []
+        pendingDisableScheduleId = nil
+        lastLocalModeChangeAt = nil
+        showNoiseRewindCard = false
+        activeAlert = nil
+        isHydrated = true
+    }
+
+    @MainActor
+    func resumeAfterAccountSignIn() {
+        isLiveActivityAccountBoundaryQuiesced = false
     }
 
     @objc private func _protectedDataReady() {
@@ -188,10 +327,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
                     self.selectedMode = restoredMode
                 }
 
-                if Activity<SessionAttributes>.activities.isEmpty {
+                let existingActivities = self.liveActivityClient.existingActivities()
+                if existingActivities.isEmpty {
                     startLiveActivity()
-                } else if let existing = Activity<SessionAttributes>.activities.first {
-                    self.liveActivity = existing
+                } else if let existing = existingActivities.first {
+                    self.adoptLiveActivity(existing)
                 }
             } else {
                 endLiveActivity()
@@ -274,6 +414,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     }
 
     // MARK: - NFC
+    @MainActor
     func startScanning(purpose: ScanningPurpose) {
         if purpose == .sessionToggle, isAppsBlocked, let start = sessionStartDate {
             let elapsed = Date().timeIntervalSince(start)
@@ -691,10 +832,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         }
 
         if blocked {
-            if Activity<SessionAttributes>.activities.isEmpty {
+            let existingActivities = liveActivityClient.existingActivities()
+            if existingActivities.isEmpty {
                 startLiveActivity()
-            } else if let existing = Activity<SessionAttributes>.activities.first {
-                self.liveActivity = existing
+            } else if let existing = existingActivities.first {
+                adoptLiveActivity(existing)
             }
         } else {
             endLiveActivity()
@@ -737,50 +879,106 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     }
 
     // MARK: - Live Activity
+    @MainActor
     func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        Task {
-            if let existing = Activity<SessionAttributes>.activities.first {
-                await MainActor.run { self.liveActivity = existing }
-                return
+        guard isLiveActivityAccountBoundaryQuiesced == false else { return }
+        guard liveActivityClient.areActivitiesEnabled() else { return }
+        guard liveActivityCreationTask == nil else { return }
+
+        if let existing = liveActivityClient.existingActivities().first {
+            adoptLiveActivity(existing)
+            return
+        }
+
+        liveActivityGeneration &+= 1
+        let generation = liveActivityGeneration
+        let attributes = SessionAttributes(modeName: selectedMode?.name ?? "JustNoise")
+        let initialContentState = SessionAttributes.ContentState(
+            startDate: sessionStartDate ?? Date()
+        )
+        let content = ActivityContent(state: initialContentState, staleDate: nil)
+        let client = liveActivityClient
+
+        liveActivityCreationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.liveActivityGeneration == generation {
+                    self.liveActivityCreationTask = nil
+                }
             }
 
-            let attributes = SessionAttributes(modeName: selectedMode?.name ?? "JustNoise")
-            let initialContentState = SessionAttributes.ContentState(startDate: sessionStartDate ?? Date())
             do {
-                let requested = try await Activity<SessionAttributes>.request(
-                    attributes: attributes,
-                    content: ActivityContent(state: initialContentState, staleDate: nil)
-                )
-                await MainActor.run { self.liveActivity = requested }
-                print("Started Live Activity: \(String(describing: self.liveActivity))")
+                let requested = try await client.request(attributes, content)
+                guard Task.isCancelled == false,
+                      self.liveActivityGeneration == generation,
+                      self.isLiveActivityAccountBoundaryQuiesced == false else {
+                    await requested.endImmediately()
+                    return
+                }
+
+                self.adoptLiveActivity(requested)
+                print("Started Live Activity: \(requested.id)")
             } catch {
-                print("Error starting Live Activity: \(error.localizedDescription)")
+                if Task.isCancelled == false {
+                    print("Error starting Live Activity: \(error.localizedDescription)")
+                }
             }
         }
     }
 
+    @MainActor
     func endLiveActivity() {
+        invalidatePendingLiveActivityCreation()
+        let remembered = currentLiveActivityHandle
+        let existing = liveActivityClient.existingActivities()
+        currentLiveActivityHandle = nil
+        currentLiveActivityHandleID = nil
+        liveActivity = nil
+
         Task {
-            if let remembered = await MainActor.run(body: { self.liveActivity }) {
-                let finalState = SessionAttributes.ContentState(startDate: Date())
-                await remembered.end(
-                    ActivityContent(state: finalState, staleDate: nil),
-                    dismissalPolicy: .immediate
-                )
+            if let remembered {
+                await remembered.endImmediately()
             }
 
-            for activity in Activity<SessionAttributes>.activities {
-                let finalState = SessionAttributes.ContentState(startDate: Date())
-                await activity.end(
-                    ActivityContent(state: finalState, staleDate: nil),
-                    dismissalPolicy: .immediate
-                )
+            for activity in existing where activity.id != remembered?.id {
+                await activity.endImmediately()
             }
 
-            await MainActor.run { self.liveActivity = nil }
             print("Ended all SessionActivities (defensive cleanup)")
         }
+    }
+
+    @MainActor
+    func endLiveActivitiesForAccountDeletion() async {
+        isLiveActivityAccountBoundaryQuiesced = true
+        invalidatePendingLiveActivityCreation()
+        let remembered = currentLiveActivityHandle
+        let existing = liveActivityClient.existingActivities()
+        currentLiveActivityHandle = nil
+        currentLiveActivityHandleID = nil
+        liveActivity = nil
+
+        if let remembered {
+            await remembered.endImmediately()
+        }
+
+        for activity in existing where activity.id != remembered?.id {
+            await activity.endImmediately()
+        }
+    }
+
+    @MainActor
+    private func adoptLiveActivity(_ handle: SessionLiveActivityHandle) {
+        currentLiveActivityHandle = handle
+        currentLiveActivityHandleID = handle.id
+        liveActivity = handle.activity
+    }
+
+    @MainActor
+    private func invalidatePendingLiveActivityCreation() {
+        liveActivityGeneration &+= 1
+        liveActivityCreationTask?.cancel()
+        liveActivityCreationTask = nil
     }
 
     private func loadActiveSessionIdIfAny() {
@@ -799,6 +997,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         activeAlert = UnifiedAlert.error(alertItem)
     }
 
+    @MainActor
     func setError(_ error: AppError) {
         let alertItem = AlertItem(
             title: Text("Error"),
@@ -975,6 +1174,11 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     }
 
     private func addDefaultModes() {
+        modes = Self.defaultModes()
+        saveModes()
+    }
+
+    private static func defaultModes() -> [Mode] {
         // Use STABLE UUIDs for defaults to avoid mismatch across launches
         let noiseID  = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
         let focusID  = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
@@ -983,8 +1187,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         let defaultMode = Mode(id: noiseID, name: "Noise", selectedApps: FamilyActivitySelection())
         let focusMode   = Mode(id: focusID, name: "Focus", selectedApps: FamilyActivitySelection())
         let sleepMode   = Mode(id: sleepID, name: "Sleep", selectedApps: FamilyActivitySelection())
-        modes = [defaultMode, focusMode, sleepMode]
-        saveModes()
+        return [defaultMode, focusMode, sleepMode]
     }
 
     func loadSessions() {

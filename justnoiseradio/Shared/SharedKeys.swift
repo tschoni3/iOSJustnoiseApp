@@ -15,6 +15,10 @@ enum SharedKeys {
     static let lastApplyEpochKey    = "jn_last_apply_epoch"
     static let allowedWeekdaysKey   = "jn_allowed_wd"
     static let preferredModeIdKey   = "jn_preferred_mode_id" // ✅ NEW
+    /// Cross-process fail-closed latch for the account-deletion boundary. The app sets
+    /// this before stopping monitoring and keeps it set until a later authenticated
+    /// account explicitly resumes scheduling.
+    static let accountDeletionQuiescenceKey = "jn_account_deletion_quiesced_v1"
 
 
     // ✅ NEW: fired markers (extension writes, app consumes)
@@ -24,6 +28,7 @@ enum SharedKeys {
     static let lastEndedScheduleIdKey = "jn_last_ended_schedule_id"
     static let lastEndedEpochKey      = "jn_last_ended_epoch"
     static let shieldOwnerKey = "jn_shield_owner"  // "app" | "ext" | nil
+    static let activeSessionIdKey = "jn_active_session_id_v1"
 
 
     // 💡 App-only (local persistence)
@@ -31,6 +36,28 @@ enum SharedKeys {
     static let emergencyUnzapKey    = "emergencyUnzapCount"
     static let allSchedulesKey      = "jn_all_schedules_data"
     static let legacySchedulesKey   = "schedules"
+
+    /// Account-owned app-group state that may be removed while the deletion sentinel
+    /// itself remains installed. Shared by the app cleaner and monitor extension so a
+    /// late extension callback can self-clear without restoring deleted-account state.
+    static let accountOwnedTransientKeys: Set<String> = [
+        selectionDataKey,
+        activeModeIdKey,
+        activeScheduleIdKey,
+        isAppsBlockedKey,
+        sessionStartKey,
+        plannedStartKey,
+        lastApplyEpochKey,
+        allowedWeekdaysKey,
+        preferredModeIdKey,
+        lastFiredScheduleIdKey,
+        lastFiredEpochKey,
+        lastEndedScheduleIdKey,
+        lastEndedEpochKey,
+        shieldOwnerKey,
+        allSchedulesKey,
+        activeSessionIdKey,
+    ]
 }
 
 enum JNActivityName {

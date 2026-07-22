@@ -106,6 +106,7 @@
 		32A08ABB2EB6319700832674 /* Exceptions for "justnoiseradio" folder in "JustNoiseFocusMonitor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Shared/AccountDeletionDeviceActivityGate.swift,
 				Shared/SharedKeys.swift,
 			);
 			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
