@@ -25,6 +25,8 @@ final class SignalStore: NSObject, ObservableObject {
     private let captureAudioFileStore: CaptureAudioFileStore
     private let captureIDProvider: () -> UUID
     private let userDefaults: UserDefaults
+    private let analysisTaskCanceller: @Sendable (Task<Void, Never>) -> Void
+    private let analysisTaskDidFinish: @Sendable () -> Void
     private var signalAnalysisPausedUntil: Date?
     // Failed analyses stay local and retry later instead of blocking capture creation.
     private var signalAnalysisFailuresByClipID: [UUID: SignalAnalysisFailureRecord] = [:]
@@ -32,17 +34,23 @@ final class SignalStore: NSObject, ObservableObject {
     private var pendingSignalAnalysisJobs: [SignalAnalysisJob] = []
     private var isProcessingSignalAnalysisQueue = false
     private var hasWrittenCaptureClipsThisProcess = false
+    private var accountBoundaryGeneration = UUID()
+    private var activeSignalAnalysisTask: Task<Void, Never>?
 
     init(
         analysisClient: any SignalAnalyzing = LiveSignalAnalysisClient(),
         captureAudioFileStore: CaptureAudioFileStore = CaptureAudioFileStore(),
         captureIDProvider: @escaping () -> UUID = { UUID() },
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
+        analysisTaskCanceller: @escaping @Sendable (Task<Void, Never>) -> Void = { $0.cancel() },
+        analysisTaskDidFinish: @escaping @Sendable () -> Void = {}
     ) {
         self.analysisClient = analysisClient
         self.captureAudioFileStore = captureAudioFileStore
         self.captureIDProvider = captureIDProvider
         self.userDefaults = userDefaults
+        self.analysisTaskCanceller = analysisTaskCanceller
+        self.analysisTaskDidFinish = analysisTaskDidFinish
         super.init()
     }
 
@@ -109,6 +117,37 @@ final class SignalStore: NSObject, ObservableObject {
         }
 
         _performHydration()
+    }
+
+    @MainActor
+    func quiesceForAccountDeletion() {
+        accountBoundaryGeneration = UUID()
+        if let activeSignalAnalysisTask {
+            analysisTaskCanceller(activeSignalAnalysisTask)
+        }
+        activeSignalAnalysisTask = nil
+        pendingSignalAnalysisJobs.removeAll()
+        signalAnalysisClipIDsInFlight.removeAll()
+        isProcessingSignalAnalysisQueue = false
+        isWaitingForProtectedData = false
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIApplication.protectedDataDidBecomeAvailableNotification,
+            object: nil
+        )
+    }
+
+    @MainActor
+    func resetInMemoryStateForAccountDeletion() {
+        quiesceForAccountDeletion()
+        captureClips = []
+        signalMemoryState = SignalMemoryState()
+        seenSignalCommentIDs = []
+        legacySignalInsights = []
+        signalAnalysisPausedUntil = nil
+        signalAnalysisFailuresByClipID = [:]
+        hasWrittenCaptureClipsThisProcess = false
+        isHydrated = true
     }
 
     @objc private func _protectedDataReady() {
@@ -446,10 +485,13 @@ final class SignalStore: NSObject, ObservableObject {
                 memoryState: signalMemoryState
             )
             let analysisClient = self.analysisClient
+            let generation = accountBoundaryGeneration
+            let taskDidFinish = analysisTaskDidFinish
 
             logger.info("Starting queued signal analysis for clip \(clip.id.uuidString, privacy: .public) at memory revision \(self.signalMemoryState.memoryRevision, privacy: .public)")
 
-            Task(priority: .utility) { [weak self] in
+            activeSignalAnalysisTask = Task(priority: .utility) { [weak self] in
+                defer { taskDidFinish() }
                 do {
                     let response = try await analysisClient.analyzeCaptureClip(
                         clip,
@@ -457,13 +499,17 @@ final class SignalStore: NSObject, ObservableObject {
                         context: analysisContext
                     )
 
+                    guard Task.isCancelled == false else { return }
                     guard let self else { return }
                     await MainActor.run {
+                        guard self.accountBoundaryGeneration == generation else { return }
                         self.handleSignalAnalysisSuccess(job: job, response: response)
                     }
                 } catch {
+                    guard Task.isCancelled == false else { return }
                     guard let self else { return }
                     await MainActor.run {
+                        guard self.accountBoundaryGeneration == generation else { return }
                         self.handleSignalAnalysisFailure(job: job, error: error)
                     }
                 }
@@ -477,6 +523,7 @@ final class SignalStore: NSObject, ObservableObject {
         job: SignalAnalysisJob,
         response: BackendCaptureResponse
     ) {
+        activeSignalAnalysisTask = nil
         signalAnalysisClipIDsInFlight.remove(job.clipID)
         clearSignalAnalysisFailure(for: job.clipID)
 
@@ -504,6 +551,7 @@ final class SignalStore: NSObject, ObservableObject {
     }
 
     private func handleSignalAnalysisFailure(job: SignalAnalysisJob, error: Error) {
+        activeSignalAnalysisTask = nil
         signalAnalysisClipIDsInFlight.remove(job.clipID)
         finishCurrentSignalAnalysisJob(job)
         recordSignalAnalysisFailure(for: job.clipID, error: error)

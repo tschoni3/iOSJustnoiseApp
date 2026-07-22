@@ -54,6 +54,9 @@ Record the device model and iOS version. Use a dedicated test account where dele
 - [ ] Relaunch, background/foreground, and force-quit preserve the expected session.
 - [ ] All main tabs, settings, mode creation/editing, and sign-out work.
 - [ ] Password recovery deep link opens the intended flow.
+- [ ] Using a dedicated test account that contains modes, schedules, Signal/history data, and captures, delete the account and confirm the app reaches signed-out state.
+- [ ] Force-quit and relaunch after deletion; no deleted account data, active restriction, pending schedule, Live Activity, notification, recording, or analytics identity may return.
+- [ ] Sign in with a different account on the same device and confirm no data from the deleted account appears, while installation-owned onboarding, activation, and emergency state follow the documented retention policy.
 
 ### NFC, restrictions, and schedules
 

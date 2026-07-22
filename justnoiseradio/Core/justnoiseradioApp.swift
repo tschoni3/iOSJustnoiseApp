@@ -19,9 +19,13 @@ struct JustNoiseApp: App {
 
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
     @AppStorage("isSignedIn")             var isSignedIn            = false
+    @AppStorage(LocalAccountDataCleaner.cleanupFallbackDefaultsKey)
+    private var hasAccountCleanupFallback = false
 
     @State private var showPasswordUpdate = false
     @State private var resetToken: String?
+    @State private var accountCleanupError: String?
+    @State private var isRetryingAccountCleanup = false
 
     init() {
         let config = PostHogConfig(
@@ -38,7 +42,11 @@ struct JustNoiseApp: App {
         config.flushAt = 20
         config.flushIntervalSeconds = 10
         #endif
-        PostHogSDK.shared.setup(config)
+        let accountCleanupPending = LocalAccountDataCleaner().hasPendingCleanup
+        JustNoiseAnalyticsRuntime.prepareSharedColdLaunch(
+            config: config,
+            accountCleanupPending: accountCleanupPending
+        )
     }
 
     @Environment(\.scenePhase) private var scenePhase
@@ -47,15 +55,28 @@ struct JustNoiseApp: App {
         WindowGroup {
             Group {
 
-                if !nfcViewModel.isHydrated || !signalStore.isHydrated {
+                if let accountCleanupError {
+                    accountCleanupGate(message: accountCleanupError)
+                } else if hasAccountCleanupFallback,
+                          nfcViewModel.isHydrated,
+                          signalStore.isHydrated {
+                    accountCleanupGate(
+                        message: "Account cleanup must finish before JustNoise can continue."
+                    )
+                } else if hasAccountCleanupFallback
+                            || !nfcViewModel.isHydrated
+                            || !signalStore.isHydrated {
                     ZStack {
                         Color.black.ignoresSafeArea()
-                        ProgressView("Loading JustNoise…")
+                        ProgressView(
+                            hasAccountCleanupFallback
+                                ? "Finishing account cleanup…"
+                                : "Loading JustNoise…"
+                        )
                             .foregroundStyle(.white)
                     }
                     .task {
-                        nfcViewModel.hydrateOnLaunch()
-                        signalStore.hydrateOnLaunch()
+                        await prepareAccountDataForUse()
                     }
 
                 } else if !hasCompletedOnboarding {
@@ -95,10 +116,12 @@ struct JustNoiseApp: App {
 
                 Task { await subscriptionManager.updateSubscriptionStatus() }
 
-                NotificationManager.shared.requestAuthorization()
-                NotificationManager.shared.scheduleDailyPreSessionNudgeIfNeeded()
-                NotificationManager.shared.scheduleDailyStreakSave()
-                NotificationManager.shared.cancelNoiseRewindNotifications()
+                if LocalAccountDataCleaner().hasPendingCleanup == false {
+                    NotificationManager.shared.requestAuthorization()
+                    NotificationManager.shared.scheduleDailyPreSessionNudgeIfNeeded()
+                    NotificationManager.shared.scheduleDailyStreakSave()
+                    NotificationManager.shared.cancelNoiseRewindNotifications()
+                }
 
                 if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -108,6 +131,7 @@ struct JustNoiseApp: App {
             }
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
+                    guard LocalAccountDataCleaner().hasPendingCleanup == false else { return }
 
                     if !nfcViewModel.isHydrated {
                         nfcViewModel.hydrateOnLaunch()
@@ -149,6 +173,86 @@ struct JustNoiseApp: App {
             }
         }
     }
+
+    @MainActor
+    private func prepareAccountDataForUse() async {
+        guard isRetryingAccountCleanup == false else { return }
+        isRetryingAccountCleanup = true
+        accountCleanupError = nil
+        defer { isRetryingAccountCleanup = false }
+
+        switch await retryPendingAccountDeletionCleanupIfNeeded() {
+        case .notNeeded:
+            if nfcViewModel.isHydrated == false {
+                nfcViewModel.hydrateOnLaunch()
+            }
+            if signalStore.isHydrated == false {
+                signalStore.hydrateOnLaunch()
+            }
+        case .completed:
+            // Cleanup reset both stores to an empty in-memory boundary. Rehydrating here
+            // could restore partially deleted data if a future cleanup surface regresses.
+            break
+        case .blocked(let message):
+            accountCleanupError = message
+        }
+    }
+
+    @MainActor
+    private func retryPendingAccountDeletionCleanupIfNeeded() async -> StartupAccountCleanupOutcome {
+        let cleaner = LocalAccountDataCleaner()
+        guard cleaner.hasPendingCleanup else { return .notNeeded }
+
+        let signedIn = $isSignedIn
+        let coordinator = AccountDeletionCoordinator(
+            remoteDeleter: AccountDeletionService(
+                functionURL: SupabaseManager.shared.deleteAccountFunctionURL
+            ),
+            cleaner: cleaner,
+            systemEffects: LiveAccountDeletionSystemEffects(
+                nfcViewModel: nfcViewModel,
+                signalStore: signalStore
+            ),
+            identityResetter: LiveAccountDeletionIdentityResetter(),
+            authSignOut: LiveAccountDeletionAuthSignOut(),
+            setSignedOut: { signedIn.wrappedValue = false }
+        )
+
+        do {
+            try await coordinator.retryPendingLocalCleanupIfNeeded()
+            return .completed
+        } catch {
+            // The marker remains and product data stays behind this blocking gate.
+            return .blocked(error.localizedDescription)
+        }
+    }
+
+    @ViewBuilder
+    private func accountCleanupGate(message: String) -> some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 18) {
+                Text("Finishing account cleanup")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text(message)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.72))
+                Button("Retry") {
+                    Task { await prepareAccountDataForUse() }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isRetryingAccountCleanup || isSignedIn)
+            }
+            .padding(32)
+        }
+    }
+}
+
+private enum StartupAccountCleanupOutcome {
+    case notNeeded
+    case completed
+    case blocked(String)
 }
 
 func requestTrackingPermission() {
@@ -157,17 +261,23 @@ func requestTrackingPermission() {
 
 // MARK: - No-survey Authenticated Container
 struct AuthenticatedContainerView: View {
+    @EnvironmentObject var nfcViewModel: NFCViewModel
     @EnvironmentObject var subscriptionManager: SubscriptionManager
 
     var body: some View {
         MainTabView()
             .onAppear {
+                DeviceActivityBridge.resumeAfterAccountSignIn()
+                nfcViewModel.resumeAfterAccountSignIn()
                 Task { await subscriptionManager.updateSubscriptionStatus() }
 
                 if let user = SupabaseManager.shared.client.auth.currentUser {
                     var props: [String: Any] = [:]
                     if let email = user.email { props["email"] = email }
-                    PostHogSDK.shared.identify(user.id.uuidString, userProperties: props)
+                    JustNoiseAnalyticsRuntime.shared.identify(
+                        user.id.uuidString,
+                        userProperties: props
+                    )
                 }
             }
     }
