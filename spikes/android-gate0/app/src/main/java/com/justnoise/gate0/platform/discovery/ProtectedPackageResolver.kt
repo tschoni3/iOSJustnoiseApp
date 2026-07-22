@@ -1,6 +1,5 @@
 package com.justnoise.gate0.platform.discovery
 
-import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -31,10 +30,6 @@ class ProtectedPackageResolver(
         context.getSystemService(TelecomManager::class.java)
             ?.defaultDialerPackage
             ?.let(::add)
-
-        context.getSystemService(RoleManager::class.java)
-            ?.getRoleHolders(RoleManager.ROLE_DIALER)
-            ?.let(::addAll)
     }
 
     private fun resolveHomePackages(): Set<String> {
