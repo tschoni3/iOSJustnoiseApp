@@ -25,13 +25,13 @@ There is no backend, account, analytics, network permission, `QUERY_ALL_PACKAGES
 
 ## Toolchain and wrapper bootstrap
 
-The project is pinned to Android Gradle Plugin 9.3.0, Gradle 9.5.0, built-in Kotlin, JDK 17, and compile/target SDK 36. The creating Mac had no Java, Gradle, Android SDK, or ADB, so no unreviewed local toolchain was installed and the Gradle wrapper JAR could not be generated locally. `gradle-wrapper.properties` is checked in; the workflow uses a pinned official Gradle action to obtain Gradle 9.5.0, generates the standard wrapper, validates its JAR against Gradle's known checksums, and then builds only through that wrapper.
+The project is pinned to Android Gradle Plugin 9.3.0, Gradle 9.5.0, built-in Kotlin, JDK 17, and compile/target SDK 36. The creating Mac had no Java, Gradle, Android SDK, or ADB, so no unreviewed local toolchain was installed. The standard wrapper was generated in the pinned CI environment, passed Gradle wrapper validation, and is checked in so every build uses the same entry point. The official Gradle 9.5.0 binary ZIP SHA-256 is `553c78f50dafcd54d65b9a444649057857469edf836431389695608536d6b746`; the official wrapper JAR SHA-256 is `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`.
 
-To check in the wrapper later without Android Studio, use a trusted JDK 17 and an official Gradle 9.5.0 binary:
+To regenerate the wrapper later without Android Studio, use a trusted JDK 17 and an official Gradle 9.5.0 binary:
 
 ```sh
 cd spikes/android-gate0
-JAVA_HOME=/absolute/path/to/jdk-17 /absolute/path/to/gradle-9.5.0/bin/gradle wrapper --gradle-version 9.5.0 --distribution-type bin
+JAVA_HOME=/absolute/path/to/jdk-17 /absolute/path/to/gradle-9.5.0/bin/gradle wrapper --gradle-version 9.5.0 --distribution-type bin --gradle-distribution-sha256-sum 553c78f50dafcd54d65b9a444649057857469edf836431389695608536d6b746
 ./gradlew --version
 ```
 

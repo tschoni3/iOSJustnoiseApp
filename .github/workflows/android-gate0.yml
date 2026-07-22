@@ -46,10 +46,8 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle 9.5.0
+      - name: Set up Gradle caching
         uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
-        with:
-          gradle-version: "9.5.0"
 
       - name: Set up Android command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
@@ -57,27 +55,8 @@ jobs:
       - name: Install Android SDK 36 for CI only
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Bootstrap the standard wrapper
-        run: >-
-          gradle --project-dir spikes/android-gate0 wrapper
-          --gradle-version 9.5.0
-          --distribution-type bin
-          --gradle-distribution-sha256-sum 940e623ea98e40ea9ad398770a6ebb91a61c0869d394dda81aa86b0f4f0025e7
-
       - name: Validate Gradle wrapper checksums
         uses: gradle/actions/wrapper-validation@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
-
-      - name: Upload generated wrapper for repository bootstrap
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: android-gate0-gradle-wrapper
-          path: |
-            spikes/android-gate0/gradlew
-            spikes/android-gate0/gradlew.bat
-            spikes/android-gate0/gradle/wrapper/gradle-wrapper.jar
-            spikes/android-gate0/gradle/wrapper/gradle-wrapper.properties
-          if-no-files-found: error
-          retention-days: 7
 
       - name: Verify static policy boundary and shared contracts
         run: bash spikes/android-gate0/scripts/verify-static-policy.sh
