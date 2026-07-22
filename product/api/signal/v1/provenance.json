@@ -1,0 +1,47 @@
+{
+  "provenanceVersion": 1,
+  "source": {
+    "repository": "https://github.com/tschoni3/JustNoiseApp",
+    "mergeCommit": "d445e7a45025b59ced388465cff3c84dd9ee86fd",
+    "contractPath": "contracts/signal/v1",
+    "openAPIDocumentVersion": "1.0.0",
+    "responseContractVersion": 1
+  },
+  "files": [
+    {
+      "path": "openapi.yaml",
+      "sourcePath": "contracts/signal/v1/openapi.yaml",
+      "sha256": "ab5fe3290917ef81bc74ca24293664e19692cf2992150c313cf513ea645f4ab0"
+    },
+    {
+      "path": "fixtures/comment.json",
+      "sourcePath": "contracts/signal/v1/fixtures/comment.json",
+      "sha256": "833826c4697bd7c973369ebd34034119d241547db2c9b532e7d058bd73d0bfc0"
+    },
+    {
+      "path": "fixtures/error.json",
+      "sourcePath": "contracts/signal/v1/fixtures/error.json",
+      "sha256": "a25a9cf3f9567004f2c37c4cf27903f26e4c2a37642a5656e73605000cb2bc9c"
+    },
+    {
+      "path": "fixtures/existing-thread.json",
+      "sourcePath": "contracts/signal/v1/fixtures/existing-thread.json",
+      "sha256": "a46a79037e2cad0caa049c5ea435a76a1fb533a73c08b9941c36d6a6998cadca"
+    },
+    {
+      "path": "fixtures/request.json",
+      "sourcePath": "contracts/signal/v1/fixtures/request.json",
+      "sha256": "5e665cfe17ac3d38262f7f3393d69fc9f72e1e0e8cc07f0c36935c14d2015c5d"
+    },
+    {
+      "path": "fixtures/safety-hold.json",
+      "sourcePath": "contracts/signal/v1/fixtures/safety-hold.json",
+      "sha256": "e122a956d5f4ff5d9c5703e52bd2724a3b9a6e88f41add439d88c2d7ac4cff81"
+    },
+    {
+      "path": "fixtures/silence.json",
+      "sourcePath": "contracts/signal/v1/fixtures/silence.json",
+      "sha256": "ef28f49337f49dfb9e15c9d83f96ede85e9c70b8dce5cb944406d06f0ec44a7f"
+    }
+  ]
+}

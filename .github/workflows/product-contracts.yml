@@ -1,0 +1,44 @@
+name: Product contracts
+
+on:
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "docs/**"
+      - "product/**"
+      - "justnoiseradioTests/SignalBackendContractFixtureTests.swift"
+      - "scripts/verify-product-contracts.sh"
+      - ".github/workflows/product-contracts.yml"
+      - ".github/workflows/ios-verification.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "AGENTS.md"
+      - "docs/**"
+      - "product/**"
+      - "justnoiseradioTests/SignalBackendContractFixtureTests.swift"
+      - "scripts/verify-product-contracts.sh"
+      - ".github/workflows/product-contracts.yml"
+      - ".github/workflows/ios-verification.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: product-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Validate shared product files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Verify product contracts
+        run: bash scripts/verify-product-contracts.sh

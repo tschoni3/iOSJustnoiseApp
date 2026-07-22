@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetVersion": "1.1.0",
+  "description": "Framework-neutral examples that both native clients must exercise in domain tests.",
+  "targetSelectionValidity": [
+    {
+      "id": "empty",
+      "applicationCount": 0,
+      "categoryCount": 0,
+      "websiteCount": 0,
+      "expectedValid": false
+    },
+    {
+      "id": "application-only",
+      "applicationCount": 1,
+      "categoryCount": 0,
+      "websiteCount": 0,
+      "expectedValid": true
+    },
+    {
+      "id": "category-only",
+      "applicationCount": 0,
+      "categoryCount": 1,
+      "websiteCount": 0,
+      "expectedValid": true
+    },
+    {
+      "id": "website-only",
+      "applicationCount": 0,
+      "categoryCount": 0,
+      "websiteCount": 1,
+      "expectedValid": true
+    },
+    {
+      "id": "mixed",
+      "applicationCount": 2,
+      "categoryCount": 1,
+      "websiteCount": 3,
+      "expectedValid": true
+    }
+  ],
+  "accidentalStopGuard": {
+    "minimumElapsedMilliseconds": 3000,
+    "cases": [
+      {
+        "id": "start",
+        "elapsedMilliseconds": 0,
+        "expectedStopAllowed": false
+      },
+      {
+        "id": "just-before-threshold",
+        "elapsedMilliseconds": 2999,
+        "expectedStopAllowed": false
+      },
+      {
+        "id": "at-threshold",
+        "elapsedMilliseconds": 3000,
+        "expectedStopAllowed": true
+      },
+      {
+        "id": "after-threshold",
+        "elapsedMilliseconds": 3001,
+        "expectedStopAllowed": true
+      }
+    ]
+  },
+  "shieldMessageRendering": [
+    {
+      "id": "application-name",
+      "displayName": "Forest",
+      "fallbackCopyKey": "shield.application.fallbackName",
+      "expectedMessage": "Forest is currently Zapped.\nTap your Zap to access it."
+    },
+    {
+      "id": "blank-application-name",
+      "displayName": "   ",
+      "fallbackCopyKey": "shield.application.fallbackName",
+      "expectedMessage": "This app is currently Zapped.\nTap your Zap to access it."
+    },
+    {
+      "id": "blank-website-name",
+      "displayName": "",
+      "fallbackCopyKey": "shield.website.fallbackName",
+      "expectedMessage": "This website is currently Zapped.\nTap your Zap to access it."
+    }
+  ],
+  "zapReadHandling": [
+    {
+      "id": "authorized-first-read",
+      "payloadClassification": "authorized",
+      "acceptedReadAlreadyHandled": false,
+      "expectedOutcome": "accepted",
+      "expectedMutationEligible": true
+    },
+    {
+      "id": "authorized-duplicate-read",
+      "payloadClassification": "authorized",
+      "acceptedReadAlreadyHandled": true,
+      "expectedOutcome": "duplicateIgnored",
+      "expectedMutationEligible": false
+    },
+    {
+      "id": "unauthorized-read",
+      "payloadClassification": "unauthorized",
+      "acceptedReadAlreadyHandled": false,
+      "expectedOutcome": "unauthorized",
+      "expectedMutationEligible": false
+    },
+    {
+      "id": "malformed-read",
+      "payloadClassification": "malformed",
+      "acceptedReadAlreadyHandled": false,
+      "expectedOutcome": "invalid",
+      "expectedMutationEligible": false
+    },
+    {
+      "id": "canceled-read",
+      "payloadClassification": "canceled",
+      "acceptedReadAlreadyHandled": false,
+      "expectedOutcome": "canceled",
+      "expectedMutationEligible": false
+    }
+  ],
+  "sessionLifecycle": [
+    {
+      "id": "authorized-idle-start",
+      "priorState": "idle",
+      "readOutcome": "accepted",
+      "selectionValid": true,
+      "capability": "available",
+      "elapsedMilliseconds": 0,
+      "expectedTransition": "start",
+      "expectedState": "active",
+      "expectedRestrictionAction": "apply"
+    },
+    {
+      "id": "missing-selection-start-fails",
+      "priorState": "idle",
+      "readOutcome": "accepted",
+      "selectionValid": false,
+      "capability": "available",
+      "elapsedMilliseconds": 0,
+      "expectedTransition": "startFailed",
+      "expectedState": "failed",
+      "expectedRestrictionAction": "none"
+    },
+    {
+      "id": "permission-denied-start-fails",
+      "priorState": "idle",
+      "readOutcome": "accepted",
+      "selectionValid": true,
+      "capability": "permissionDenied",
+      "elapsedMilliseconds": 0,
+      "expectedTransition": "startFailed",
+      "expectedState": "failed",
+      "expectedRestrictionAction": "none"
+    },
+    {
+      "id": "unauthorized-idle-no-change",
+      "priorState": "idle",
+      "readOutcome": "unauthorized",
+      "selectionValid": true,
+      "capability": "available",
+      "elapsedMilliseconds": 0,
+      "expectedTransition": "noChange",
+      "expectedState": "idle",
+      "expectedRestrictionAction": "none"
+    },
+    {
+      "id": "authorized-active-too-early",
+      "priorState": "active",
+      "readOutcome": "accepted",
+      "selectionValid": true,
+      "capability": "available",
+      "elapsedMilliseconds": 2999,
+      "expectedTransition": "stopRejected",
+      "expectedState": "active",
+      "expectedRestrictionAction": "none"
+    },
+    {
+      "id": "authorized-active-stop",
+      "priorState": "active",
+      "readOutcome": "accepted",
+      "selectionValid": true,
+      "capability": "available",
+      "elapsedMilliseconds": 3000,
+      "expectedTransition": "stop",
+      "expectedState": "idle",
+      "expectedRestrictionAction": "clear"
+    },
+    {
+      "id": "duplicate-active-no-change",
+      "priorState": "active",
+      "readOutcome": "duplicateIgnored",
+      "selectionValid": true,
+      "capability": "available",
+      "elapsedMilliseconds": 3000,
+      "expectedTransition": "noChange",
+      "expectedState": "active",
+      "expectedRestrictionAction": "none"
+    }
+  ],
+  "weekdayIdentifiers": {
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  }
+}
