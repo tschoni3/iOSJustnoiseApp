@@ -77,7 +77,9 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         didSet { UserDefaults.standard.set(emergencyUnzapCount, forKey: SharedKeys.emergencyUnzapKey) }
     }
 
-    private let authorizedTagUIDs: Set<String> = [
+    // Compatibility allow-list for Zaps already in use. Provisioning, rotation,
+    // migration, and secret storage remain a separate product/security decision.
+    private let authorizedTagPayloads: Set<String> = [
         "tschoni",
         "Tschoni",
         "ZAP-123456",
@@ -88,6 +90,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     var store = ManagedSettingsStore()
     private var sessionStartDate: Date?
     private var unauthorizedTagDetected = false
+    private var acceptedNFCReadHandled = false
     private let selectedModeKey = "selectedModeID"
     private let scheduleStore = ScheduleStore()
 
@@ -274,7 +277,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     func startScanning(purpose: ScanningPurpose) {
         if purpose == .sessionToggle, isAppsBlocked, let start = sessionStartDate {
             let elapsed = Date().timeIntervalSince(start)
-            if elapsed < 3 {
+            if !AccidentalStopGuard.allowsStop(elapsedSeconds: elapsed) {
                 let gen = UINotificationFeedbackGenerator()
                 gen.notificationOccurred(.warning)
 
@@ -294,23 +297,21 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             return
         }
 
-        scanningPurpose = purpose
-
         switch purpose {
         case .activation:
             guard !isActivated else { setError(.alreadyActivated); return }
         case .sessionToggle:
             if !isAppsBlocked {
                 guard let mode = selectedMode else { setError(.invalidModeSelection); return }
-                let noApps = mode.selectedApps.applicationTokens.isEmpty
-                let noCategories = mode.selectedApps.categoryTokens.isEmpty
-                let noWeb = mode.selectedApps.webDomainTokens.isEmpty
-                if noApps && noCategories && noWeb { setError(.invalidModeSelection); return }
+                guard mode.selectedApps.hasBlockingTargets else { setError(.invalidModeSelection); return }
             }
         }
 
         guard NFCNDEFReaderSession.readingAvailable else { setError(.nfcNotAvailable); return }
 
+        scanningPurpose = purpose
+        acceptedNFCReadHandled = false
+        unauthorizedTagDetected = false
         session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: true)
         switch purpose {
         case .activation:
@@ -354,26 +355,32 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
                 return
             }
 
-            for message in messages {
-                for record in message.records {
-                    guard record.payload.count > 3 else { self.setError(.invalidNFCTag); continue }
-                    let payloadData = record.payload
-                    let payloadSubstring = payloadData.dropFirst(3)
-                    if let payload = String(data: Data(payloadSubstring), encoding: .utf8) {
-                        switch self.scanningPurpose {
-                        case .activation: self.validateTag(payload: payload)
-                        case .sessionToggle: self.toggleAppBlocking()
-                        case .none: self.setError(.unknown(description: "Unknown scan purpose."))
-                        }
-                    } else {
-                        self.setError(.invalidNFCTag)
-                    }
-                }
+            let records = messages.flatMap(\.records).map { record in
+                ZapNDEFRecordInput(
+                    typeNameFormat: record.typeNameFormat == .nfcWellKnown ? .wellKnown : .unsupported,
+                    type: record.type,
+                    payload: record.payload
+                )
+            }
+            let decision = self.firstRelevantZapReadDecision(for: records)
+
+            switch decision.outcome {
+            case .accepted:
+                self.handleAcceptedZapRead()
+            case .duplicateIgnored:
+                self.logger.info("Duplicate NFC read ignored.")
+            case .unauthorized:
+                self.unauthorizedTagDetected = true
+                self.setError(.unauthorizedNFCTag)
+            case .invalid:
+                self.setError(.invalidNFCTag)
+            case .canceled:
+                self.logger.info("Canceled NFC read ignored.")
             }
 
             session.invalidate()
             self.session = nil
-            self.logger.info("NFC session closed after first valid read.")
+            self.logger.info("NFC session closed after handling one read outcome.")
         }
     }
 
@@ -381,22 +388,31 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         logger.info("NFC session did become active.")
     }
 
-    private func validateTag(payload: String) {
-        if authorizedTagUIDs.contains(payload) {
+    private func firstRelevantZapReadDecision(for records: [ZapNDEFRecordInput]) -> ZapReadDecision {
+        let decision = ZapReadPolicy.firstRelevantDecision(
+            records: records,
+            authorizedPayloads: authorizedTagPayloads,
+            acceptedReadAlreadyHandled: acceptedNFCReadHandled
+        )
+        if decision.mutationEligible {
+            acceptedNFCReadHandled = true
+        }
+        return decision
+    }
+
+    @MainActor private func handleAcceptedZapRead() {
+        switch scanningPurpose {
+        case .activation:
             isActivated = true
             saveActivationStatus()
             showAlertWith(message: "JustNoise activated!")
             Analytics.capture("activation_successful", props: [
-                "timestamp": Date().timeIntervalSince1970,
-                "nfc_tag_id": payload
+                "timestamp": Date().timeIntervalSince1970
             ])
-        } else {
-            unauthorizedTagDetected = true
-            setError(.unauthorizedNFCTag)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.session?.invalidate()
-                self.session = nil
-            }
+        case .sessionToggle:
+            toggleAppBlocking()
+        case .none:
+            setError(.unknown(description: "Unknown scan purpose."))
         }
     }
 
@@ -404,7 +420,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         if isAppsBlocked {
             if let startDate = sessionStartDate {
                 let elapsed = Date().timeIntervalSince(startDate)
-                if elapsed < 3 {
+                if !AccidentalStopGuard.allowsStop(elapsedSeconds: elapsed) {
                     let gen = UINotificationFeedbackGenerator()
                     gen.notificationOccurred(.warning)
                     let alertItem = AlertItem(
@@ -433,7 +449,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
     // MARK: - Start/Stop (manual start still allowed)
     @MainActor func blockApplications() {
         guard let mode = selectedMode else { setError(.invalidModeSelection); return }
-        guard !selectionIsEmpty(mode.selectedApps) else { setError(.invalidModeSelection); return }
+        guard mode.selectedApps.hasBlockingTargets else { setError(.invalidModeSelection); return }
 
         store.shield.applications = mode.selectedApps.applicationTokens
         store.shield.applicationCategories = ShieldSettings.ActivityCategoryPolicy.specific(
@@ -1205,10 +1221,6 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
 // MARK: - Selection/Auth helpers
 private extension NFCViewModel {
-    func selectionIsEmpty(_ sel: FamilyActivitySelection) -> Bool {
-        sel.applicationTokens.isEmpty && sel.categoryTokens.isEmpty && sel.webDomainTokens.isEmpty
-    }
-
     /// Request Screen Time auth if needed and ensure the current selected mode targets something.
     func ensureAuthorizationAndSelection() async throws {
         if AuthorizationCenter.shared.authorizationStatus != .approved {
@@ -1217,7 +1229,7 @@ private extension NFCViewModel {
                 throw AppError.unknown(description: "Screen Time permission not granted.")
             }
         }
-        if let sm = selectedMode, selectionIsEmpty(sm.selectedApps) {
+        if let sm = selectedMode, !sm.selectedApps.hasBlockingTargets {
             throw AppError.invalidModeSelection
         }
     }

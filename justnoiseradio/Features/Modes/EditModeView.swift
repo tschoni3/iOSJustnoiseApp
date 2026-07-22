@@ -100,7 +100,7 @@ struct EditModeView: View {
     
     // Computed Property to Determine if Save Button Should be Disabled
     private var isSaveDisabled: Bool {
-        editedName.trimmingCharacters(in: .whitespaces).isEmpty || (selection.applicationTokens.isEmpty && selection.categoryTokens.isEmpty)
+        editedName.trimmingCharacters(in: .whitespaces).isEmpty || !selection.hasBlockingTargets
     }
     
     // Save Changes to Mode

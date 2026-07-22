@@ -23,6 +23,7 @@ copy_path = root / "product/copy/en.v1.json"
 fixture_path = root / "product/behavior/portable-fixtures.v1.json"
 workflow_path = root / ".github/workflows/product-contracts.yml"
 ios_workflow_path = root / ".github/workflows/ios-verification.yml"
+portable_rules_test_path = root / "justnoiseradioTests/PortableZapRulesTests.swift"
 signal_api_root = root / "product/api/signal/v1"
 signal_provenance_path = signal_api_root / "provenance.json"
 
@@ -42,6 +43,7 @@ required_contract_paths = (
     "product/api/signal/v1/fixtures/request.json",
     "product/api/signal/v1/fixtures/safety-hold.json",
     "product/api/signal/v1/fixtures/silence.json",
+    "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "scripts/verify-product-contracts.sh",
     ".github/workflows/product-contracts.yml",
@@ -530,6 +532,16 @@ for relative in required_contract_paths:
     if not (root / relative).is_file():
         fail(f"missing required product-contract path: {relative}")
 
+portable_rules_test_text = portable_rules_test_path.read_text(encoding="utf-8")
+for fragment in (
+    "portable-fixtures.v1.json",
+    "targetSelectionValidity",
+    "accidentalStopGuard",
+    "zapReadHandling",
+):
+    if fragment not in portable_rules_test_text:
+        fail(f"portable iOS fixture tests are missing shared behavior marker: {fragment!r}")
+
 required_document_fragments = {
     "AGENTS.md": (
         "product/behavior/portable-fixtures.v1.json",
@@ -574,6 +586,7 @@ for required_path_filter in (
     '"AGENTS.md"',
     '"docs/**"',
     '"product/**"',
+    '"justnoiseradioTests/PortableZapRulesTests.swift"',
     '"justnoiseradioTests/SignalBackendContractFixtureTests.swift"',
     '"scripts/verify-product-contracts.sh"',
     '".github/workflows/product-contracts.yml"',
@@ -585,6 +598,8 @@ if "run: bash scripts/verify-product-contracts.sh" not in workflow_text:
     fail("product-contract workflow must run the repository verifier")
 
 ios_workflow_text = ios_workflow_path.read_text(encoding="utf-8")
+if ios_workflow_text.count('"product/behavior/**"') < 2:
+    fail("iOS workflow must run for pull requests and main pushes that change portable behavior fixtures")
 if ios_workflow_text.count('"product/api/signal/**"') < 2:
     fail("iOS workflow must run for pull requests and main pushes that change the Signal contract pin")
 
@@ -592,6 +607,7 @@ contract_scopes = [
     "AGENTS.md",
     "docs",
     "product",
+    "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "scripts/verify-product-contracts.sh",
     ".github/workflows/product-contracts.yml",
