@@ -1,0 +1,1312 @@
+{
+  "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "JustNoise Signal API",
+    "version": "1.0.0",
+    "description": "Frozen V1 contract for the stateless JustNoise Signal backend. The file uses JSON syntax, which is valid YAML 1.2, so contract tests can parse it without adding a YAML dependency."
+  },
+  "paths": {
+    "/captures": {
+      "post": {
+        "operationId": "createCaptureAnalysis",
+        "summary": "Analyze one locally owned Capture",
+        "description": "Accepts the canonical multipart payload sent by the native clients. The backend stores no Capture data. A successful response is applied only when baseMemoryRevision exactly matches local state; operationId and every memory operationId are deterministic idempotency keys.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureRequest"
+              },
+              "examples": {
+                "canonical": {
+                  "externalValue": "./fixtures/request.json"
+                }
+              },
+              "encoding": {
+                "audio": {
+                  "contentType": "audio/mp4, audio/x-m4a, audio/mpeg, audio/wav"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The Capture was processed. Silence and safety holds are successful responses, not errors.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureResponse"
+                },
+                "examples": {
+                  "comment": {
+                    "externalValue": "./fixtures/comment.json"
+                  },
+                  "existingThread": {
+                    "externalValue": "./fixtures/existing-thread.json"
+                  },
+                  "silence": {
+                    "externalValue": "./fixtures/silence.json"
+                  },
+                  "safetyHold": {
+                    "externalValue": "./fixtures/safety-hold.json"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "429": {
+            "description": "The account or upstream analysis quota is temporarily limited.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until a locally enforced account limit may be retried, when available.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Supabase access token"
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "The request could not be processed. The recording remains local to the client.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "unauthenticated": {
+                "externalValue": "./fixtures/error.json"
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CaptureRequest": {
+        "type": "object",
+        "description": "Canonical clients MUST keep duplicated memory values equal: memory_revision equals memory.memoryRevision, threads equals memory.threads, all_known_threads equals memory.allKnownThreads, existing_comments equals memory.existingComments, and thread_links equals memory.threadLinks. The V1 runtime gives explicit multipart values precedence for revision, comments, all-known threads, and links. It merges thread lists in memory, threads, then all_known_threads order with topic-key deduplication. Equality prevents transport-dependent results.",
+        "additionalProperties": false,
+        "required": [
+          "audio",
+          "selected_mode",
+          "language",
+          "capture_id",
+          "insight_mode",
+          "memory_revision",
+          "recent_captures",
+          "existing_signals",
+          "existing_comments",
+          "threads",
+          "all_known_threads",
+          "thread_links",
+          "memory"
+        ],
+        "properties": {
+          "audio": {
+            "type": "string",
+            "format": "binary",
+            "description": "The Capture audio. The production contract requires this field; text fallback is a development-only server option."
+          },
+          "selected_mode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "capture_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,64}$",
+            "description": "Client-generated stable Capture identifier."
+          },
+          "insight_mode": {
+            "type": "string",
+            "enum": [
+              "automatic",
+              "manual"
+            ]
+          },
+          "memory_revision": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Base local memory revision encoded as a multipart string."
+          },
+          "recent_captures": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/RecentCaptureContextArray"
+            },
+            "description": "JSON-encoded array of recent local Capture context."
+          },
+          "existing_signals": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/ExistingSignalContextArray"
+            },
+            "description": "JSON-encoded array of already surfaced local Signals."
+          },
+          "existing_comments": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/ExistingCommentContextArray"
+            },
+            "description": "JSON-encoded array of existing local comments."
+          },
+          "threads": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/MemoryThreadContextArray"
+            },
+            "description": "JSON-encoded array of the most relevant local topic threads."
+          },
+          "all_known_threads": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/MemoryThreadContextArray"
+            },
+            "description": "JSON-encoded array of all bounded local thread context."
+          },
+          "thread_links": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/ThreadLinkContextArray"
+            },
+            "description": "JSON-encoded array of local thread links."
+          },
+          "memory": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {
+              "$ref": "#/components/schemas/MemoryContext"
+            },
+            "description": "JSON-encoded V1 local memory context, including memoryRevision."
+          }
+        }
+      },
+      "RecentCaptureContextArray": {
+        "type": "array",
+        "maxItems": 10,
+        "items": {
+          "$ref": "#/components/schemas/RecentCaptureContext"
+        }
+      },
+      "RecentCaptureContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capture_id",
+          "created_at",
+          "summary",
+          "themes"
+        ],
+        "properties": {
+          "capture_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceLanguage": {
+            "type": "string"
+          },
+          "emotion": {
+            "type": "string"
+          },
+          "strongQuote": {
+            "type": "string"
+          },
+          "transcript": {
+            "type": "string"
+          },
+          "clarifiedTranscript": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "tension": {
+            "type": "string"
+          },
+          "highlight": {
+            "type": "string"
+          },
+          "signalStrength": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "emotionalIntensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "ExistingSignalContextArray": {
+        "type": "array",
+        "maxItems": 10,
+        "items": {
+          "$ref": "#/components/schemas/ExistingSignalContext"
+        }
+      },
+      "ExistingSignalContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "text",
+          "created_at",
+          "source_capture_ids",
+          "themes",
+          "origin",
+          "reveal_state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source_capture_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "origin": {
+            "type": "string"
+          },
+          "reveal_state": {
+            "type": "string"
+          },
+          "revealed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ExistingCommentContextArray": {
+        "type": "array",
+        "maxItems": 30,
+        "items": {
+          "$ref": "#/components/schemas/ExistingCommentContext"
+        }
+      },
+      "ExistingCommentContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "anchor_capture_id",
+          "text",
+          "created_at",
+          "thread_ids",
+          "source_capture_ids"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "anchor_capture_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hat": {
+            "$ref": "#/components/schemas/VisibleHat"
+          },
+          "path": {
+            "$ref": "#/components/schemas/CommentPath"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "thread_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_capture_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "MemoryThreadContextArray": {
+        "type": "array",
+        "maxItems": 30,
+        "items": {
+          "$ref": "#/components/schemas/MemoryThreadContext"
+        }
+      },
+      "MemoryThreadContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "topicKey",
+          "themes",
+          "occurrenceCount",
+          "captureIds",
+          "evidenceQuotes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "topicKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occurrenceCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "intensity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "intensityTrend": {
+            "type": "string"
+          },
+          "firstSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "captureIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidenceQuotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceQuote"
+            }
+          }
+        }
+      },
+      "ThreadLinkContextArray": {
+        "type": "array",
+        "maxItems": 30,
+        "items": {
+          "$ref": "#/components/schemas/ThreadLinkContext"
+        }
+      },
+      "ThreadLinkContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sourceThreadId",
+          "targetThreadId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceThreadId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetThreadId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "MemoryContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "source",
+          "memoryRevision",
+          "threads",
+          "allKnownThreads",
+          "threadLinks",
+          "existingComments",
+          "categories"
+        ],
+        "properties": {
+          "version": {
+            "type": "string",
+            "const": "v1"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "memoryRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "narrativeSummary": {
+            "type": "string"
+          },
+          "threads": {
+            "$ref": "#/components/schemas/MemoryThreadContextArray"
+          },
+          "allKnownThreads": {
+            "$ref": "#/components/schemas/MemoryThreadContextArray"
+          },
+          "threadLinks": {
+            "$ref": "#/components/schemas/ThreadLinkContextArray"
+          },
+          "existingComments": {
+            "$ref": "#/components/schemas/ExistingCommentContextArray"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          }
+        }
+      },
+      "CaptureResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "engineVersion",
+          "operationId",
+          "baseMemoryRevision",
+          "nextMemoryRevision",
+          "requiresExactBaseRevision",
+          "capturePatch",
+          "memoryPatch",
+          "commentDecision",
+          "safety",
+          "comment",
+          "serverStorage"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "engineVersion": {
+            "type": "string",
+            "const": "justnoise-backend-v1"
+          },
+          "operationId": {
+            "type": "string",
+            "pattern": "^operation-[0-9a-f]{32}$",
+            "description": "Deterministic response-level idempotency key."
+          },
+          "baseMemoryRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextMemoryRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "requiresExactBaseRevision": {
+            "type": "boolean",
+            "const": true
+          },
+          "capturePatch": {
+            "$ref": "#/components/schemas/CapturePatch"
+          },
+          "memoryPatch": {
+            "$ref": "#/components/schemas/MemoryPatch"
+          },
+          "commentDecision": {
+            "$ref": "#/components/schemas/CommentDecision"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/Safety"
+          },
+          "comment": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Comment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serverStorage": {
+            "type": "string",
+            "const": "none"
+          }
+        }
+      },
+      "CapturePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "captureId",
+          "transcript",
+          "sourceLanguage",
+          "summary",
+          "themes",
+          "category",
+          "emotion",
+          "intensity",
+          "tension",
+          "desire",
+          "avoidedAction",
+          "currentState",
+          "processingStatus",
+          "processedAt",
+          "strongQuote",
+          "clarifiedTranscript",
+          "context",
+          "highlight",
+          "signalStrength"
+        ],
+        "properties": {
+          "captureId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,64}$"
+          },
+          "transcript": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "emotion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "intensity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "tension": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "desire": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "avoidedAction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currentState": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "processingStatus": {
+            "type": "string",
+            "const": "processed"
+          },
+          "processedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "strongQuote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "clarifiedTranscript": {
+            "type": "string",
+            "minLength": 1
+          },
+          "context": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "highlight": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "signalStrength": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "MemoryPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operations"
+        ],
+        "properties": {
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryOperation"
+            }
+          }
+        }
+      },
+      "MemoryOperation": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CreateThreadOperation"
+          },
+          {
+            "$ref": "#/components/schemas/AppendCaptureToThreadOperation"
+          },
+          {
+            "$ref": "#/components/schemas/UpdateThreadStateOperation"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "createThread": "#/components/schemas/CreateThreadOperation",
+            "appendCaptureToThread": "#/components/schemas/AppendCaptureToThreadOperation",
+            "updateThreadState": "#/components/schemas/UpdateThreadStateOperation"
+          }
+        }
+      },
+      "MemoryOperationType": {
+        "type": "string",
+        "enum": [
+          "createThread",
+          "appendCaptureToThread",
+          "updateThreadState"
+        ]
+      },
+      "CreateThreadOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "type",
+          "thread"
+        ],
+        "properties": {
+          "operationId": {
+            "$ref": "#/components/schemas/MemoryOperationId"
+          },
+          "type": {
+            "type": "string",
+            "const": "createThread"
+          },
+          "thread": {
+            "$ref": "#/components/schemas/Thread"
+          }
+        }
+      },
+      "AppendCaptureToThreadOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "type",
+          "threadId",
+          "captureId"
+        ],
+        "properties": {
+          "operationId": {
+            "$ref": "#/components/schemas/MemoryOperationId"
+          },
+          "type": {
+            "type": "string",
+            "const": "appendCaptureToThread"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "captureId": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateThreadStateOperation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "type",
+          "threadId",
+          "threadPatch",
+          "state"
+        ],
+        "properties": {
+          "operationId": {
+            "$ref": "#/components/schemas/MemoryOperationId"
+          },
+          "type": {
+            "type": "string",
+            "const": "updateThreadState"
+          },
+          "threadId": {
+            "type": "string"
+          },
+          "threadPatch": {
+            "$ref": "#/components/schemas/ThreadPatch"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "MemoryOperationId": {
+        "type": "string",
+        "pattern": "^memory-[0-9a-f]{32}$",
+        "description": "Deterministic per-operation idempotency key."
+      },
+      "Thread": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "topicKey",
+          "category",
+          "themes",
+          "occurrenceCount",
+          "intensity",
+          "intensityTrend",
+          "firstSeen",
+          "lastSeen",
+          "captureIds",
+          "evidenceQuotes",
+          "state",
+          "commentState"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "topicKey": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occurrenceCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "intensity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "intensityTrend": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "firstSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "captureIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidenceQuotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceQuote"
+            }
+          },
+          "state": {
+            "type": "string"
+          },
+          "commentState": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ThreadPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "topicKey",
+          "category",
+          "themes",
+          "occurrenceCount",
+          "intensity",
+          "intensityTrend",
+          "firstSeen",
+          "lastSeen",
+          "captureIds",
+          "evidenceQuotes",
+          "state",
+          "commentState"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "topicKey": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occurrenceCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "intensity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "intensityTrend": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "firstSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "captureIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidenceQuotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenceQuote"
+            }
+          },
+          "state": {
+            "type": "string"
+          },
+          "commentState": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EvidenceQuote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "captureId",
+          "quote"
+        ],
+        "properties": {
+          "captureId": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          }
+        }
+      },
+      "CommentDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "shouldShow",
+          "shouldCreate",
+          "reason",
+          "blockReason",
+          "hat",
+          "path"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/Hat"
+          },
+          "shouldShow": {
+            "type": "boolean"
+          },
+          "shouldCreate": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "blockReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hat": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/VisibleHat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "path": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CommentPath"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Safety": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "isSafe",
+          "blocked",
+          "hold",
+          "reason",
+          "categories"
+        ],
+        "properties": {
+          "isSafe": {
+            "type": "boolean"
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "hold": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "anchorCaptureId",
+          "text",
+          "hat",
+          "path",
+          "createdAt",
+          "threadIds",
+          "sourceCaptureIds",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^comment-[0-9a-f]{32}$"
+          },
+          "anchorCaptureId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hat": {
+            "$ref": "#/components/schemas/VisibleHat"
+          },
+          "path": {
+            "$ref": "#/components/schemas/CommentPath"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "threadIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceCaptureIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "type": "string",
+            "const": "visible"
+          }
+        }
+      },
+      "Hat": {
+        "type": "string",
+        "enum": [
+          "mirror",
+          "anchor",
+          "question",
+          "pattern",
+          "action",
+          "reframe",
+          "silence"
+        ]
+      },
+      "VisibleHat": {
+        "type": "string",
+        "enum": [
+          "mirror",
+          "anchor",
+          "question",
+          "pattern",
+          "action",
+          "reframe"
+        ]
+      },
+      "CommentPath": {
+        "type": "string",
+        "enum": [
+          "state_moment",
+          "narrative_change"
+        ]
+      },
+      "Category": {
+        "type": "string",
+        "enum": [
+          "work",
+          "money_security",
+          "health_body",
+          "relationships",
+          "creativity_identity",
+          "emotions_mind",
+          "projects_execution",
+          "life_direction",
+          "uncategorized"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "secure_transport_required",
+              "rate_limited",
+              "unauthenticated",
+              "auth_unavailable",
+              "quota_unavailable",
+              "signal_engine_unavailable"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

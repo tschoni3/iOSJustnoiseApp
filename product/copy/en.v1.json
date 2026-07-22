@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "copyVersion": "1.0.0",
+  "locale": "en",
+  "description": "Core cross-platform English copy. This is a deliberately small baseline, not a complete localization catalog.",
+  "strings": {
+    "brand.displayName": "Justnoise",
+    "navigation.zap": "Zap",
+    "navigation.capture": "Capture",
+    "zap.idle.title": "Zap to Block",
+    "zap.idle.subtitle": "Distractions",
+    "zap.active.title": "Phone Zapped",
+    "zap.active.action.stop": "Unzap Phone",
+    "mode.selector.label": "Select a mode",
+    "mode.selector.empty": "Select a Mode",
+    "mode.list.title": "Select Mode",
+    "mode.list.prompt": "What do you want to make space for?",
+    "mode.list.emptyAction": "Select apps to block",
+    "schedule.list.title": "Schedules",
+    "schedule.list.empty": "No schedules yet. Tap + to create one.",
+    "shield.title": "THIS IS JUSTNOISE",
+    "shield.item.message": "{appName} is currently Zapped.\nTap your Zap to access it.",
+    "shield.application.fallbackName": "This app",
+    "shield.website.fallbackName": "This website",
+    "shield.primaryAction": "Keep going",
+    "session.complete.title": "Session Complete",
+    "session.complete.body": "Your focus was protected."
+  }
+}

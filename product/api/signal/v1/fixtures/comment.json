@@ -1,0 +1,98 @@
+{
+  "contractVersion": 1,
+  "engineVersion": "justnoise-backend-v1",
+  "operationId": "operation-8caed06d41f30714c36e4bcdb7147f02",
+  "baseMemoryRevision": 7,
+  "nextMemoryRevision": 8,
+  "requiresExactBaseRevision": true,
+  "capturePatch": {
+    "captureId": "11111111-1111-4111-8111-111111111111",
+    "transcript": "I keep chasing a promotion, but approval matters more to me than the job itself.",
+    "sourceLanguage": "en",
+    "summary": "Promotion feels like approval rather than desire.",
+    "themes": [
+      "promotion",
+      "approval"
+    ],
+    "category": "work",
+    "emotion": "conflicted",
+    "intensity": 0.82,
+    "tension": "achievement versus autonomy",
+    "desire": "a self-directed life",
+    "avoidedAction": null,
+    "currentState": "questioning the promotion",
+    "processingStatus": "processed",
+    "processedAt": "2026-07-18T12:00:00Z",
+    "strongQuote": "I may be chasing approval.",
+    "clarifiedTranscript": "I keep chasing a promotion, but approval matters more to me than the job itself.",
+    "context": "work",
+    "highlight": "I may be chasing approval.",
+    "signalStrength": 0.91
+  },
+  "memoryPatch": {
+    "operations": [
+      {
+        "operationId": "memory-adb790f26b4ac85b68cc701b1f085500",
+        "type": "createThread",
+        "thread": {
+          "id": "thread-promotion-conflict",
+          "label": "Promotion conflict",
+          "topicKey": "promotion conflict",
+          "category": "work",
+          "themes": [
+            "promotion",
+            "approval"
+          ],
+          "occurrenceCount": 1,
+          "intensity": 0.82,
+          "intensityTrend": null,
+          "firstSeen": "2026-07-18T12:00:00Z",
+          "lastSeen": "2026-07-18T12:00:00Z",
+          "captureIds": [
+            "11111111-1111-4111-8111-111111111111"
+          ],
+          "evidenceQuotes": [
+            {
+              "captureId": "11111111-1111-4111-8111-111111111111",
+              "quote": "I may be chasing approval."
+            }
+          ],
+          "state": "active",
+          "commentState": "commented"
+        }
+      }
+    ]
+  },
+  "commentDecision": {
+    "type": "mirror",
+    "shouldShow": true,
+    "shouldCreate": true,
+    "reason": "state_moment",
+    "blockReason": null,
+    "hat": "mirror",
+    "path": "state_moment"
+  },
+  "safety": {
+    "isSafe": true,
+    "blocked": false,
+    "hold": false,
+    "reason": null,
+    "categories": []
+  },
+  "comment": {
+    "id": "comment-11bf54f4acf7d83db779548d96487d99",
+    "anchorCaptureId": "11111111-1111-4111-8111-111111111111",
+    "text": "The promotion matters, but approval is starting to matter more than the work.",
+    "hat": "mirror",
+    "path": "state_moment",
+    "createdAt": "2026-07-18T12:00:00Z",
+    "threadIds": [
+      "thread-promotion-conflict"
+    ],
+    "sourceCaptureIds": [
+      "11111111-1111-4111-8111-111111111111"
+    ],
+    "state": "visible"
+  },
+  "serverStorage": "none"
+}

@@ -1,0 +1,50 @@
+{
+  "contractVersion": 1,
+  "engineVersion": "justnoise-backend-v1",
+  "operationId": "operation-d202a469940bef24d648eb6bc09c46e6",
+  "baseMemoryRevision": 8,
+  "nextMemoryRevision": 9,
+  "requiresExactBaseRevision": true,
+  "capturePatch": {
+    "captureId": "44444444-4444-4444-8444-444444444444",
+    "transcript": "A short capture.",
+    "sourceLanguage": "en",
+    "summary": "A short capture.",
+    "themes": [],
+    "category": "uncategorized",
+    "emotion": null,
+    "intensity": null,
+    "tension": null,
+    "desire": null,
+    "avoidedAction": null,
+    "currentState": null,
+    "processingStatus": "processed",
+    "processedAt": "2026-07-18T12:01:00Z",
+    "strongQuote": null,
+    "clarifiedTranscript": "A short capture.",
+    "context": "A short capture.",
+    "highlight": null,
+    "signalStrength": null
+  },
+  "memoryPatch": {
+    "operations": []
+  },
+  "commentDecision": {
+    "type": "silence",
+    "shouldShow": false,
+    "shouldCreate": false,
+    "reason": "transcript_too_short",
+    "blockReason": "transcript_too_short",
+    "hat": null,
+    "path": null
+  },
+  "safety": {
+    "isSafe": true,
+    "blocked": false,
+    "hold": false,
+    "reason": null,
+    "categories": []
+  },
+  "comment": null,
+  "serverStorage": "none"
+}

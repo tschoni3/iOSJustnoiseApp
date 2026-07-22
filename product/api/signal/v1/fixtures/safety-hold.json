@@ -1,0 +1,52 @@
+{
+  "contractVersion": 1,
+  "engineVersion": "justnoise-backend-v1",
+  "operationId": "operation-00cc674d1ab75e5b5f2fa82a06470901",
+  "baseMemoryRevision": 9,
+  "nextMemoryRevision": 10,
+  "requiresExactBaseRevision": true,
+  "capturePatch": {
+    "captureId": "55555555-5555-4555-8555-555555555555",
+    "transcript": "I am in immediate danger and need urgent help.",
+    "sourceLanguage": "en",
+    "summary": "I am in immediate danger and need urgent help.",
+    "themes": [],
+    "category": "uncategorized",
+    "emotion": null,
+    "intensity": null,
+    "tension": null,
+    "desire": null,
+    "avoidedAction": null,
+    "currentState": null,
+    "processingStatus": "processed",
+    "processedAt": "2026-07-18T12:02:00Z",
+    "strongQuote": null,
+    "clarifiedTranscript": "I am in immediate danger and need urgent help.",
+    "context": "I am in immediate danger and need urgent help.",
+    "highlight": null,
+    "signalStrength": null
+  },
+  "memoryPatch": {
+    "operations": []
+  },
+  "commentDecision": {
+    "type": "silence",
+    "shouldShow": false,
+    "shouldCreate": false,
+    "reason": "safety_hold",
+    "blockReason": "safety_hold",
+    "hat": null,
+    "path": null
+  },
+  "safety": {
+    "isSafe": false,
+    "blocked": true,
+    "hold": true,
+    "reason": "Immediate safety concern.",
+    "categories": [
+      "immediate danger"
+    ]
+  },
+  "comment": null,
+  "serverStorage": "none"
+}
