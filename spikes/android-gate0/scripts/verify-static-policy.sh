@@ -16,16 +16,27 @@ fail() {
     exit 1
 }
 
+contains_literal() {
+    local value="$1"
+    local path="$2"
+
+    if command -v rg >/dev/null 2>&1; then
+        rg --fixed-strings --quiet -- "$value" "$path"
+    else
+        grep -F -R -q -- "$value" "$path"
+    fi
+}
+
 require_literal() {
     local value="$1"
     local file="$2"
-    rg --fixed-strings --quiet "$value" "$file" || fail "missing '$value' in $file"
+    contains_literal "$value" "$file" || fail "missing '$value' in $file"
 }
 
 reject_literal() {
     local value="$1"
     local path="$2"
-    if rg --fixed-strings --quiet "$value" "$path"; then
+    if contains_literal "$value" "$path"; then
         fail "prohibited '$value' found in $path"
     fi
 }
@@ -90,7 +101,11 @@ require_literal '<string name="shield_open_justnoise">Keep going</string>' "$SPI
 require_literal '<cloud-backup>' "$SPIKE_ROOT/app/src/main/res/xml/data_extraction_rules.xml"
 require_literal '<device-transfer>' "$SPIKE_ROOT/app/src/main/res/xml/data_extraction_rules.xml"
 
-matrix_rows="$(rg --count '^\| G0-[0-9]{2} .*\| BLOCKED \| BLOCKED \|' "$MATRIX")"
+if command -v rg >/dev/null 2>&1; then
+    matrix_rows="$(rg --count '^\| G0-[0-9]{2} .*\| BLOCKED \| BLOCKED \|' "$MATRIX" || true)"
+else
+    matrix_rows="$(grep -E -c '^\| G0-[0-9]{2} .*\| BLOCKED \| BLOCKED \|' "$MATRIX" || true)"
+fi
 [[ "$matrix_rows" == "18" ]] || fail "device matrix must contain 18 explicitly BLOCKED rows"
 
 bash "$REPOSITORY_ROOT/scripts/verify-product-contracts.sh"
