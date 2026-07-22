@@ -11,11 +11,11 @@ struct SettingsView: View {
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @EnvironmentObject var signalStore: SignalStore
     @EnvironmentObject var subscriptionManager: SubscriptionManager
+    @EnvironmentObject var authSessionStore: AuthSessionStore
     @Environment(\.presentationMode) var presentationMode
     
     @AppStorage("userName") var userName: String = ""
     @AppStorage("userLanguage") var userLanguage: String = "Auto detect"
-    @AppStorage("isSignedIn") var isSignedIn: Bool = false
     @AppStorage("hasCompletedCoachMarks") private var hasCompletedCoachMarks: Bool = false
     @AppStorage("showPostSessionJournalPrompt") private var showPostSessionJournalPrompt: Bool = true
     
@@ -27,7 +27,7 @@ struct SettingsView: View {
     @State private var deleteError: String?
 
     private var email: String {
-        SupabaseManager.shared.client.auth.currentUser?.email ?? "Not Available"
+        authSessionStore.state.authenticatedAccount?.email ?? "Not Available"
     }
     private var subscriptionStatus: String {
         subscriptionManager.isProActive ? "JustNoise Pro" : "Free"
@@ -184,7 +184,6 @@ struct SettingsView: View {
                         Task {
                             do {
                                 try await SupabaseManager.shared.signOut()
-                                isSignedIn = false
                             } catch {
                                 print("Error during sign out: \(error)")
                             }
@@ -216,7 +215,6 @@ struct SettingsView: View {
 
         do {
             let token = await SupabaseManager.shared.currentAccessToken()
-            let signedIn = $isSignedIn
             let coordinator = AccountDeletionCoordinator(
                 remoteDeleter: deleter,
                 cleaner: LocalAccountDataCleaner(),
@@ -226,7 +224,9 @@ struct SettingsView: View {
                 ),
                 identityResetter: LiveAccountDeletionIdentityResetter(),
                 authSignOut: LiveAccountDeletionAuthSignOut(),
-                setSignedOut: { signedIn.wrappedValue = false }
+                setSignedOut: {
+                    authSessionStore.transitionToSignedOutAfterConfirmedDeletion()
+                }
             )
 
             try await coordinator.deleteAccount(accessToken: token)
@@ -243,5 +243,15 @@ struct SettingsView_Previews: PreviewProvider {
             .environmentObject(NFCViewModel())
             .environmentObject(SignalStore())
             .environmentObject(SubscriptionManager())
+            .environmentObject(
+                AuthSessionStore(
+                    source: .constant(
+                        AuthSessionEvent(
+                            kind: .initialSession,
+                            account: AuthenticatedAccount(id: UUID(), email: "preview@example.com")
+                        )
+                    )
+                )
+            )
     }
 }

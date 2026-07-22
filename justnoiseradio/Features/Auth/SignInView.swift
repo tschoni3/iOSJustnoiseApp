@@ -111,7 +111,6 @@ struct SignInView: View {
     @State private var authMessage: String?
     @State private var showForgotPassword = false
     
-    @AppStorage("isSignedIn") var isSignedIn: Bool = false
     @EnvironmentObject var supabaseManager: SupabaseManager
     
     var body: some View {
@@ -231,7 +230,6 @@ struct SignInView: View {
                             Task {
                                 do {
                                     try await GoogleSignInManager.shared.signIn()
-                                    isSignedIn = true
                                 } catch {
                                     print("Google Sign In error: \(error)")
                                     authMessage = "Google Sign In failed: \(error.localizedDescription)"
@@ -254,7 +252,6 @@ struct SignInView: View {
                                         credentials: .init(provider: .apple, idToken: idToken)
                                     )
                                     print("Apple Sign In succeeded")
-                                    isSignedIn = true
                                 } catch {
                                     print("Apple Sign In error: \(error)")
                                     authMessage = "Apple Sign In failed: \(error.localizedDescription)"
@@ -295,7 +292,6 @@ struct SignInView: View {
         do {
             try await supabaseManager.client.auth.signIn(email: email, password: password)
             print("Sign In succeeded.")
-            isSignedIn = true
         } catch {
             authMessage = "Sign In failed: \(error.localizedDescription)"
             print("Sign In error: \(error)")
@@ -313,7 +309,6 @@ struct SignUpView: View {
     @State private var authMessage: String?
     @State private var showForgotPassword = false
     
-    @AppStorage("isSignedIn") var isSignedIn: Bool = false
     @EnvironmentObject var supabaseManager: SupabaseManager
     @Environment(\.dismiss) var dismiss
 
@@ -436,7 +431,6 @@ struct SignUpView: View {
                             Task {
                                 do {
                                     try await GoogleSignInManager.shared.signIn()
-                                    isSignedIn = true
                                 } catch {
                                     print("Google Sign In error: \(error)")
                                     authMessage = "Google Sign In failed: \(error.localizedDescription)"
@@ -459,7 +453,6 @@ struct SignUpView: View {
                                         credentials: .init(provider: .apple, idToken: idToken)
                                     )
                                     print("Apple Sign In succeeded")
-                                    isSignedIn = true
                                 } catch {
                                     print("Apple Sign In error: \(error)")
                                     authMessage = "Apple Sign In failed: \(error.localizedDescription)"
@@ -533,7 +526,6 @@ struct SignUpView: View {
                 authMessage = "Sign up successful. Check your email for a verification link."
             } else {
                 print("Sign Up returned a session.")
-                isSignedIn = true
             }
         } catch {
             authMessage = "Sign Up failed: \(error.localizedDescription)"

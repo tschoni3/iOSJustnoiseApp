@@ -16,9 +16,9 @@ struct JustNoiseApp: App {
     @StateObject private var nfcViewModel        = NFCViewModel()
     @StateObject private var signalStore         = SignalStore()
     @StateObject private var subscriptionManager = SubscriptionManager()
+    @StateObject private var authSessionStore    = AuthSessionStore()
 
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding = false
-    @AppStorage("isSignedIn")             var isSignedIn            = false
     @AppStorage(LocalAccountDataCleaner.cleanupFallbackDefaultsKey)
     private var hasAccountCleanupFallback = false
 
@@ -89,14 +89,21 @@ struct JustNoiseApp: App {
                         .environmentObject(nfcViewModel)
                         .environmentObject(subscriptionManager)
 
-                } else if !isSignedIn {
+                } else if authSessionStore.state == .resolving {
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        ProgressView("Loading JustNoise…")
+                            .foregroundStyle(.white)
+                    }
+
+                } else if authSessionStore.state == .signedOut {
                     NavigationView {
                         SignInView()
                             .environmentObject(subscriptionManager)
                     }
 
-                } else {
-                    AuthenticatedContainerView()
+                } else if let account = authSessionStore.state.authenticatedAccount {
+                    AuthenticatedContainerView(account: account)
                         .environmentObject(nfcViewModel)
                         .environmentObject(subscriptionManager)
                 }
@@ -151,14 +158,13 @@ struct JustNoiseApp: App {
                     .environmentObject(SupabaseManager.shared)
             }
             .environmentObject(SupabaseManager.shared)
+            .environmentObject(authSessionStore)
             .environmentObject(signalStore)
             .onOpenURL { url in
                 guard url.scheme == "justnoise" else { return }
                 switch url.host {
                 case "open":
-                    if SupabaseManager.shared.client.auth.currentUser != nil {
-                        isSignedIn = true
-                    }
+                    break
                 case "reset-password":
                     if let token = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                         .queryItems?
@@ -203,7 +209,6 @@ struct JustNoiseApp: App {
         let cleaner = LocalAccountDataCleaner()
         guard cleaner.hasPendingCleanup else { return .notNeeded }
 
-        let signedIn = $isSignedIn
         let coordinator = AccountDeletionCoordinator(
             remoteDeleter: AccountDeletionService(
                 functionURL: SupabaseManager.shared.deleteAccountFunctionURL
@@ -215,7 +220,9 @@ struct JustNoiseApp: App {
             ),
             identityResetter: LiveAccountDeletionIdentityResetter(),
             authSignOut: LiveAccountDeletionAuthSignOut(),
-            setSignedOut: { signedIn.wrappedValue = false }
+            setSignedOut: {
+                authSessionStore.transitionToSignedOutAfterConfirmedDeletion()
+            }
         )
 
         do {
@@ -242,7 +249,10 @@ struct JustNoiseApp: App {
                     Task { await prepareAccountDataForUse() }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isRetryingAccountCleanup || isSignedIn)
+                .disabled(
+                    isRetryingAccountCleanup
+                        || authSessionStore.state.authenticatedAccount != nil
+                )
             }
             .padding(32)
         }
@@ -261,6 +271,7 @@ func requestTrackingPermission() {
 
 // MARK: - No-survey Authenticated Container
 struct AuthenticatedContainerView: View {
+    let account: AuthenticatedAccount
     @EnvironmentObject var nfcViewModel: NFCViewModel
     @EnvironmentObject var subscriptionManager: SubscriptionManager
 
@@ -271,14 +282,12 @@ struct AuthenticatedContainerView: View {
                 nfcViewModel.resumeAfterAccountSignIn()
                 Task { await subscriptionManager.updateSubscriptionStatus() }
 
-                if let user = SupabaseManager.shared.client.auth.currentUser {
-                    var props: [String: Any] = [:]
-                    if let email = user.email { props["email"] = email }
-                    JustNoiseAnalyticsRuntime.shared.identify(
-                        user.id.uuidString,
-                        userProperties: props
-                    )
-                }
+                var props: [String: Any] = [:]
+                if let email = account.email { props["email"] = email }
+                JustNoiseAnalyticsRuntime.shared.identify(
+                    account.id.uuidString,
+                    userProperties: props
+                )
             }
     }
 }
