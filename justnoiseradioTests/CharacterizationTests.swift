@@ -194,6 +194,347 @@ final class CaptureClipCharacterizationTests: XCTestCase {
     }
 }
 
+final class CaptureAudioFileStoreTests: XCTestCase {
+    private var rootDirectory: URL!
+    private var draftDirectory: URL!
+    private var clipsDirectory: URL!
+    private var store: CaptureAudioFileStore!
+    private var userDefaults: UserDefaults!
+    private var userDefaultsSuiteName: String!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        rootDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CaptureAudioFileStoreTests-\(UUID().uuidString)", isDirectory: true)
+        draftDirectory = rootDirectory.appendingPathComponent("drafts", isDirectory: true)
+        clipsDirectory = rootDirectory.appendingPathComponent("clips", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+        store = CaptureAudioFileStore(
+            draftDirectory: draftDirectory,
+            clipsDirectory: clipsDirectory
+        )
+        userDefaultsSuiteName = "CaptureAudioFileStoreTests-\(UUID().uuidString)"
+        userDefaults = try XCTUnwrap(UserDefaults(suiteName: userDefaultsSuiteName))
+    }
+
+    override func tearDownWithError() throws {
+        if let rootDirectory {
+            try? FileManager.default.removeItem(at: rootDirectory)
+        }
+        if let userDefaultsSuiteName {
+            UserDefaults.standard.removePersistentDomain(forName: userDefaultsSuiteName)
+        }
+        userDefaults = nil
+        userDefaultsSuiteName = nil
+        store = nil
+        clipsDirectory = nil
+        draftDirectory = nil
+        rootDirectory = nil
+        try super.tearDownWithError()
+    }
+
+    func testCommitMovesDraftWithoutLeavingSourceDuplicate() throws {
+        let clipID = try XCTUnwrap(UUID(uuidString: "CCCCCCCC-1111-1111-1111-111111111111"))
+        let draftURL = try writeDraft(named: "recording.m4a", contents: Data("audio".utf8))
+
+        let destinationURL = try store.commitDraft(at: draftURL, clipID: clipID)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: draftURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destinationURL.path))
+        XCTAssertEqual(destinationURL.lastPathComponent, "\(clipID.uuidString).m4a")
+        XCTAssertEqual(try Data(contentsOf: destinationURL), Data("audio".utf8))
+    }
+
+    func testCommitFailureLeavesDraftOwnedByCallerAndDoesNotAppendMetadata() throws {
+        let clipID = try XCTUnwrap(UUID(uuidString: "DDDDDDDD-1111-1111-1111-111111111111"))
+        let draftURL = try writeDraft(named: "recording.m4a", contents: Data("draft".utf8))
+        try FileManager.default.createDirectory(at: clipsDirectory, withIntermediateDirectories: true)
+        let occupiedDestination = clipsDirectory.appendingPathComponent("\(clipID.uuidString).m4a")
+        try Data("existing".utf8).write(to: occupiedDestination)
+        let signalStore = SignalStore(
+            captureAudioFileStore: store,
+            captureIDProvider: { clipID },
+            userDefaults: userDefaults
+        )
+
+        XCTAssertThrowsError(
+            try signalStore.saveCaptureClip(
+                audioURL: draftURL,
+                duration: 1,
+                selectedModeName: "Focus"
+            )
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: draftURL.path))
+        XCTAssertEqual(try Data(contentsOf: occupiedDestination), Data("existing".utf8))
+        XCTAssertTrue(signalStore.captureClips.isEmpty)
+        XCTAssertTrue(store.pendingCommits().isEmpty)
+    }
+
+    func testInterruptedCommitRecoversMetadataOnNextLoad() throws {
+        let clipID = try XCTUnwrap(UUID(uuidString: "EEEEEEEE-1111-1111-1111-111111111111"))
+        let createdAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let draftURL = try writeDraft(named: "recover.m4a", contents: Data("audio".utf8))
+        let destinationURL = try store.commitDraft(at: draftURL, clipID: clipID)
+        let pending = PendingCaptureCommit(
+            clipID: clipID,
+            createdAt: createdAt,
+            duration: 4.2,
+            sourceModeName: "Focus",
+            draftFileName: draftURL.lastPathComponent
+        )
+        try store.writePendingCommit(pending)
+        let signalStore = SignalStore(
+            captureAudioFileStore: store,
+            userDefaults: userDefaults
+        )
+
+        signalStore.loadCaptureClips()
+
+        let recovered = try XCTUnwrap(signalStore.captureClips.first)
+        XCTAssertEqual(signalStore.captureClips.count, 1)
+        XCTAssertEqual(recovered.id, clipID)
+        XCTAssertEqual(recovered.createdAt, createdAt)
+        XCTAssertEqual(recovered.duration, 4.2, accuracy: 0.001)
+        XCTAssertEqual(recovered.audioFileURL, destinationURL)
+        XCTAssertEqual(recovered.sourceModeName, "Focus")
+        XCTAssertEqual(store.pendingCommits(), [pending])
+
+        let nextLaunchStore = SignalStore(
+            captureAudioFileStore: store,
+            userDefaults: userDefaults
+        )
+        nextLaunchStore.loadCaptureClips()
+        XCTAssertTrue(store.pendingCommits().isEmpty)
+    }
+
+    func testInterruptedCommitBeforeMoveRecoversTheNamedDraft() throws {
+        let clipID = try XCTUnwrap(UUID(uuidString: "FFFFFFFF-1111-1111-1111-111111111111"))
+        let draftURL = try writeDraft(named: "before-move.m4a", contents: Data("audio".utf8))
+        let pending = PendingCaptureCommit(
+            clipID: clipID,
+            createdAt: Date(timeIntervalSince1970: 1_800_000_100),
+            duration: 2.5,
+            sourceModeName: nil,
+            draftFileName: draftURL.lastPathComponent
+        )
+        try store.writePendingCommit(pending)
+        let signalStore = SignalStore(
+            captureAudioFileStore: store,
+            userDefaults: userDefaults
+        )
+
+        signalStore.loadCaptureClips()
+
+        let recovered = try XCTUnwrap(signalStore.captureClips.first)
+        XCTAssertEqual(recovered.id, clipID)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: draftURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: recovered.audioFileURL.path))
+        XCTAssertEqual(store.pendingCommits(), [pending])
+    }
+
+    func testDiscardDraftIsIdempotentAndCannotDeleteOutsideDraftDirectory() throws {
+        let draftURL = try writeDraft(named: "discard.m4a")
+        let outsideURL = rootDirectory.appendingPathComponent("legacy.m4a")
+        try Data("legacy".utf8).write(to: outsideURL)
+
+        store.discardDraft(at: draftURL)
+        store.discardDraft(at: draftURL)
+        store.discardDraft(at: outsideURL)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: draftURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outsideURL.path))
+    }
+
+    func testPendingRecoveryRejectsAPathInsteadOfARelativeDraftName() throws {
+        let draftURL = try writeDraft(named: "safe.m4a")
+
+        XCTAssertNil(store.recoverableDraftURL(named: "../safe.m4a"))
+        XCTAssertEqual(store.recoverableDraftURL(named: draftURL.lastPathComponent), draftURL)
+    }
+
+    func testStaleDraftCleanupTouchesOnlyCaptureDraftDirectory() throws {
+        let referenceDate = Date(timeIntervalSince1970: 1_800_000_000)
+        let oldDraft = try writeDraft(named: "old.m4a")
+        let freshDraft = try writeDraft(named: "fresh.m4a")
+        let outsideURL = rootDirectory.appendingPathComponent("old-legacy.m4a")
+        try Data("legacy".utf8).write(to: outsideURL)
+        try setModificationDate(referenceDate.addingTimeInterval(-101), for: oldDraft)
+        try setModificationDate(referenceDate.addingTimeInterval(-99), for: freshDraft)
+        try setModificationDate(referenceDate.addingTimeInterval(-101), for: outsideURL)
+
+        try store.pruneStaleDrafts(referenceDate: referenceDate, maximumAge: 100)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: oldDraft.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: freshDraft.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: outsideURL.path))
+    }
+
+    func testDraftURLIsNamespacedAndUsesM4AExtension() throws {
+        let draftURL = try store.makeDraftURL()
+
+        XCTAssertEqual(draftURL.deletingLastPathComponent(), draftDirectory)
+        XCTAssertEqual(draftURL.pathExtension, "m4a")
+    }
+
+    private func writeDraft(
+        named name: String,
+        contents: Data = Data("draft".utf8)
+    ) throws -> URL {
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        let url = draftDirectory.appendingPathComponent(name)
+        try contents.write(to: url)
+        return url
+    }
+
+    private func setModificationDate(_ date: Date, for url: URL) throws {
+        try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: url.path)
+    }
+}
+
+private final class FakeCaptureAudioRecording: CaptureAudioRecording {
+    var isMeteringEnabled = false
+    var shouldStart = true
+    var prepareCount = 0
+    var recordCount = 0
+    var stopCount = 0
+
+    func prepareToRecord() -> Bool {
+        prepareCount += 1
+        return true
+    }
+
+    func record() -> Bool {
+        recordCount += 1
+        return shouldStart
+    }
+
+    func stop() {
+        stopCount += 1
+    }
+
+    func updateMeters() {}
+    func averagePower(forChannel channelNumber: Int) -> Float { -20 }
+    func peakPower(forChannel channelNumber: Int) -> Float { -10 }
+}
+
+final class AudioRecorderLifecycleTests: XCTestCase {
+    private var rootDirectory: URL!
+    private var draftDirectory: URL!
+    private var clipsDirectory: URL!
+    private var store: CaptureAudioFileStore!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        rootDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AudioRecorderLifecycleTests-\(UUID().uuidString)", isDirectory: true)
+        draftDirectory = rootDirectory.appendingPathComponent("drafts", isDirectory: true)
+        clipsDirectory = rootDirectory.appendingPathComponent("clips", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+        store = CaptureAudioFileStore(
+            draftDirectory: draftDirectory,
+            clipsDirectory: clipsDirectory
+        )
+    }
+
+    override func tearDownWithError() throws {
+        if let rootDirectory {
+            try? FileManager.default.removeItem(at: rootDirectory)
+        }
+        store = nil
+        clipsDirectory = nil
+        draftDirectory = nil
+        rootDirectory = nil
+        try super.tearDownWithError()
+    }
+
+    func testFailedStartDeletesDraftAndReleasesAudioSession() throws {
+        let fakeRecording = FakeCaptureAudioRecording()
+        fakeRecording.shouldStart = false
+        var activationCount = 0
+        var deactivationCount = 0
+        var candidateURL: URL?
+        let recorder = AudioRecorder(
+            audioFileStore: store,
+            permissionDenied: { false },
+            activateAudioSession: { activationCount += 1 },
+            deactivateAudioSession: { deactivationCount += 1 },
+            recorderFactory: { url, _ in
+                candidateURL = url
+                try Data("audio".utf8).write(to: url)
+                return fakeRecording
+            }
+        )
+
+        XCTAssertThrowsError(try recorder.startRecording()) { error in
+            guard case AudioRecorderError.failedToStart = error else {
+                return XCTFail("Expected failedToStart, received \(error)")
+            }
+        }
+
+        XCTAssertEqual(activationCount, 1)
+        XCTAssertEqual(deactivationCount, 1)
+        XCTAssertEqual(fakeRecording.prepareCount, 1)
+        XCTAssertEqual(fakeRecording.recordCount, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: try XCTUnwrap(candidateURL).path))
+    }
+
+    func testStopHandsDraftOwnershipToCallerExactlyOnce() throws {
+        let fakeRecording = FakeCaptureAudioRecording()
+        var deactivationCount = 0
+        let recorder = AudioRecorder(
+            audioFileStore: store,
+            permissionDenied: { false },
+            activateAudioSession: {},
+            deactivateAudioSession: { deactivationCount += 1 },
+            recorderFactory: { url, _ in
+                try Data("audio".utf8).write(to: url)
+                return fakeRecording
+            }
+        )
+        try recorder.startRecording()
+
+        var result: Result<URL, Error>?
+        recorder.stopRecording { result = $0 }
+        let handedOffURL = try XCTUnwrap(result).get()
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: handedOffURL.path))
+        XCTAssertEqual(fakeRecording.stopCount, 1)
+        XCTAssertEqual(deactivationCount, 1)
+
+        recorder.stopRecording { result = $0 }
+        XCTAssertThrowsError(try XCTUnwrap(result).get())
+        XCTAssertEqual(deactivationCount, 1)
+
+        recorder.discardRecording(at: handedOffURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: handedOffURL.path))
+    }
+
+    func testCancellationDeletesOwnedDraftAndSecondCancelIsNoOp() throws {
+        let fakeRecording = FakeCaptureAudioRecording()
+        var deactivationCount = 0
+        var draftURL: URL?
+        let recorder = AudioRecorder(
+            audioFileStore: store,
+            permissionDenied: { false },
+            activateAudioSession: {},
+            deactivateAudioSession: { deactivationCount += 1 },
+            recorderFactory: { url, _ in
+                draftURL = url
+                try Data("audio".utf8).write(to: url)
+                return fakeRecording
+            }
+        )
+        try recorder.startRecording()
+
+        recorder.cancelRecording()
+        recorder.cancelRecording()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: try XCTUnwrap(draftURL).path))
+        XCTAssertEqual(fakeRecording.stopCount, 1)
+        XCTAssertEqual(deactivationCount, 1)
+    }
+}
+
 final class SignalTopicThreadCharacterizationTests: XCTestCase {
     func testThreadBuilderGroupsThemesAndAveragesIntensity() throws {
         let captures = [

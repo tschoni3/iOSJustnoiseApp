@@ -235,10 +235,8 @@ struct SignalTapeView: View {
             tapePlayer.stop()
             liveMeterSamples = []
 
-            if isRecording {
-                audioRecorder.stopRecording { _ in }
-                isRecording = false
-            }
+            audioRecorder.cancelRecording()
+            isRecording = false
         }
         .alert(
             isPresented: Binding<Bool>(
@@ -558,7 +556,7 @@ struct SignalTapeView: View {
     }
 
     private func deleteTemporaryRecording(at url: URL) {
-        try? FileManager.default.removeItem(at: url)
+        audioRecorder.discardRecording(at: url)
     }
 
     private func appendLiveMeterSample() {

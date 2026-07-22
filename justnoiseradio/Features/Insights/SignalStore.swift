@@ -22,15 +22,27 @@ final class SignalStore: NSObject, ObservableObject {
 
     private let logger = Logger(subsystem: "com.stilltschoni.justnoiseradioapp", category: "SignalStore")
     private let analysisClient: any SignalAnalyzing
+    private let captureAudioFileStore: CaptureAudioFileStore
+    private let captureIDProvider: () -> UUID
+    private let userDefaults: UserDefaults
     private var signalAnalysisPausedUntil: Date?
     // Failed analyses stay local and retry later instead of blocking capture creation.
     private var signalAnalysisFailuresByClipID: [UUID: SignalAnalysisFailureRecord] = [:]
     private var isWaitingForProtectedData: Bool = false
     private var pendingSignalAnalysisJobs: [SignalAnalysisJob] = []
     private var isProcessingSignalAnalysisQueue = false
+    private var hasWrittenCaptureClipsThisProcess = false
 
-    init(analysisClient: any SignalAnalyzing = LiveSignalAnalysisClient()) {
+    init(
+        analysisClient: any SignalAnalyzing = LiveSignalAnalysisClient(),
+        captureAudioFileStore: CaptureAudioFileStore = CaptureAudioFileStore(),
+        captureIDProvider: @escaping () -> UUID = { UUID() },
+        userDefaults: UserDefaults = .standard
+    ) {
         self.analysisClient = analysisClient
+        self.captureAudioFileStore = captureAudioFileStore
+        self.captureIDProvider = captureIDProvider
+        self.userDefaults = userDefaults
         super.init()
     }
 
@@ -124,7 +136,7 @@ final class SignalStore: NSObject, ObservableObject {
             uniqueKeysWithValues: legacyExtractions.map { ($0.captureClipID, $0) }
         )
 
-        if let data = UserDefaults.standard.data(forKey: captureClipsKey),
+        if let data = userDefaults.data(forKey: captureClipsKey),
            let saved = try? JSONDecoder().decode([CaptureClip].self, from: data) {
             captureClips = saved
                 .filter { FileManager.default.fileExists(atPath: $0.audioFileURL.path) }
@@ -146,20 +158,72 @@ final class SignalStore: NSObject, ObservableObject {
             captureClips = []
         }
 
+        recoverPendingCaptureCommits(
+            canAcknowledgePersistedMetadata: hasWrittenCaptureClipsThisProcess == false
+        )
         saveCaptureClips()
-        UserDefaults.standard.removeObject(forKey: legacySignalExtractionsKey)
+        userDefaults.removeObject(forKey: legacySignalExtractionsKey)
     }
 
     func saveCaptureClips() {
         refreshDerivedCaptureData()
 
         if let data = try? JSONEncoder().encode(captureClips) {
-            UserDefaults.standard.set(data, forKey: captureClipsKey)
+            userDefaults.set(data, forKey: captureClipsKey)
+            hasWrittenCaptureClipsThisProcess = true
+        }
+    }
+
+    private func recoverPendingCaptureCommits(canAcknowledgePersistedMetadata: Bool) {
+        let persistedClipIDs = Set(captureClips.map(\.id))
+
+        for pending in captureAudioFileStore.pendingCommits() {
+            if persistedClipIDs.contains(pending.clipID) {
+                if canAcknowledgePersistedMetadata {
+                    captureAudioFileStore.clearPendingCommit(for: pending.clipID)
+                }
+                continue
+            }
+
+            var audioURL = captureAudioFileStore.persistedURL(for: pending.clipID)
+            if FileManager.default.fileExists(atPath: audioURL.path) == false {
+                guard let draftURL = captureAudioFileStore.recoverableDraftURL(
+                    named: pending.draftFileName
+                ) else {
+                    logger.error("Pending Capture commit has no recoverable audio file.")
+                    continue
+                }
+
+                do {
+                    audioURL = try captureAudioFileStore.commitDraft(
+                        at: draftURL,
+                        clipID: pending.clipID
+                    )
+                } catch {
+                    logger.error("Pending Capture file move could not be recovered: \(error.localizedDescription)")
+                    continue
+                }
+            }
+
+            captureClips.append(
+                CaptureClip(
+                    id: pending.clipID,
+                    createdAt: pending.createdAt,
+                    duration: max(0, pending.duration),
+                    audioFileURL: audioURL,
+                    sourceModeName: pending.sourceModeName
+                )
+            )
+        }
+
+        captureClips.sort { $0.createdAt < $1.createdAt }
+        if Set(captureClips.map(\.id)) != persistedClipIDs {
+            logger.warning("Recovered Capture metadata after an interrupted file commit.")
         }
     }
 
     private func loadLegacySignalInsights() {
-        if let data = UserDefaults.standard.data(forKey: legacySignalInsightsKey),
+        if let data = userDefaults.data(forKey: legacySignalInsightsKey),
            let saved = try? JSONDecoder().decode([SignalInsight].self, from: data) {
             legacySignalInsights = saved.sorted { $0.createdAt > $1.createdAt }
         } else {
@@ -168,7 +232,7 @@ final class SignalStore: NSObject, ObservableObject {
     }
 
     func loadSignalMemoryState() {
-        if let data = UserDefaults.standard.data(forKey: signalMemoryStateKey),
+        if let data = userDefaults.data(forKey: signalMemoryStateKey),
            let saved = try? JSONDecoder().decode(SignalMemoryState.self, from: data) {
             signalMemoryState = saved
         } else {
@@ -178,14 +242,14 @@ final class SignalStore: NSObject, ObservableObject {
 
     private func saveSignalMemoryState() {
         if let data = try? JSONEncoder().encode(signalMemoryState) {
-            UserDefaults.standard.set(data, forKey: signalMemoryStateKey)
+            userDefaults.set(data, forKey: signalMemoryStateKey)
         }
     }
 
     private func loadSignalCommentReadState() {
         let currentCommentIDs = Set(signalMemoryState.comments.map(\.id))
 
-        if let savedIDs = UserDefaults.standard.stringArray(forKey: seenSignalCommentIDsKey) {
+        if let savedIDs = userDefaults.stringArray(forKey: seenSignalCommentIDsKey) {
             seenSignalCommentIDs = Set(savedIDs).intersection(currentCommentIDs)
         } else {
             // Existing comments predate unread tracking and should not create a migration badge.
@@ -196,19 +260,19 @@ final class SignalStore: NSObject, ObservableObject {
     }
 
     private func saveSignalCommentReadState() {
-        UserDefaults.standard.set(seenSignalCommentIDs.sorted(), forKey: seenSignalCommentIDsKey)
+        userDefaults.set(seenSignalCommentIDs.sorted(), forKey: seenSignalCommentIDsKey)
     }
 
     func loadSignalAnalysisRetryState() {
-        if let pauseDate = UserDefaults.standard.object(forKey: signalAnalysisPausedUntilKey) as? Date,
+        if let pauseDate = userDefaults.object(forKey: signalAnalysisPausedUntilKey) as? Date,
            pauseDate > .now {
             signalAnalysisPausedUntil = pauseDate
         } else {
             signalAnalysisPausedUntil = nil
-            UserDefaults.standard.removeObject(forKey: signalAnalysisPausedUntilKey)
+            userDefaults.removeObject(forKey: signalAnalysisPausedUntilKey)
         }
 
-        if let data = UserDefaults.standard.data(forKey: signalAnalysisFailuresKey),
+        if let data = userDefaults.data(forKey: signalAnalysisFailuresKey),
            let saved = try? JSONDecoder().decode([SignalAnalysisFailureRecord].self, from: data) {
             signalAnalysisFailuresByClipID = Dictionary(
                 uniqueKeysWithValues: saved
@@ -228,7 +292,7 @@ final class SignalStore: NSObject, ObservableObject {
         }
 
         if let data = try? JSONEncoder().encode(failures) {
-            UserDefaults.standard.set(data, forKey: signalAnalysisFailuresKey)
+            userDefaults.set(data, forKey: signalAnalysisFailuresKey)
         }
     }
 
@@ -238,19 +302,31 @@ final class SignalStore: NSObject, ObservableObject {
         duration: TimeInterval,
         selectedModeName: String?
     ) throws -> CaptureClip {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let folder = documents.appendingPathComponent("CaptureClips", isDirectory: true)
-
-        try FileManager.default.createDirectory(
-            at: folder,
-            withIntermediateDirectories: true
+        let clipID = captureIDProvider()
+        let pending = PendingCaptureCommit(
+            clipID: clipID,
+            createdAt: Date(),
+            duration: max(0, duration),
+            sourceModeName: selectedModeName,
+            draftFileName: audioURL.lastPathComponent
         )
+        try captureAudioFileStore.writePendingCommit(pending)
 
-        let destinationURL = folder.appendingPathComponent("\(UUID().uuidString).m4a")
-        try FileManager.default.copyItem(at: audioURL, to: destinationURL)
+        let destinationURL: URL
+        do {
+            destinationURL = try captureAudioFileStore.commitDraft(
+                at: audioURL,
+                clipID: clipID
+            )
+        } catch {
+            captureAudioFileStore.clearPendingCommit(for: clipID)
+            throw error
+        }
 
         let clip = CaptureClip(
-            duration: max(0, duration),
+            id: clipID,
+            createdAt: pending.createdAt,
+            duration: pending.duration,
             audioFileURL: destinationURL,
             sourceModeName: selectedModeName
         )
@@ -911,7 +987,7 @@ final class SignalStore: NSObject, ObservableObject {
             }
 
             self.signalAnalysisPausedUntil = nil
-            UserDefaults.standard.removeObject(forKey: signalAnalysisPausedUntilKey)
+            userDefaults.removeObject(forKey: signalAnalysisPausedUntilKey)
         }
 
         guard let failure = signalAnalysisFailuresByClipID[clipID] else {
@@ -958,7 +1034,7 @@ final class SignalStore: NSObject, ObservableObject {
             kind = .quotaExceeded
             retryAfter = failedAt.addingTimeInterval(60 * 60)
             signalAnalysisPausedUntil = retryAfter
-            UserDefaults.standard.set(retryAfter, forKey: signalAnalysisPausedUntilKey)
+            userDefaults.set(retryAfter, forKey: signalAnalysisPausedUntilKey)
             logger.info("Signal analysis paused because the analysis quota is exhausted.")
         } else {
             kind = .transient
@@ -1001,7 +1077,7 @@ final class SignalStore: NSObject, ObservableObject {
     }
 
     private func loadLegacySignalExtractions() -> [SignalExtraction] {
-        if let data = UserDefaults.standard.data(forKey: legacySignalExtractionsKey),
+        if let data = userDefaults.data(forKey: legacySignalExtractionsKey),
            let saved = try? JSONDecoder().decode([SignalExtraction].self, from: data) {
             return saved.sorted { $0.createdAt < $1.createdAt }
         }
