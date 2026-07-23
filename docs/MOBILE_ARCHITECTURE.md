@@ -1,12 +1,26 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.0
+Status: target architecture, version 1.0.1
 
 ## Decision
 
 Justnoise will use native SwiftUI on iOS and native Kotlin with Jetpack Compose on Android. The two applications share product contracts rather than a UI runtime. This preserves the published iOS experience and gives each platform direct access to the system capabilities required for NFC, restrictions, background work, notifications, and platform-owned UI.
 
 The backend stays separately deployed. Its API contract can be consumed by both clients, but backend source code does not belong in either mobile application.
+
+## Readiness checkpoint
+
+Audited 2026-07-23 against GitHub `main` merge `4b58c2e90b375f615df9de75485dbd5d3846cf8b`.
+
+**Architecture foundation: READY. Production Android implementation: HOLD.**
+
+The repository has the foundations needed for one Codex task to evolve two native clients: a verified SwiftUI application, versioned behavior/copy/design/API contracts, portable fixture cases, a native-platform adapter map, and a disposable Android feasibility spike. “Ready” means the architecture no longer needs a framework rewrite, Storybook, a mass directory move, or a shared UI runtime before Android work.
+
+It does not authorize a production Android application. All 36 required Pixel/Samsung Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
+
+The iOS `ACCOUNT-01` ordinary-sign-out storage gap remains visible in `docs/MOBILE_BEHAVIOR_V1.md`. Per-account namespacing is legitimate product hardening, but it is not an Android feasibility prerequisite and must not be used to justify a broad startup/runtime rewrite. Address it later as a separate, measured change with an explicit migration policy and cross-account device evidence.
+
+Complexity is governed by responsibility, not by the smallest file count. Do not collapse legitimate Xcode target folders or combine unrelated features to reduce a number. Conversely, do not add layers, modules, or component catalogs solely to make both platforms look symmetrical. Extract a boundary only when it removes duplicated product decisions, isolates a system capability, or reduces measured change risk.
 
 ## Repository shape
 
@@ -21,6 +35,8 @@ The existing iOS project remains at the repository root to avoid a high-churn mo
 │   ├── copy/
 │   └── design/
 ├── scripts/
+├── spikes/
+│   └── android-gate0/           # disposable candidate; never a production app
 ├── android-app/                 # future Gradle root
 │   └── app/                     # one module initially
 ├── justnoise.xcodeproj          # existing iOS project
