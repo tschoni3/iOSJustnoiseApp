@@ -2,6 +2,8 @@
 
 This checklist protects the currently published behavior while the app is prepared for Android. Automated checks are necessary but do not replace physical-device checks for NFC, Family Controls, schedules, or Live Activities.
 
+The current 1.1.0 build 6 source and App Store metadata handoff is recorded in `docs/APP_STORE_1.1.0.md`.
+
 ## One-command local check
 
 Requirements: Xcode with an iOS simulator runtime and network access for the first Swift package resolution.
@@ -50,9 +52,11 @@ Record the device model and iOS version. Use a dedicated test account where dele
 ### Launch, account, and navigation
 
 - [ ] Clean install reaches the expected onboarding/sign-in route without a crash.
+- [ ] The Release build has no Capture onboarding page, post-session Reflect action that opens Capture, or Capture settings preference.
+- [ ] The Release build opens directly on Zap without a bottom tab bar.
 - [ ] Email and Google sign-in return to the correct signed-in screen.
 - [ ] Relaunch, background/foreground, and force-quit preserve the expected session.
-- [ ] All main tabs, settings, mode creation/editing, and sign-out work.
+- [ ] All release navigation, settings, mode creation/editing, and sign-out work.
 - [ ] Password recovery deep link opens the intended flow.
 - [ ] Using a dedicated test account that contains modes, schedules, Signal/history data, and captures, delete the account and confirm the app reaches signed-out state.
 - [ ] Force-quit and relaunch after deletion; no deleted account data, active restriction, pending schedule, Live Activity, notification, recording, or analytics identity may return.
@@ -67,11 +71,12 @@ Record the device model and iOS version. Use a dedicated test account where dele
 - [ ] With the app force-quit, a schedule starts and later releases at the expected times.
 - [ ] Relaunching during an active NFC or scheduled session restores the correct state.
 
-### Capture, Signal, and history
+### Capture development build, Signal, and history
 
-- [ ] Record a capture, stop it, play it back, and confirm its duration/waveform are plausible.
-- [ ] Successful backend analysis appears in Signal and remains after relaunch.
-- [ ] Offline or failed analysis presents the expected retry/error behavior.
+- [ ] In a Debug build, confirm the Capture tab is present and its ongoing development remains reachable.
+- [ ] In a Debug build, record a capture, stop it, play it back, and confirm its duration/waveform are plausible.
+- [ ] In a Debug build, successful backend analysis appears in Signal and remains after relaunch.
+- [ ] In a Debug build, offline or failed analysis presents the expected retry/error behavior.
 - [ ] Session history, day dots, Signal timeline, and weekly insight show existing data correctly.
 
 ### Extensions and system integration
@@ -83,9 +88,10 @@ Record the device model and iOS version. Use a dedicated test account where dele
 
 ### Visual and performance regression pass
 
-- [ ] Compare onboarding/sign-in, home, modes, capture, Signal, history, and settings with the approved reference screenshots.
+- [ ] Compare the Release onboarding/sign-in, home, modes, history, and settings with the approved reference screenshots.
+- [ ] Compare Capture and Signal with their approved reference screenshots in a Debug build.
 - [ ] Check light/dark appearance where supported, Dynamic Type, long labels, loading, empty, and error states.
-- [ ] Cold launch, tab switching, scrolling, recording, and waveform rendering remain responsive.
+- [ ] Cold launch and Release navigation remain responsive; check tab switching, recording, and waveform rendering in a Debug build.
 - [ ] No new crash, hang, repeated permission prompt, or unexpected network error appears in device logs.
 
 ## Release evidence

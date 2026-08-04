@@ -131,6 +131,20 @@ Reusable components live in native code. Shared product files name states and se
 
 Storybook is not a prerequisite. Native previews are closer to the actual typography, accessibility, rendering, and system components. A catalog app can be added later if discovery becomes a measured problem.
 
+## Release feature gates
+
+Unfinished product surfaces stay merged into the main codebase behind centralized, compile-time gates. This avoids a long-lived release branch while ensuring an App Store archive cannot expose work in progress because of a network response or stale local setting.
+
+Capture is controlled by `AppFeatures.captureEnabled`, backed by the `CAPTURE_ENABLED` Swift compilation condition:
+
+- The iOS app target's Debug configuration defines `CAPTURE_ENABLED`, so normal Xcode development keeps the full Capture experience available.
+- The Release configuration does not define it, so App Store archives do not present any Capture entry point and open directly on Zap without a one-item tab bar.
+- All user-facing entry points must use the same gate: navigation, programmatic routes, post-session actions, onboarding, coach marks, and settings.
+- Capture source, local data, and account-cleanup support remain intact while the feature is hidden. Do not create a long-lived branch for Capture development.
+- When Capture is launch-ready, enable it intentionally for the shipping configuration and update the release checklist in the same reviewed change.
+
+Remote flags are not the release boundary for unfinished features. They may be added later for rollout control only after the compiled product is safe in both enabled and disabled states.
+
 ## Change workflow for Codex
 
 For a feature intended on both platforms:
