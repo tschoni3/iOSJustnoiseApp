@@ -6,12 +6,12 @@ import AVKit
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
     @State private var currentPage = 0
-    private let totalPages = 3
+    private var totalPages: Int { AppFeatures.captureEnabled ? 3 : 2 }
 
     var body: some View {
         NavigationView {
             VStack {
-                // TabView for Onboarding Pages (3 pages)
+                // Capture adds a third page in development builds.
                 TabView(selection: $currentPage) {
                     OnboardingPage(
                         mediaName: "JN_video1",
@@ -27,12 +27,14 @@ struct OnboardingView: View {
                     )
                     .tag(1)
 
-                    OnboardingPage(
-                        mediaName: "JN_video3",
-                        title: "Reset & Reflect",
-                        description: "After each session, take a moment to capture your thoughts, track your progress, and reset your mind for what’s next."
-                    )
-                    .tag(2)
+                    if AppFeatures.captureEnabled {
+                        OnboardingPage(
+                            mediaName: "JN_video3",
+                            title: "Reset & Reflect",
+                            description: "After each session, take a moment to capture your thoughts, track your progress, and reset your mind for what’s next."
+                        )
+                        .tag(2)
+                    }
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentPage)

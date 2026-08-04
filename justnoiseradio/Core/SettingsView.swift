@@ -79,14 +79,16 @@ struct SettingsView: View {
                     }
                 }
                 
-                // 2) PREFERENCES (PROMPTS)
-                Section(header: Text("PREFERENCES")) {
-                    Toggle(isOn: $showPostSessionJournalPrompt) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Post-session journaling prompt")
-                            Text("Show the reflection prompt after ending a session")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                if AppFeatures.captureEnabled {
+                    // 2) PREFERENCES (PROMPTS)
+                    Section(header: Text("PREFERENCES")) {
+                        Toggle(isOn: $showPostSessionJournalPrompt) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Post-session journaling prompt")
+                                Text("Show the reflection prompt after ending a session")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                 }

@@ -22,10 +22,20 @@ struct MainTabView: View {
     @State private var selectedTab: MainTab = .zap
 
     init() {
-        configureTabBarAppearance()
+        if AppFeatures.captureEnabled {
+            configureTabBarAppearance()
+        }
     }
 
     var body: some View {
+        if AppFeatures.captureEnabled {
+            captureEnabledTabs
+        } else {
+            ContentView(selectedTab: $selectedTab)
+        }
+    }
+
+    private var captureEnabledTabs: some View {
         TabView(selection: $selectedTab) {
             ContentView(selectedTab: $selectedTab)
             .tabItem {
@@ -263,6 +273,7 @@ struct ContentView: View {
                         modeName: completedSessionModeName,
                         duration: completedSessionDuration,
                         signalBoost: nfcViewModel.calculateSessionSignalBoost(for: completedSessionDuration),
+                        showsReflectionAction: AppFeatures.captureEnabled,
                         onReflect: {
                             routeSessionReflectionToSignal()
                         },
@@ -729,6 +740,7 @@ private enum CoachMarksFactory {
             return [ CoachMark(targetID: "scan", title: "Finish When You’re Done",
                                message: "Tap the Zap button again to end the session.") ]
         case .extendedPostStop:
+            guard AppFeatures.captureEnabled else { return [] }
             return [ CoachMark(targetID: "scan", title: "Reflect on Your Session",
                                message: "We’ll take you to Capture so you can record a short reflection and generate a Signal.",
                                offset: CGSize(width: 0, height: 12)) ]
@@ -794,7 +806,10 @@ private extension ContentView {
             showCoachMarks = true
 
         case .extendedRunning where ended:
-            if completedSessionDuration >= 20 * 60 {
+            if !AppFeatures.captureEnabled {
+                tourPhase = .extendedFinished
+                showCoachMarks = false
+            } else if completedSessionDuration >= 20 * 60 {
                 tourPhase = .extendedPostStop
                 coachStep = 0
                 showCoachMarks = true
@@ -854,6 +869,11 @@ private extension ContentView {
 
         if tourPhase == .extendedPostStop || tourPhase == .extendedRunning {
             tourPhase = .extendedFinished
+        }
+
+        guard AppFeatures.captureEnabled else {
+            selectedTab = .zap
+            return
         }
 
         if shouldDismissSummary {
@@ -935,6 +955,7 @@ struct SessionCompleteCard: View {
     let modeName: String
     let duration: TimeInterval
     let signalBoost: Int
+    let showsReflectionAction: Bool
     let onReflect: () -> Void
     let onDone: () -> Void
 
@@ -996,16 +1017,18 @@ struct SessionCompleteCard: View {
             )
 
             HStack(spacing: 12) {
-                Button("Reflect") {
-                    onReflect()
+                if showsReflectionAction {
+                    Button("Reflect") {
+                        onReflect()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                    )
                 }
-                .font(.system(size: 16, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                )
 
                 Button("Done") {
                     onDone()
