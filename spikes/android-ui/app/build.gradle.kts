@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.Sync
 
 plugins {
     id("com.android.application")
@@ -40,12 +41,42 @@ android {
     }
 
     sourceSets {
-        getByName("main").assets.directories.add(
-            rootProject.projectDir.resolve(
-                "../../justnoiseradio/Assets.xcassets/zap_button.imageset",
-            ).path,
+        getByName("main").res.directories.add(
+            layout.buildDirectory.dir("generated/prototypeResources").get().asFile.path,
         )
     }
+}
+
+val syncPrototypeResources = tasks.register<Sync>("syncPrototypeResources") {
+    into(layout.buildDirectory.dir("generated/prototypeResources"))
+
+    from(
+        rootProject.projectDir.resolve(
+            "../../justnoiseradio/Assets.xcassets/zap_button.imageset/zap_button.png",
+        ),
+    ) {
+        into("drawable-nodpi")
+    }
+    from(
+        rootProject.projectDir.resolve(
+            "../../justnoiseradio/Assets.xcassets/Icon.imageset/Instagram post - 4.png",
+        ),
+    ) {
+        into("drawable-nodpi")
+        rename { "justnoise_icon.png" }
+    }
+    from(rootProject.projectDir.resolve("../../JN_video1.mp4")) {
+        into("raw")
+        rename { "jn_video1.mp4" }
+    }
+    from(rootProject.projectDir.resolve("../../JN_video2.mp4")) {
+        into("raw")
+        rename { "jn_video2.mp4" }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(syncPrototypeResources)
 }
 
 tasks.withType<Test>().configureEach {

@@ -99,3 +99,63 @@ val PreviewModes = listOf(
     ModeOption(id = "study", name = "Study"),
     ModeOption(id = "offline", name = "Offline"),
 )
+
+enum class PrototypeRoute {
+    Onboarding,
+    Activation,
+    SignIn,
+    SignUp,
+    Zap,
+}
+
+data class PrototypeFlowState(
+    val route: PrototypeRoute = PrototypeRoute.Onboarding,
+    val onboardingPage: Int = 0,
+)
+
+sealed interface PrototypeFlowAction {
+    data class ShowOnboardingPage(val page: Int) : PrototypeFlowAction
+    data object AdvanceOnboarding : PrototypeFlowAction
+    data object CompleteActivationPreview : PrototypeFlowAction
+    data object OpenSignUp : PrototypeFlowAction
+    data object OpenSignIn : PrototypeFlowAction
+    data object PreviewAuthenticated : PrototypeFlowAction
+    data object Back : PrototypeFlowAction
+    data object Reset : PrototypeFlowAction
+}
+
+object PrototypeFlowReducer {
+    fun reduce(
+        state: PrototypeFlowState,
+        action: PrototypeFlowAction,
+    ): PrototypeFlowState = when (action) {
+        is PrototypeFlowAction.ShowOnboardingPage -> state.copy(
+            onboardingPage = action.page.coerceIn(0, 1),
+        )
+        PrototypeFlowAction.AdvanceOnboarding -> when (state.onboardingPage) {
+            0 -> state.copy(onboardingPage = 1)
+            else -> PrototypeFlowState(route = PrototypeRoute.Activation)
+        }
+        PrototypeFlowAction.CompleteActivationPreview -> PrototypeFlowState(
+            route = PrototypeRoute.SignIn,
+        )
+        PrototypeFlowAction.OpenSignUp -> state.copy(route = PrototypeRoute.SignUp)
+        PrototypeFlowAction.OpenSignIn -> state.copy(route = PrototypeRoute.SignIn)
+        PrototypeFlowAction.PreviewAuthenticated -> PrototypeFlowState(
+            route = PrototypeRoute.Zap,
+        )
+        PrototypeFlowAction.Back -> when (state.route) {
+            PrototypeRoute.Onboarding -> state.copy(
+                onboardingPage = (state.onboardingPage - 1).coerceAtLeast(0),
+            )
+            PrototypeRoute.Activation -> PrototypeFlowState(
+                route = PrototypeRoute.Onboarding,
+                onboardingPage = 1,
+            )
+            PrototypeRoute.SignIn -> PrototypeFlowState(route = PrototypeRoute.Activation)
+            PrototypeRoute.SignUp -> PrototypeFlowState(route = PrototypeRoute.SignIn)
+            PrototypeRoute.Zap -> state
+        }
+        PrototypeFlowAction.Reset -> PrototypeFlowState()
+    }
+}

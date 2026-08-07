@@ -1,7 +1,7 @@
 package com.justnoise.uiprototype
 
-import android.graphics.BitmapFactory
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
@@ -49,12 +49,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -70,32 +68,73 @@ import kotlin.math.max
 
 @Composable
 fun JustnoisePrototypeApp() {
-    var state by rememberSaveable(stateSaver = ZapStateSaver) {
+    var flowState by rememberSaveable(stateSaver = PrototypeFlowStateSaver) {
+        mutableStateOf(PrototypeFlowState())
+    }
+    var zapState by rememberSaveable(stateSaver = ZapStateSaver) {
         mutableStateOf(ZapUiState())
     }
     var showModes by rememberSaveable { mutableStateOf(false) }
 
-    JustnoiseTheme {
-        ZapScreen(
-            state = state,
-            onZapClick = {
-                state = ZapPreviewReducer.reduce(state, ZapPreviewAction.ToggleSession)
-            },
-            onModeClick = { showModes = true },
-        )
+    val dispatch: (PrototypeFlowAction) -> Unit = { action ->
+        flowState = PrototypeFlowReducer.reduce(flowState, action)
+    }
 
-        if (showModes) {
-            ModeSheet(
-                selectedMode = state.selectedMode,
-                onSelect = { mode ->
-                    state = ZapPreviewReducer.reduce(state, ZapPreviewAction.SelectMode(mode))
-                    showModes = false
+    BackHandler(
+        enabled = flowState.route != PrototypeRoute.Onboarding || flowState.onboardingPage > 0,
+    ) {
+        dispatch(PrototypeFlowAction.Back)
+    }
+
+    JustnoiseTheme {
+        if (flowState.route == PrototypeRoute.Zap) {
+            ZapScreen(
+                state = zapState,
+                onZapClick = {
+                    zapState = ZapPreviewReducer.reduce(
+                        zapState,
+                        ZapPreviewAction.ToggleSession,
+                    )
                 },
-                onDismiss = { showModes = false },
+                onModeClick = { showModes = true },
+            )
+
+            if (showModes) {
+                ModeSheet(
+                    selectedMode = zapState.selectedMode,
+                    onSelect = { mode ->
+                        zapState = ZapPreviewReducer.reduce(
+                            zapState,
+                            ZapPreviewAction.SelectMode(mode),
+                        )
+                        showModes = false
+                    },
+                    onDismiss = { showModes = false },
+                )
+            }
+        } else {
+            LaunchFlowScreen(
+                state = flowState,
+                onAction = dispatch,
             )
         }
     }
 }
+
+private val PrototypeFlowStateSaver = androidx.compose.runtime.saveable.mapSaver<PrototypeFlowState>(
+    save = { state ->
+        mapOf(
+            "route" to state.route.name,
+            "onboardingPage" to state.onboardingPage,
+        )
+    },
+    restore = { saved ->
+        PrototypeFlowState(
+            route = PrototypeRoute.valueOf(saved["route"] as String),
+            onboardingPage = saved["onboardingPage"] as Int,
+        )
+    },
+)
 
 private val ZapStateSaver = androidx.compose.runtime.saveable.mapSaver<ZapUiState>(
     save = { state ->
@@ -119,7 +158,7 @@ private val ZapStateSaver = androidx.compose.runtime.saveable.mapSaver<ZapUiStat
 )
 
 @Composable
-private fun JustnoiseTheme(content: @Composable () -> Unit) {
+fun JustnoiseTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = JustnoiseContract.color("accent.noiseRewind"),
@@ -315,7 +354,6 @@ private fun ZapButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bitmap = rememberZapBitmap()
     val pressShadow by animateDpAsState(targetValue = 1.dp, label = "zap-shadow")
     Box(
         modifier = modifier
@@ -326,30 +364,14 @@ private fun ZapButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .size(220.dp)
-                    .shadow(pressShadow, CircleShape),
-            )
-        } else {
-            ZapFallbackGlyph(modifier = Modifier.size(220.dp))
-        }
-    }
-}
-
-@Composable
-private fun rememberZapBitmap(): ImageBitmap? {
-    val context = LocalContext.current
-    return remember(context) {
-        runCatching {
-            context.assets.open("zap_button.png").use { stream ->
-                BitmapFactory.decodeStream(stream)?.asImageBitmap()
-            }
-        }.getOrNull()
+        Image(
+            painter = painterResource(R.drawable.zap_button),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .size(220.dp)
+                .shadow(pressShadow, CircleShape),
+        )
     }
 }
 
@@ -565,24 +587,6 @@ private fun HistoryGlyph(color: Color) {
     }
 }
 
-@Composable
-private fun ZapFallbackGlyph(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        drawCircle(color = Color(0xFF080808))
-        drawCircle(
-            color = Color(0xFF2B2B2B),
-            radius = size.minDimension * 0.39f,
-            style = Stroke(width = size.minDimension * 0.04f),
-        )
-        drawLine(
-            color = Color(0xFF050505),
-            start = Offset(size.width * 0.35f, size.height * 0.50f),
-            end = Offset(size.width * 0.65f, size.height * 0.50f),
-            strokeWidth = size.minDimension * 0.025f,
-            cap = StrokeCap.Round,
-        )
-    }
-}
 
 @Preview(name = "Zap idle", widthDp = 412, heightDp = 915, showBackground = true)
 @Composable

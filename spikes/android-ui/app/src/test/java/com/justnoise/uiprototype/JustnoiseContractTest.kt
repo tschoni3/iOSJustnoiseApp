@@ -73,4 +73,46 @@ class JustnoiseContractTest {
         assertFalse(manifest.contains("<uses-permission"))
         assertFalse(manifest.contains("<service"))
     }
+
+    @Test
+    fun previewLaunchFlowMatchesReleaseSequence() {
+        var state = PrototypeFlowState()
+        assertEquals(PrototypeRoute.Onboarding, state.route)
+        assertEquals(0, state.onboardingPage)
+
+        state = PrototypeFlowReducer.reduce(
+            state,
+            PrototypeFlowAction.AdvanceOnboarding,
+        )
+        assertEquals(PrototypeRoute.Onboarding, state.route)
+        assertEquals(1, state.onboardingPage)
+
+        state = PrototypeFlowReducer.reduce(
+            state,
+            PrototypeFlowAction.AdvanceOnboarding,
+        )
+        assertEquals(PrototypeRoute.Activation, state.route)
+
+        state = PrototypeFlowReducer.reduce(
+            state,
+            PrototypeFlowAction.CompleteActivationPreview,
+        )
+        assertEquals(PrototypeRoute.SignIn, state.route)
+
+        state = PrototypeFlowReducer.reduce(
+            state,
+            PrototypeFlowAction.OpenSignUp,
+        )
+        assertEquals(PrototypeRoute.SignUp, state.route)
+
+        state = PrototypeFlowReducer.reduce(
+            state,
+            PrototypeFlowAction.OpenSignIn,
+        )
+        state = PrototypeFlowReducer.reduce(
+            state,
+            PrototypeFlowAction.PreviewAuthenticated,
+        )
+        assertEquals(PrototypeRoute.Zap, state.route)
+    }
 }
