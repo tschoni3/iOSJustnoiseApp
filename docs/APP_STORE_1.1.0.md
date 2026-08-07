@@ -1,8 +1,10 @@
-# App Store handoff: Justnoise 1.1.0
+# App Store release record: Justnoise 1.1.0
 
-Status: **Source prepared for build and archive; no build, archive, upload, or release validation has been performed.**
+Status: **Released / live on the App Store, as confirmed by the owner in this task.**
 
-## Candidate identity
+Repository evidence proves the source candidate and automated checks. Archive validation, App Store Connect processing, review, and public availability happened outside Git and are recorded here from the owner's confirmation; no App Store receipt or exported review record is vendored in this repository.
+
+## Released source identity
 
 - Marketing version: `1.1.0`
 - Build number: `6`
@@ -10,7 +12,9 @@ Status: **Source prepared for build and archive; no build, archive, upload, or r
 - Archive configuration: `Release`
 - Capture availability: enabled in Debug, disabled in Release
 
-Build 6 is intentional. Local Xcode Organizer history records successful App Store uploads of 1.1.0 builds 3, 4, and 5; build 5 was uploaded on July 27, 2026. Before uploading, confirm in App Store Connect that no build newer than 5 was uploaded from another Mac or automation.
+Build 6 was intentional. At handoff, local Xcode Organizer history recorded successful App Store uploads of 1.1.0 builds 3, 4, and 5; build 5 had been uploaded on July 27, 2026. The handoff required checking App Store Connect for any build uploaded from another Mac or automation before archiving build 6.
+
+The release line is merged at `main` commit `4bb4631148a1c5fdab0455c4e09b247c3ca74428`. GitHub **iOS verification** and **Product contracts** both passed on that exact commit on 2026-08-04. The owner subsequently completed the archive/submission flow and reported the version live.
 
 ## Release behavior
 
@@ -47,7 +51,9 @@ With Justnoise, you can:
 
 Justnoise uses Apple Screen Time controls. A compatible Justnoise Zap NFC tag and iOS 18 or later are required.
 
-## App Store Connect actions before submission
+## Historical App Store Connect submission checklist
+
+The items below were the handoff checklist. They are retained as release context, not as independently verifiable repository evidence.
 
 - Replace the current description, which advertises voice recording and Focus Companion.
 - Remove or replace every screenshot or app preview showing Capture, Reflect, voice recording, Focus Companion, Signal, or the old two-tab bar.
@@ -62,7 +68,7 @@ Suggested final Review Notes sentence:
 
 > Capture/Focus Companion is intentionally not part of this Release build and is not advertised in the submitted metadata. Development-only Capture code is not accessible to customers.
 
-## Build and archive handoff
+## Historical build and archive handoff
 
 1. Confirm the candidate commit is merged and the worktree is clean.
 2. Confirm App Store Connect has no 1.1.0 build newer than 5.
@@ -73,4 +79,4 @@ Suggested final Review Notes sentence:
 7. In Organizer, validate the archive before uploading it.
 8. After upload processing, install the exact build from TestFlight and complete `docs/RELEASE_VERIFICATION.md` before submission.
 
-Do not upload or submit a dirty-worktree archive. Do not enable `CAPTURE_ENABLED` in Release for this candidate.
+The archived candidate was required to come from a clean worktree with `CAPTURE_ENABLED` absent from Release. The current project configuration still preserves that boundary.

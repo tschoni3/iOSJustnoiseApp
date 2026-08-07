@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.1
+Status: target architecture, version 1.0.2
 
 ## Decision
 
@@ -10,15 +10,19 @@ The backend stays separately deployed. Its API contract can be consumed by both 
 
 ## Readiness checkpoint
 
-Audited 2026-07-23 against GitHub `main` merge `4b58c2e90b375f615df9de75485dbd5d3846cf8b`.
+Audited 2026-08-07 against GitHub `main` merge `4bb4631148a1c5fdab0455c4e09b247c3ca74428`.
 
 **Architecture foundation: READY. Production Android implementation: HOLD.**
 
 The repository has the foundations needed for one Codex task to evolve two native clients: a verified SwiftUI application, versioned behavior/copy/design/API contracts, portable fixture cases, a native-platform adapter map, and a disposable Android feasibility spike. “Ready” means the architecture no longer needs a framework rewrite, Storybook, a mass directory move, or a shared UI runtime before Android work.
 
+The exact audited `main` commit passed the GitHub **iOS verification** and **Product contracts** workflows on 2026-08-04. A fresh **Android Gate 0** workflow dispatch passed on 2026-08-05. On 2026-08-07 the same spike also passed 23 JVM tests, lint/APK assembly, five API-36 emulator instrumentation tests, and a cold-launch smoke check. These checks prove buildability and portable/static boundaries; they do not replace any physical Gate 0 cell.
+
 It does not authorize a production Android application. All 36 required Pixel/Samsung Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
 
 The iOS `ACCOUNT-01` ordinary-sign-out storage gap remains visible in `docs/MOBILE_BEHAVIOR_V1.md`. Per-account namespacing is legitimate product hardening, but it is not an Android feasibility prerequisite and must not be used to justify a broad startup/runtime rewrite. Address it later as a separate, measured change with an explicit migration policy and cross-account device evidence.
+
+The owner reported that iOS 1.1.0 build 6 from this release line is live on the App Store. `docs/APP_STORE_1.1.0.md` records the repository evidence and the boundary between that evidence and App Store-side actions.
 
 Complexity is governed by responsibility, not by the smallest file count. Do not collapse legitimate Xcode target folders or combine unrelated features to reduce a number. Conversely, do not add layers, modules, or component catalogs solely to make both platforms look symmetrical. Extract a boundary only when it removes duplicated product decisions, isolates a system capability, or reduces measured change risk.
 

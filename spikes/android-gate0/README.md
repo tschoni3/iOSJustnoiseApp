@@ -23,9 +23,22 @@ The canonical decision criteria remain in [`../../docs/ANDROID_GATE_0.md`](../..
 
 There is no backend, account, analytics, network permission, `QUERY_ALL_PACKAGES`, usage-stats permission, draw-over-other-apps permission, device-owner path, Compose runtime, or production identifier in this spike.
 
+## Verified pre-device baseline
+
+Recorded 2026-08-07 at repository commit `4bb4631148a1c5fdab0455c4e09b247c3ca74428`:
+
+- Product-contract verification passed: 14 semantic colors, 21 English copy entries, and 24 portable behavior cases.
+- The Gate 0 static-policy boundary passed.
+- The pinned local build passed 23 JVM tests, lint, debug APK assembly, and instrumentation APK assembly with JDK 17 and SDK 36.
+- Five hardware-independent instrumentation tests passed on an Apple Silicon API 36 Google Play emulator: disclosure/consent UI, Android Keystore HMAC Zap storage, local session-state persistence, and synthetic NDEF parsing.
+- The debug APK installed and cold-launched successfully on the same emulator.
+- GitHub **Android Gate 0** run [`31009963974`](https://github.com/tschoni3/iOSJustnoiseApp/actions/runs/31009963974) passed on the exact commit.
+
+This is supporting preflight evidence only. The Android Emulator has no NFC hardware and does not reproduce Pixel/Samsung lifecycle, battery, escape-path, or interception timing behavior. Therefore it changes zero cells in `evidence/DEVICE_MATRIX.md`; all 36 cells remain `BLOCKED`.
+
 ## Toolchain and wrapper bootstrap
 
-The project is pinned to Android Gradle Plugin 9.3.0, Gradle 9.5.0, built-in Kotlin, JDK 17, and compile/target SDK 36. The creating Mac had no Java, Gradle, Android SDK, or ADB, so no unreviewed local toolchain was installed. The standard wrapper was generated in the pinned CI environment, passed Gradle wrapper validation, and is checked in so every build uses the same entry point. The official Gradle 9.5.0 binary ZIP SHA-256 is `553c78f50dafcd54d65b9a444649057857469edf836431389695608536d6b746`; the official wrapper JAR SHA-256 is `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`.
+The project is pinned to Android Gradle Plugin 9.3.0, Gradle 9.5.0, built-in Kotlin, JDK 17, and compile/target SDK 36. At spike creation the Mac had no Java, Gradle, Android SDK, or ADB, so the standard wrapper was generated in the pinned CI environment rather than copied from an unknown local installation. It passed Gradle wrapper validation and is checked in so every build uses the same entry point. The official Gradle 9.5.0 binary ZIP SHA-256 is `553c78f50dafcd54d65b9a444649057857469edf836431389695608536d6b746`; the official wrapper JAR SHA-256 is `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`.
 
 To regenerate the wrapper later without Android Studio, use a trusted JDK 17 and an official Gradle 9.5.0 binary:
 

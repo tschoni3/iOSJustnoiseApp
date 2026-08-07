@@ -4,14 +4,23 @@ Decision: **HOLD / NO-GO for the full Android port**
 
 Date opened: 2026-07-22
 
+Last updated: 2026-08-07
+
 The repository now contains a reviewable candidate and CI design, but the required consumer-device and policy evidence does not exist. All 36 Pixel/Samsung cells remain `BLOCKED`, which is a gate failure. No production `android-app/` should be created from this spike yet.
 
-## What a green prototype build would prove
+## Pre-device evidence now recorded
+
+At repository commit `4bb4631148a1c5fdab0455c4e09b247c3ca74428`, product-contract and static-policy verification passed; the local prototype passed 23 JVM tests, lint and APK assembly; five hardware-independent instrumentation tests passed on an API 36 Google Play emulator; and the APK cold-launched. GitHub Android Gate 0 run [`31009963974`](https://github.com/tschoni3/iOSJustnoiseApp/actions/runs/31009963974) also passed on the exact commit.
+
+This evidence changes no device-matrix cell. It validates only the build, declared static boundary, portable fixtures, local state/Keystore behavior, synthetic NDEF parsing, and basic launchability.
+
+## What the green prototype evidence proves
 
 - The disposable project compiles with its pinned toolchain.
 - Portable reducer fixtures pass in Kotlin.
 - Static source/manifest claims match the minimal declared boundary.
 - Lint and instrumentation-test APK compilation pass.
+- The five hardware-independent instrumentation tests execute successfully on an API 36 emulator.
 
 ## What it cannot prove
 
