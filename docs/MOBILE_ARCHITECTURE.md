@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.2
+Status: target architecture, version 1.0.3
 
 ## Decision
 
@@ -124,6 +124,45 @@ Package boundaries are sufficient at first. Create additional Gradle modules onl
 “Unresolved” is intentional. It prevents an incidental iOS implementation from becoming a false Android promise.
 
 An Android accessibility overlay is not a system-owned equivalent of an iOS shield. Android owns the permission flow, Accessibility settings, and window authorization; Justnoise renders and owns the candidate blocked surface. That means its visual accessibility, touch handling, navigation behavior, privacy, and escape paths are all application responsibilities and must be tested explicitly.
+
+## Launch-ready iOS to Android delivery matrix
+
+Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftUI screens, and extension targets on 2026-08-07. This matrix controls scope and sequencing; it is not a claim that an Android screen or capability already exists.
+
+| Product surface | iOS 1.1.0 Release source | Portable contract coverage | Android delivery decision |
+| --- | --- | --- | --- |
+| Startup and account-cleanup gate | Root routing blocks product hydration until cleanup succeeds | Account isolation and fail-closed deletion rules are portable; ordinary sign-out namespacing remains partial | Implement in the first production slice with native persistence and the same truthful loading/blocked outcomes |
+| Onboarding and Zap activation | Two launch pages followed by physical Zap activation; Capture page is compiled out | Core brand/Zap copy and activation outcomes are only partially keyed | Implement natively after Gate 0; use Android NFC language and permission flow rather than copying iOS instructions literally |
+| Sign-in, sign-up, reset, and session restoration | Supabase email/password, Google sign-in, reset deep link, authoritative auth-session store | Identity/account safety outcomes are portable; provider SDK and redirect handling are adapters | Include in the first production slice; configure Android OAuth/package-signing identity separately and do not treat StoreKit state as entitlement |
+| Zap home and focus-session lifecycle | Release opens directly on the single Zap surface; idle/active UI, mode selector, scan, stop guard, and completion sheet | Lifecycle reducer, stop guard, keyed core copy, and semantic Zap colors are shared | Primary Android v1 surface after Gate 0, implemented in Compose against the shared reducer fixtures |
+| Modes and target selection | List, create, edit, delete, and Family Controls picker for apps/categories/web domains | Stable mode identity and non-empty selection rule are shared; selection tokens remain platform-owned | Primary Android v1 surface after Gate 0; expose only target types the Android adapter proves and report unsupported types honestly |
+| Blocked surface | Managed Settings shield configured with app/site name, fallback copy, and white action | Shield template, fallbacks, action copy, and semantic colors are shared | Gate 0 blocker; Android owns a Compose/View overlay and must pass accessibility, layout, bypass, and escape-path checks |
+| Emergency Unzap and recovery | Token-gated recovery plus relaunch/platform-state reconciliation | Recovery intent is portable; token replenishment is intentionally undefined | Include recovery in primary Android v1, but do not invent replenishment or stronger enforcement semantics |
+| History and weekly Noise Rewind | Session totals, day grid, 90-day/year views, completion summary, and weekly insight | Session duration is portable; aggregate/display semantics and most copy/tokens are not yet frozen | Add after the core focus slice; define fixtures for aggregates and empty states before implementation |
+| Schedules and notifications | Create/edit/enable/delete schedule, Device Activity extension, and notification nudges | Only schedule identity/safety and weekday names are shared; time-zone, DST, collision, missed-fire, and recovery semantics are unresolved | Defer Android schedules until those decisions and fixtures are approved; do not copy the current iOS monitoring window |
+| Settings, deletion, and support | Account details, language, onboarding reset, support/legal links, Emergency Unzap, deletion, and sign-out | Account deletion/isolation rules are shared; store links, language UI, and provider details remain native | Add account/deletion settings with the first authenticated slice; add secondary support/settings rows incrementally |
+| Active-session system surface | WidgetKit extension supplies a Live Activity, Lock Screen, StandBy, and Dynamic Island presentation | Active/idle truth is portable; system presentation is not | Use an Android ongoing notification after the core restriction flow is stable; behavioral truth matters, not pixel identity |
+| Capture and Signal | Capture entry points are compiled out of Release; development source remains available | Signal API contract is pinned, but Capture is not in the launch surface | Excluded from Android v1 until the iOS feature is launch-ready and separately scoped |
+| Home-screen widget | No home-screen widget ships; the existing WidgetKit target contains only the Live Activity configuration | No widget activation contract is required for Android v1 | Explicitly deferred by product decision; it is not a prerequisite for the Android port |
+
+### Delivery slices
+
+1. **Current pre-device phase:** maintain shared contracts, the disposable Gate 0 spike, policy evidence, and this matrix. Do not create `android-app/`.
+2. **Production slice 1, only after Gate 0 PASS:** one Compose application module with startup/account boundaries, onboarding/activation, authentication, Modes, Zap lifecycle, restriction capability, and recovery.
+3. **Production slice 2:** history, completion/weekly states, account/settings surfaces, and an ongoing-notification adapter.
+4. **Production slice 3:** schedules only after the unresolved temporal rules have explicit product decisions and portable fixtures.
+5. **Later products:** Capture, Signal UI, and an Android widget require separate launch decisions and are not allowed to delay the core Android focus experience.
+
+### Contract expansion rule
+
+Do not bulk-copy every current SwiftUI string, color literal, layout constant, or system phrase into `product/`. The current contract files are intentionally a small stable baseline. At the start of each approved production slice:
+
+1. promote the shared observable states, copy, and semantic visual values used by that slice;
+2. add portable fixtures for rules and formatted outcomes;
+3. map the same keys in SwiftUI and Compose without changing already-approved iOS behavior accidentally; and
+4. keep platform permission, OAuth, store, accessibility-settings, and system-notification language in native resources.
+
+Deferred surfaces do not need speculative contract expansion. This keeps Codex changes simultaneous and reviewable once both native applications exist without turning today’s iOS implementation details into accidental cross-platform promises.
 
 ## Component workflow
 
