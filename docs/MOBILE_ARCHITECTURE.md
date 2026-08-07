@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.3
+Status: target architecture, version 1.0.4
 
 ## Decision
 
@@ -17,6 +17,8 @@ Audited 2026-08-07 against GitHub `main` merge `4bb4631148a1c5fdab0455c4e09b247c
 The repository has the foundations needed for one Codex task to evolve two native clients: a verified SwiftUI application, versioned behavior/copy/design/API contracts, portable fixture cases, a native-platform adapter map, and a disposable Android feasibility spike. “Ready” means the architecture no longer needs a framework rewrite, Storybook, a mass directory move, or a shared UI runtime before Android work.
 
 The exact audited `main` commit passed the GitHub **iOS verification** and **Product contracts** workflows on 2026-08-04. A fresh **Android Gate 0** workflow dispatch passed on 2026-08-05. On 2026-08-07 the same spike also passed 23 JVM tests, lint/APK assembly, five API-36 emulator instrumentation tests, and a cold-launch smoke check. These checks prove buildability and portable/static boundaries; they do not replace any physical Gate 0 cell.
+
+The separate `spikes/android-ui/` project now proves the release Zap idle/active hierarchy and native mode picker in Jetpack Compose. It maps all current copy and color contracts with drift tests, exposes Compose previews, reuses the existing Zap artwork, and declares no user-facing permission or Android service. Its in-app state switch is presentation-only; it is not NFC or restriction evidence and does not authorize `android-app/`.
 
 It does not authorize a production Android application. All 36 required Pixel/Samsung Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
 
@@ -40,7 +42,8 @@ The existing iOS project remains at the repository root to avoid a high-churn mo
 │   └── design/
 ├── scripts/
 ├── spikes/
-│   └── android-gate0/           # disposable candidate; never a production app
+│   ├── android-gate0/           # disposable capability candidate
+│   └── android-ui/              # permission-free Compose presentation proof
 ├── android-app/                 # future Gradle root
 │   └── app/                     # one module initially
 ├── justnoise.xcodeproj          # existing iOS project
@@ -147,7 +150,7 @@ Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftU
 
 ### Delivery slices
 
-1. **Current pre-device phase:** maintain shared contracts, the disposable Gate 0 spike, policy evidence, and this matrix. Do not create `android-app/`.
+1. **Current pre-device phase:** maintain shared contracts, the disposable Gate 0 and UI spikes, policy evidence, and this matrix. Do not create `android-app/`.
 2. **Production slice 1, only after Gate 0 PASS:** one Compose application module with startup/account boundaries, onboarding/activation, authentication, Modes, Zap lifecycle, restriction capability, and recovery.
 3. **Production slice 2:** history, completion/weekly states, account/settings surfaces, and an ongoing-notification adapter.
 4. **Production slice 3:** schedules only after the unresolved temporal rules have explicit product decisions and portable fixtures.
