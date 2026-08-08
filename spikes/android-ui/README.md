@@ -13,6 +13,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - The conditional Noise Rewind ready card and its seven-page weekly reflection sequence have deterministic Compose states and native swipe navigation.
 - The shared blocked-surface copy, app-name fallback behavior, semantic colors, and white action render in a static Compose preview, including a long-name state.
 - Truthful permission-required, permission-denied, temporarily-unavailable, and unsupported recovery cards keep the Zap surface idle and never simulate capability success.
+- Startup hydration, account-cleanup progress/blocking, auth resolution, and reset-link password-update states mirror the iOS root-routing boundaries.
 - Mode selection can use native Android interaction while preserving the same product intent.
 - Compose previews expose important states without adding Storybook or a second component runtime.
 - The existing Zap artwork is reused at build time rather than copied into another source of truth.
@@ -26,6 +27,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - Noise Rewind uses representative values; eligibility, 12-second autoplay, analytics, and reflection persistence are not running.
 - The blocked surface is an activity/preview only. It is not an overlay, does not intercept another app, and is not restriction evidence.
 - Recovery-card actions update local preview intent only; they do not open Settings, request permission, retry a service, or assert availability.
+- Startup retry and password-update actions produce local preview requests only. They do not load account data, call Supabase, change credentials, consume a deep link, or bypass the cleanup gate.
 - No Accessibility service or user-facing/sensitive system permission is declared.
 - No production package name, signing identity, account, schedule, backend, or Play listing is created.
 
@@ -44,7 +46,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
 
 Install the resulting APK from `app/build/outputs/apk/debug/app-debug.apk` on an emulator. Android Studio can also open this directory directly and render the launch, Zap, Modes, History, Schedules, and Settings previews from the prototype source files.
 
-For deterministic emulator inspection only, launch `MainActivity` with the string extra `prototype_scene` set to `noise-rewind-ready`, `noise-rewind-flow`, `blocked-surface`, `blocked-surface-long-name`, `capability-permission-required`, `capability-permission-denied`, `capability-temporarily-unavailable`, or `capability-unsupported`. These extras are preview test entry points, not product navigation.
+For deterministic emulator inspection only, launch `MainActivity` with the string extra `prototype_scene` set to `noise-rewind-ready`, `noise-rewind-flow`, `blocked-surface`, `blocked-surface-long-name`, `capability-permission-required`, `capability-permission-denied`, `capability-temporarily-unavailable`, `capability-unsupported`, `startup-loading`, `startup-cleanup`, `startup-cleanup-blocked`, `auth-resolving`, `password-update`, or `password-update-success`. These extras are preview test entry points, not product navigation.
 
 ## Promotion boundary
 

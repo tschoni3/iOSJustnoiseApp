@@ -48,6 +48,31 @@ class MainActivity : ComponentActivity() {
                 "capability-unsupported" -> JustnoiseTheme {
                     CapabilityRecoveryScene(RestrictionCapabilityPreview.Unsupported)
                 }
+                "startup-loading" -> JustnoiseTheme {
+                    StartupBoundaryScene(StartupPreviewPhase.AppHydration)
+                }
+                "startup-cleanup" -> JustnoiseTheme {
+                    StartupBoundaryScene(StartupPreviewPhase.AccountCleanup)
+                }
+                "startup-cleanup-blocked" -> JustnoiseTheme {
+                    StartupBoundaryScene(StartupPreviewPhase.AccountCleanupBlocked)
+                }
+                "auth-resolving" -> JustnoiseTheme {
+                    StartupBoundaryScene(StartupPreviewPhase.AuthResolution)
+                }
+                "password-update" -> JustnoiseTheme {
+                    PasswordUpdateScene()
+                }
+                "password-update-success" -> JustnoiseTheme {
+                    PasswordUpdateScene(
+                        PasswordUpdateUiState(
+                            newPassword = "focus123",
+                            confirmPassword = "focus123",
+                            visualState = PasswordUpdateVisualState.Success,
+                            statusMessage = "Your password has been updated successfully.",
+                        ),
+                    )
+                }
                 else -> JustnoisePrototypeApp()
             }
         }

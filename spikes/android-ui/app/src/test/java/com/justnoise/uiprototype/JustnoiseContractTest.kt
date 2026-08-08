@@ -255,4 +255,86 @@ class JustnoiseContractTest {
         assertEquals(RecoveryRequest.None, handled.request)
         assertFalse(handled.isDismissed)
     }
+
+    @Test
+    fun startupCleanupRetryKeepsTheHydrationGateClosed() {
+        val blocked = StartupBoundaryUiState(StartupPreviewPhase.AccountCleanupBlocked)
+        val retrying = StartupBoundaryReducer.reduce(
+            blocked,
+            StartupBoundaryAction.RetryAccountCleanup,
+        )
+
+        assertEquals(StartupPreviewPhase.AccountCleanupBlocked, retrying.phase)
+        assertEquals(StartupPreviewRequest.RetryAccountCleanup, retrying.request)
+
+        val loading = StartupBoundaryUiState(StartupPreviewPhase.AppHydration)
+        assertEquals(
+            loading,
+            StartupBoundaryReducer.reduce(
+                loading,
+                StartupBoundaryAction.RetryAccountCleanup,
+            ),
+        )
+    }
+
+    @Test
+    fun passwordUpdatePreviewValidatesBeforeRequestingAnAdapterMutation() {
+        fun submit(state: PasswordUpdateUiState): PasswordUpdateUiState =
+            PasswordUpdateReducer.reduce(state, PasswordUpdateAction.Submit)
+
+        assertEquals("Please fill in all fields.", submit(PasswordUpdateUiState()).statusMessage)
+        assertEquals(
+            "Passwords do not match.",
+            submit(
+                PasswordUpdateUiState(
+                    newPassword = "focus1",
+                    confirmPassword = "focus2",
+                ),
+            ).statusMessage,
+        )
+        assertEquals(
+            "Password is too weak (min 6 chars).",
+            submit(
+                PasswordUpdateUiState(
+                    newPassword = "short",
+                    confirmPassword = "short",
+                ),
+            ).statusMessage,
+        )
+        assertEquals(
+            "Invalid reset token.",
+            submit(
+                PasswordUpdateUiState(
+                    newPassword = "focus123",
+                    confirmPassword = "focus123",
+                    hasResetToken = false,
+                ),
+            ).statusMessage,
+        )
+
+        val submitting = submit(
+            PasswordUpdateUiState(
+                newPassword = "focus123",
+                confirmPassword = "focus123",
+            ),
+        )
+        assertEquals(PasswordUpdateVisualState.Submitting, submitting.visualState)
+        assertEquals(PasswordUpdatePreviewRequest.SubmitPassword, submitting.request)
+        assertFalse(submitting.visualState == PasswordUpdateVisualState.Success)
+
+        val succeeded = PasswordUpdateReducer.reduce(
+            submitting,
+            PasswordUpdateAction.ResolveSuccess,
+        )
+        assertEquals(PasswordUpdateVisualState.Success, succeeded.visualState)
+        assertEquals("Your password has been updated successfully.", succeeded.statusMessage)
+
+        assertEquals(
+            PasswordUpdateUiState(),
+            PasswordUpdateReducer.reduce(
+                PasswordUpdateUiState(),
+                PasswordUpdateAction.ResolveSuccess,
+            ),
+        )
+    }
 }

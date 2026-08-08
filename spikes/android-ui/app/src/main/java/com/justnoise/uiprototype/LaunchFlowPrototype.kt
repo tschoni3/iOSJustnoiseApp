@@ -805,22 +805,6 @@ private fun PreviewMarker(foreground: Color) {
     )
 }
 
-@Composable
-private fun StartupLoadingScreen() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "Loading Justnoise…",
-            color = Color.White.copy(alpha = 0.78f),
-            fontSize = 16.sp,
-        )
-    }
-}
-
 @Preview(name = "Onboarding · Select Mode", widthDp = 412, heightDp = 915)
 @Composable
 private fun OnboardingFirstPreview() {
@@ -871,10 +855,4 @@ private fun SignUpPreview() {
             onContinuePreview = {},
         )
     }
-}
-
-@Preview(name = "Startup loading", widthDp = 412, heightDp = 915)
-@Composable
-private fun StartupLoadingPreview() {
-    JustnoiseTheme { StartupLoadingScreen() }
 }
