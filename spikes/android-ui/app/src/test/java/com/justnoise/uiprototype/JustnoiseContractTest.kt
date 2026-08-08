@@ -115,4 +115,31 @@ class JustnoiseContractTest {
         )
         assertEquals(PrototypeRoute.Zap, state.route)
     }
+
+    @Test
+    fun previewManagementRoutesReturnToExpectedParent() {
+        val zap = PrototypeFlowState(route = PrototypeRoute.Zap)
+
+        val modes = PrototypeFlowReducer.reduce(zap, PrototypeFlowAction.OpenModes)
+        assertEquals(PrototypeRoute.Modes, modes.route)
+        assertEquals(
+            PrototypeRoute.Zap,
+            PrototypeFlowReducer.reduce(modes, PrototypeFlowAction.Back).route,
+        )
+
+        val schedules = PrototypeFlowReducer.reduce(zap, PrototypeFlowAction.OpenSchedules)
+        assertEquals(PrototypeRoute.Schedules, schedules.route)
+        assertEquals(
+            PrototypeRoute.Zap,
+            PrototypeFlowReducer.reduce(schedules, PrototypeFlowAction.Back).route,
+        )
+
+        val history = PrototypeFlowReducer.reduce(zap, PrototypeFlowAction.OpenHistory)
+        val settings = PrototypeFlowReducer.reduce(history, PrototypeFlowAction.OpenSettings)
+        assertEquals(PrototypeRoute.Settings, settings.route)
+        assertEquals(
+            PrototypeRoute.History,
+            PrototypeFlowReducer.reduce(settings, PrototypeFlowAction.Back).route,
+        )
+    }
 }

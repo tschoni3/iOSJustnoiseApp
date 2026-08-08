@@ -106,6 +106,10 @@ enum class PrototypeRoute {
     SignIn,
     SignUp,
     Zap,
+    Modes,
+    History,
+    Schedules,
+    Settings,
 }
 
 data class PrototypeFlowState(
@@ -120,6 +124,10 @@ sealed interface PrototypeFlowAction {
     data object OpenSignUp : PrototypeFlowAction
     data object OpenSignIn : PrototypeFlowAction
     data object PreviewAuthenticated : PrototypeFlowAction
+    data object OpenModes : PrototypeFlowAction
+    data object OpenHistory : PrototypeFlowAction
+    data object OpenSchedules : PrototypeFlowAction
+    data object OpenSettings : PrototypeFlowAction
     data object Back : PrototypeFlowAction
     data object Reset : PrototypeFlowAction
 }
@@ -144,6 +152,10 @@ object PrototypeFlowReducer {
         PrototypeFlowAction.PreviewAuthenticated -> PrototypeFlowState(
             route = PrototypeRoute.Zap,
         )
+        PrototypeFlowAction.OpenModes -> state.copy(route = PrototypeRoute.Modes)
+        PrototypeFlowAction.OpenHistory -> state.copy(route = PrototypeRoute.History)
+        PrototypeFlowAction.OpenSchedules -> state.copy(route = PrototypeRoute.Schedules)
+        PrototypeFlowAction.OpenSettings -> state.copy(route = PrototypeRoute.Settings)
         PrototypeFlowAction.Back -> when (state.route) {
             PrototypeRoute.Onboarding -> state.copy(
                 onboardingPage = (state.onboardingPage - 1).coerceAtLeast(0),
@@ -155,6 +167,11 @@ object PrototypeFlowReducer {
             PrototypeRoute.SignIn -> PrototypeFlowState(route = PrototypeRoute.Activation)
             PrototypeRoute.SignUp -> PrototypeFlowState(route = PrototypeRoute.SignIn)
             PrototypeRoute.Zap -> state
+            PrototypeRoute.Modes,
+            PrototypeRoute.History,
+            PrototypeRoute.Schedules,
+            -> PrototypeFlowState(route = PrototypeRoute.Zap)
+            PrototypeRoute.Settings -> PrototypeFlowState(route = PrototypeRoute.History)
         }
         PrototypeFlowAction.Reset -> PrototypeFlowState()
     }

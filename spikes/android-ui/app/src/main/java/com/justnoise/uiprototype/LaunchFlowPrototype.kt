@@ -109,7 +109,12 @@ fun LaunchFlowScreen(
             onSwitchMode = { onAction(PrototypeFlowAction.OpenSignIn) },
             onContinuePreview = { onAction(PrototypeFlowAction.PreviewAuthenticated) },
         )
-        PrototypeRoute.Zap -> Unit
+        PrototypeRoute.Zap,
+        PrototypeRoute.Modes,
+        PrototypeRoute.History,
+        PrototypeRoute.Schedules,
+        PrototypeRoute.Settings,
+        -> Unit
     }
 }
 

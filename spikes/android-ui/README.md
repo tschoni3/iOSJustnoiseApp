@@ -6,6 +6,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 
 - The published iOS Zap screen can be expressed as a responsive native Compose screen.
 - The published Release launch order is represented as two onboarding pages, Zap activation, signed-out authentication, and Zap home; Capture remains absent.
+- The remaining Release surfaces reachable from Zap home—Modes, History, Schedules, and Settings—are represented with native Android navigation, scrolling, sheets, and controls.
 - The existing onboarding videos and app icon are reused through generated build resources rather than copied into Android source.
 - Idle and active presentation states use the shared copy and semantic color contracts.
 - Mode selection can use native Android interaction while preserving the same product intent.
@@ -17,10 +18,11 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - No NFC scan is started.
 - No application is restricted or observed.
 - Email, Google, password-reset, and activation actions change local preview state only; no authentication or reset request is sent.
+- Mode editing, app selection, schedule editing/toggles, settings links, emergency unzap, account deletion, and sign-out are local presentation simulations only.
 - No Accessibility service or user-facing/sensitive system permission is declared.
 - No production package name, signing identity, account, schedule, backend, or Play listing is created.
 
-Tapping the activation Zap advances the preview to authentication, the Google button advances to Zap home, and the home Zap switches the visual idle/active state. The launcher label and on-screen preview notices make those boundaries explicit.
+Tapping the activation Zap advances the preview to authentication, the Google button advances to Zap home, and the home Zap switches the visual idle/active state. Zap home also opens the Modes, History, Schedules, and Settings previews. The launcher label and on-screen preview notices make those boundaries explicit.
 
 The prototype omits the iOS-only Sign in with Apple button. Production Android authentication must make a deliberate provider decision and configure its own package/signing identity; this UI spike does not infer that decision from the iOS SDK.
 
@@ -33,7 +35,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
   ../android-gate0/gradlew -p . testDebugUnitTest assembleDebug
 ```
 
-Install the resulting APK from `app/build/outputs/apk/debug/app-debug.apk` on an emulator. Android Studio can also open this directory directly and render the idle and active previews in `ZapPrototype.kt`.
+Install the resulting APK from `app/build/outputs/apk/debug/app-debug.apk` on an emulator. Android Studio can also open this directory directly and render the launch, Zap, Modes, History, Schedules, and Settings previews from the prototype source files.
 
 ## Promotion boundary
 

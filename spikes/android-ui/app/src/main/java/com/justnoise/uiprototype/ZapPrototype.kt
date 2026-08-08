@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -80,40 +81,69 @@ fun JustnoisePrototypeApp() {
         flowState = PrototypeFlowReducer.reduce(flowState, action)
     }
 
-    BackHandler(
-        enabled = flowState.route != PrototypeRoute.Onboarding || flowState.onboardingPage > 0,
-    ) {
+    val handlesBack = when (flowState.route) {
+        PrototypeRoute.Onboarding -> flowState.onboardingPage > 0
+        PrototypeRoute.Zap -> false
+        else -> true
+    }
+    BackHandler(enabled = handlesBack) {
         dispatch(PrototypeFlowAction.Back)
     }
 
     JustnoiseTheme {
-        if (flowState.route == PrototypeRoute.Zap) {
-            ZapScreen(
-                state = zapState,
-                onZapClick = {
-                    zapState = ZapPreviewReducer.reduce(
-                        zapState,
-                        ZapPreviewAction.ToggleSession,
-                    )
-                },
-                onModeClick = { showModes = true },
-            )
-
-            if (showModes) {
-                ModeSheet(
-                    selectedMode = zapState.selectedMode,
-                    onSelect = { mode ->
+        when (flowState.route) {
+            PrototypeRoute.Zap -> {
+                ZapScreen(
+                    state = zapState,
+                    onZapClick = {
                         zapState = ZapPreviewReducer.reduce(
                             zapState,
-                            ZapPreviewAction.SelectMode(mode),
+                            ZapPreviewAction.ToggleSession,
                         )
-                        showModes = false
                     },
-                    onDismiss = { showModes = false },
+                    onModeClick = { showModes = true },
+                    onSchedulesClick = {
+                        dispatch(PrototypeFlowAction.OpenSchedules)
+                    },
+                    onHistoryClick = {
+                        dispatch(PrototypeFlowAction.OpenHistory)
+                    },
                 )
+
+                if (showModes) {
+                    ModeSheet(
+                        selectedMode = zapState.selectedMode,
+                        onSelect = { mode ->
+                            zapState = ZapPreviewReducer.reduce(
+                                zapState,
+                                ZapPreviewAction.SelectMode(mode),
+                            )
+                            showModes = false
+                        },
+                        onManageModes = {
+                            showModes = false
+                            dispatch(PrototypeFlowAction.OpenModes)
+                        },
+                        onDismiss = { showModes = false },
+                    )
+                }
             }
-        } else {
-            LaunchFlowScreen(
+            PrototypeRoute.Modes,
+            PrototypeRoute.History,
+            PrototypeRoute.Schedules,
+            PrototypeRoute.Settings,
+            -> ManagementFlowScreen(
+                route = flowState.route,
+                selectedMode = zapState.selectedMode,
+                onAction = dispatch,
+                onModeSelected = { mode ->
+                    zapState = ZapPreviewReducer.reduce(
+                        zapState,
+                        ZapPreviewAction.SelectMode(mode),
+                    )
+                },
+            )
+            else -> LaunchFlowScreen(
                 state = flowState,
                 onAction = dispatch,
             )
@@ -174,6 +204,8 @@ fun ZapScreen(
     state: ZapUiState,
     onZapClick: () -> Unit,
     onModeClick: () -> Unit,
+    onSchedulesClick: () -> Unit,
+    onHistoryClick: () -> Unit,
 ) {
     val background by animateColorAsState(
         targetValue = JustnoiseContract.color(
@@ -207,6 +239,8 @@ fun ZapScreen(
             ZapToolbar(
                 foreground = foreground,
                 showActions = !state.isActive,
+                onSchedulesClick = onSchedulesClick,
+                onHistoryClick = onHistoryClick,
             )
 
             BoxWithConstraints(
@@ -268,6 +302,8 @@ fun ZapScreen(
 private fun ZapToolbar(
     foreground: Color,
     showActions: Boolean,
+    onSchedulesClick: () -> Unit,
+    onHistoryClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -277,7 +313,12 @@ private fun ZapToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clickable(enabled = showActions, onClick = onSchedulesClick),
+            contentAlignment = Alignment.Center,
+        ) {
             if (showActions) CalendarGlyph(color = foreground)
         }
 
@@ -300,7 +341,12 @@ private fun ZapToolbar(
             )
         }
 
-        Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clickable(enabled = showActions, onClick = onHistoryClick),
+            contentAlignment = Alignment.Center,
+        ) {
             if (showActions) HistoryGlyph(color = foreground)
         }
     }
@@ -458,6 +504,7 @@ private fun UnzapButton(
 private fun ModeSheet(
     selectedMode: ModeOption,
     onSelect: (ModeOption) -> Unit,
+    onManageModes: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
@@ -498,6 +545,12 @@ private fun ModeSheet(
                     onClick = { onSelect(mode) },
                 )
                 Spacer(modifier = Modifier.height(10.dp))
+            }
+            TextButton(
+                onClick = onManageModes,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text("Manage modes", color = Color(0xFF1467C8))
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(
@@ -596,6 +649,8 @@ private fun ZapIdlePreview() {
             state = ZapUiState(isActive = false),
             onZapClick = {},
             onModeClick = {},
+            onSchedulesClick = {},
+            onHistoryClick = {},
         )
     }
 }
@@ -608,6 +663,8 @@ private fun ZapActivePreview() {
             state = ZapUiState(isActive = true),
             onZapClick = {},
             onModeClick = {},
+            onSchedulesClick = {},
+            onHistoryClick = {},
         )
     }
 }
