@@ -4,23 +4,29 @@ on:
   pull_request:
     paths:
       - ".github/workflows/android-gate0.yml"
+      - "AGENTS.md"
       - "docs/ANDROID_GATE_0.md"
-      - "product/behavior/portable-fixtures.v1.json"
-      - "product/copy/**"
-      - "product/design/**"
+      - "docs/ANDROID_PREDEVICE_READINESS.md"
+      - "docs/MOBILE_ARCHITECTURE.md"
+      - "product/**"
+      - "scripts/verify-android-predevice-readiness.sh"
       - "scripts/verify-product-contracts.sh"
       - "spikes/android-gate0/**"
+      - "spikes/android-ui/**"
   push:
     branches:
       - main
     paths:
       - ".github/workflows/android-gate0.yml"
+      - "AGENTS.md"
       - "docs/ANDROID_GATE_0.md"
-      - "product/behavior/portable-fixtures.v1.json"
-      - "product/copy/**"
-      - "product/design/**"
+      - "docs/ANDROID_PREDEVICE_READINESS.md"
+      - "docs/MOBILE_ARCHITECTURE.md"
+      - "product/**"
+      - "scripts/verify-android-predevice-readiness.sh"
       - "scripts/verify-product-contracts.sh"
       - "spikes/android-gate0/**"
+      - "spikes/android-ui/**"
   workflow_dispatch:
 
 concurrency:
@@ -32,7 +38,7 @@ permissions:
 
 jobs:
   build:
-    name: Static policy, JVM tests, lint, and APKs
+    name: Pre-device policy, tests, lint, and APKs
     runs-on: ubuntu-24.04
     timeout-minutes: 35
 
@@ -58,12 +64,8 @@ jobs:
       - name: Validate Gradle wrapper checksums
         uses: gradle/actions/wrapper-validation@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
 
-      - name: Verify static policy boundary and shared contracts
-        run: bash spikes/android-gate0/scripts/verify-static-policy.sh
-
-      - name: Run JVM tests, lint, and build testable APKs
-        working-directory: spikes/android-gate0
-        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+      - name: Verify the complete Android pre-device baseline
+        run: bash scripts/verify-android-predevice-readiness.sh
 
       - name: Collect APKs and checksums
         run: |
@@ -80,6 +82,21 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Collect UI prototype APK and checksum
+        run: |
+          mkdir -p "$RUNNER_TEMP/android-ui-debug"
+          cp spikes/android-ui/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/android-ui-debug/justnoise-ui-prototype-debug.apk"
+          cd "$RUNNER_TEMP/android-ui-debug"
+          sha256sum --binary *.apk > SHA256SUMS
+
+      - name: Upload UI prototype APK and checksum
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-ui-debug
+          path: ${{ runner.temp }}/android-ui-debug
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -89,5 +106,8 @@ jobs:
             spikes/android-gate0/app/build/reports
             spikes/android-gate0/app/build/test-results
             spikes/android-gate0/app/build/intermediates/lint*
+            spikes/android-ui/app/build/reports
+            spikes/android-ui/app/build/test-results
+            spikes/android-ui/app/build/intermediates/lint*
           if-no-files-found: ignore
           retention-days: 14

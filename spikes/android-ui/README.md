@@ -37,7 +37,13 @@ The prototype omits the iOS-only Sign in with Apple button. Production Android a
 
 ## Run
 
-The Gate 0 wrapper is reused so the repository does not track a second Gradle wrapper binary:
+To verify the complete repository pre-device baseline (shared contracts, both Android spikes, lint, tests, APKs, and the production-module boundary), run from the repository root:
+
+```sh
+bash scripts/verify-android-predevice-readiness.sh
+```
+
+For this UI project only, the Gate 0 wrapper is reused so the repository does not track a second Gradle wrapper binary:
 
 ```sh
 JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \

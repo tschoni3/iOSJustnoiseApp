@@ -58,6 +58,7 @@ For a portable mobile change:
 - Add native tests for both implementations when both exist.
 - Run `bash scripts/verify-product-contracts.sh`.
 - Run the affected platform verifier.
+- For any pre-device Android contract, UI, Gate 0, or readiness change, run `bash scripts/verify-android-predevice-readiness.sh`.
 - Record physical-device-only checks for NFC, restrictions, schedules, notifications, widgets, or background execution.
 
 Platform-only fixes may remain platform-only when the portable behavior is unchanged. Say why in the pull request.

@@ -23,6 +23,7 @@ copy_path = root / "product/copy/en.v1.json"
 fixture_path = root / "product/behavior/portable-fixtures.v1.json"
 workflow_path = root / ".github/workflows/product-contracts.yml"
 ios_workflow_path = root / ".github/workflows/ios-verification.yml"
+android_workflow_path = root / ".github/workflows/android-gate0.yml"
 portable_rules_test_path = root / "justnoiseradioTests/PortableZapRulesTests.swift"
 signal_api_root = root / "product/api/signal/v1"
 signal_provenance_path = signal_api_root / "provenance.json"
@@ -32,6 +33,7 @@ required_contract_paths = (
     "docs/MOBILE_ARCHITECTURE.md",
     "docs/MOBILE_BEHAVIOR_V1.md",
     "docs/ANDROID_GATE_0.md",
+    "docs/ANDROID_PREDEVICE_READINESS.md",
     "product/behavior/portable-fixtures.v1.json",
     "product/copy/en.v1.json",
     "product/design/tokens.v1.json",
@@ -46,8 +48,10 @@ required_contract_paths = (
     "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "scripts/verify-product-contracts.sh",
+    "scripts/verify-android-predevice-readiness.sh",
     ".github/workflows/product-contracts.yml",
     ".github/workflows/ios-verification.yml",
+    ".github/workflows/android-gate0.yml",
 )
 
 
@@ -549,6 +553,7 @@ required_document_fragments = {
         "released and pinned",
         "d445e7a45025b59ced388465cff3c84dd9ee86fd",
         "product/api/signal/v1/",
+        "scripts/verify-android-predevice-readiness.sh",
     ),
     "docs/MOBILE_ARCHITECTURE.md": (
         "## Color-token mapping",
@@ -573,6 +578,21 @@ required_document_fragments = {
         "G0-18",
         "local-only data inventory",
         "Force Stop",
+    ),
+    "docs/ANDROID_PREDEVICE_READINESS.md": (
+        "READY TO RUN PHYSICAL GATE 0",
+        "PRODUCTION IMPLEMENTATION HOLD",
+        "scripts/verify-android-predevice-readiness.sh",
+        "Do not create `android-app/`",
+        "Complete all 36 Pixel/Samsung cells",
+    ),
+    "scripts/verify-android-predevice-readiness.sh": (
+        '[[ ! -e "$REPOSITORY_ROOT/android-app" ]]',
+        "verify-static-policy.sh",
+        "testDebugUnitTest",
+        "lintDebug",
+        "assembleDebugAndroidTest",
+        '"$GRADLE_WRAPPER" --no-daemon -p "$UI_ROOT"',
     ),
 }
 for relative, fragments in required_document_fragments.items():
@@ -603,6 +623,29 @@ if ios_workflow_text.count('"product/behavior/**"') < 2:
 if ios_workflow_text.count('"product/api/signal/**"') < 2:
     fail("iOS workflow must run for pull requests and main pushes that change the Signal contract pin")
 
+android_workflow_text = android_workflow_path.read_text(encoding="utf-8")
+for required_path_filter in (
+    '"AGENTS.md"',
+    '"docs/ANDROID_GATE_0.md"',
+    '"docs/ANDROID_PREDEVICE_READINESS.md"',
+    '"docs/MOBILE_ARCHITECTURE.md"',
+    '"product/**"',
+    '"scripts/verify-android-predevice-readiness.sh"',
+    '"scripts/verify-product-contracts.sh"',
+    '"spikes/android-gate0/**"',
+    '"spikes/android-ui/**"',
+):
+    if android_workflow_text.count(required_path_filter) < 2:
+        fail(f"Android Gate 0 workflow must filter pull requests and main pushes for {required_path_filter}")
+if "run: bash scripts/verify-android-predevice-readiness.sh" not in android_workflow_text:
+    fail("Android Gate 0 workflow must run the complete pre-device verifier")
+for report_marker in (
+    "spikes/android-gate0/app/build/test-results",
+    "spikes/android-ui/app/build/test-results",
+):
+    if report_marker not in android_workflow_text:
+        fail(f"Android Gate 0 workflow must preserve report collection for {report_marker}")
+
 contract_scopes = [
     "AGENTS.md",
     "docs",
@@ -610,8 +653,10 @@ contract_scopes = [
     "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "scripts/verify-product-contracts.sh",
+    "scripts/verify-android-predevice-readiness.sh",
     ".github/workflows/product-contracts.yml",
     ".github/workflows/ios-verification.yml",
+    ".github/workflows/android-gate0.yml",
 ]
 try:
     tracked = subprocess.run(

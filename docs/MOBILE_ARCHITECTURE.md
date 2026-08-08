@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.10
+Status: target architecture, version 1.0.11
 
 ## Decision
 
@@ -21,6 +21,8 @@ The exact audited `main` commit passed the GitHub **iOS verification** and **Pro
 The separate `spikes/android-ui/` project now proves the Release presentation sequence—startup hydration/account-cleanup gates, two onboarding pages, Zap activation, signed-out authentication and reset-link password update, Zap idle/active, Capture-disabled Session Complete, Modes, History, Schedules, Settings, and the conditional seven-page Noise Rewind—in Jetpack Compose. It also renders the shared blocked-surface contract and truthful restriction-capability recovery cards without declaring a service or permission. It maps all current copy and color contracts with drift tests, exposes Compose previews, reuses the existing onboarding videos/icon/Zap artwork through generated resources, and declares no user-facing permission or Android service. Its startup/auth routing, navigation, authentication, activation, mode/app selection, schedule controls, settings/account actions, completion sheet, Noise Rewind values/navigation, blocked surface, recovery actions, and Zap state switches are presentation-only; they are not backend, NFC, restriction, interception, background-work, analytics, eligibility, autoplay, persistence, account cleanup/deletion, credential mutation, or deep-link evidence and do not authorize `android-app/`.
 
 It does not authorize a production Android application. All 36 required Pixel/Samsung Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
+
+`docs/ANDROID_PREDEVICE_READINESS.md` is the operational handoff. `scripts/verify-android-predevice-readiness.sh` validates both disposable Android projects, the shared/static boundaries, and the absence of `android-app/` in one command; the **Android Gate 0** workflow runs that same command for Gate 0, UI-prototype, architecture, and contract changes. A green run proves only the pre-device baseline described there.
 
 The iOS `ACCOUNT-01` ordinary-sign-out storage gap remains visible in `docs/MOBILE_BEHAVIOR_V1.md`. Per-account namespacing is legitimate product hardening, but it is not an Android feasibility prerequisite and must not be used to justify a broad startup/runtime rewrite. Address it later as a separate, measured change with an explicit migration policy and cross-account device evidence.
 
