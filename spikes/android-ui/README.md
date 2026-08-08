@@ -9,6 +9,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - The remaining Release surfaces reachable from Zap home—Modes, History, Schedules, and Settings—are represented with native Android navigation, scrolling, sheets, and controls.
 - The existing onboarding videos and app icon are reused through generated build resources rather than copied into Android source.
 - Idle and active presentation states use the shared copy and semantic color contracts.
+- Stopping an active preview returns to idle and presents the Capture-disabled Release Session Complete sheet.
 - Mode selection can use native Android interaction while preserving the same product intent.
 - Compose previews expose important states without adding Storybook or a second component runtime.
 - The existing Zap artwork is reused at build time rather than copied into another source of truth.
@@ -22,7 +23,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - No Accessibility service or user-facing/sensitive system permission is declared.
 - No production package name, signing identity, account, schedule, backend, or Play listing is created.
 
-Tapping the activation Zap advances the preview to authentication, the Google button advances to Zap home, and the home Zap switches the visual idle/active state. Zap home also opens the Modes, History, Schedules, and Settings previews. The launcher label and on-screen preview notices make those boundaries explicit.
+Tapping the activation Zap advances the preview to authentication, the Google button advances to Zap home, and the home Zap switches the visual idle/active state. Stopping presents Session Complete without a reflection action because Capture is excluded from Release. Zap home also opens the Modes, History, Schedules, and Settings previews. The launcher label and on-screen preview notices make those boundaries explicit.
 
 The prototype omits the iOS-only Sign in with Apple button. Production Android authentication must make a deliberate provider decision and configure its own package/signing identity; this UI spike does not infer that decision from the iOS SDK.
 

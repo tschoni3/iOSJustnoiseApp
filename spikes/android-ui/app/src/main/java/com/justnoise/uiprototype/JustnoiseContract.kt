@@ -80,17 +80,24 @@ data class ZapUiState(
     val isActive: Boolean = false,
     val selectedMode: ModeOption = PreviewModes.first(),
     val elapsedText: String = "00:25:00",
+    val isCompletionVisible: Boolean = false,
 )
 
 sealed interface ZapPreviewAction {
     data object ToggleSession : ZapPreviewAction
     data class SelectMode(val mode: ModeOption) : ZapPreviewAction
+    data object DismissCompletion : ZapPreviewAction
 }
 
 object ZapPreviewReducer {
     fun reduce(state: ZapUiState, action: ZapPreviewAction): ZapUiState = when (action) {
-        ZapPreviewAction.ToggleSession -> state.copy(isActive = !state.isActive)
+        ZapPreviewAction.ToggleSession -> if (state.isActive) {
+            state.copy(isActive = false, isCompletionVisible = true)
+        } else {
+            state.copy(isActive = true, isCompletionVisible = false)
+        }
         is ZapPreviewAction.SelectMode -> state.copy(selectedMode = action.mode)
+        ZapPreviewAction.DismissCompletion -> state.copy(isCompletionVisible = false)
     }
 }
 

@@ -57,11 +57,20 @@ class JustnoiseContractTest {
 
         assertTrue(active.isActive)
         assertEquals(initial.selectedMode, active.selectedMode)
+        assertFalse(active.isCompletionVisible)
         assertTrue(selected.isActive)
         assertEquals(study, selected.selectedMode)
-        assertFalse(
-            ZapPreviewReducer.reduce(selected, ZapPreviewAction.ToggleSession).isActive,
+        val stopped = ZapPreviewReducer.reduce(selected, ZapPreviewAction.ToggleSession)
+        assertFalse(stopped.isActive)
+        assertTrue(stopped.isCompletionVisible)
+
+        val dismissed = ZapPreviewReducer.reduce(
+            stopped,
+            ZapPreviewAction.DismissCompletion,
         )
+        assertFalse(dismissed.isCompletionVisible)
+        assertFalse(dismissed.isActive)
+        assertEquals(study, dismissed.selectedMode)
     }
 
     @Test

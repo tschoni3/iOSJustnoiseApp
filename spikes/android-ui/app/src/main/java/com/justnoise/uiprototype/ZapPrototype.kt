@@ -110,6 +110,20 @@ fun JustnoisePrototypeApp() {
                     },
                 )
 
+                if (zapState.isCompletionVisible) {
+                    SessionCompleteSheet(
+                        modeName = zapState.selectedMode.name,
+                        durationText = "25m protected",
+                        signalBoost = 5,
+                        onDone = {
+                            zapState = ZapPreviewReducer.reduce(
+                                zapState,
+                                ZapPreviewAction.DismissCompletion,
+                            )
+                        },
+                    )
+                }
+
                 if (showModes) {
                     ModeSheet(
                         selectedMode = zapState.selectedMode,
@@ -173,6 +187,7 @@ private val ZapStateSaver = androidx.compose.runtime.saveable.mapSaver<ZapUiStat
             "modeId" to state.selectedMode.id,
             "modeName" to state.selectedMode.name,
             "elapsed" to state.elapsedText,
+            "completion" to state.isCompletionVisible,
         )
     },
     restore = { saved ->
@@ -183,6 +198,7 @@ private val ZapStateSaver = androidx.compose.runtime.saveable.mapSaver<ZapUiStat
                 name = saved["modeName"] as String,
             ),
             elapsedText = saved["elapsed"] as String,
+            isCompletionVisible = saved["completion"] as? Boolean ?: false,
         )
     },
 )
