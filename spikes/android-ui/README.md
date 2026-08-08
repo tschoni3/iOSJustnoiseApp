@@ -10,6 +10,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - The existing onboarding videos and app icon are reused through generated build resources rather than copied into Android source.
 - Idle and active presentation states use the shared copy and semantic color contracts.
 - Stopping an active preview returns to idle and presents the Capture-disabled Release Session Complete sheet.
+- The conditional Noise Rewind ready card and its seven-page weekly reflection sequence have deterministic Compose states and native swipe navigation.
 - Mode selection can use native Android interaction while preserving the same product intent.
 - Compose previews expose important states without adding Storybook or a second component runtime.
 - The existing Zap artwork is reused at build time rather than copied into another source of truth.
@@ -20,6 +21,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - No application is restricted or observed.
 - Email, Google, password-reset, and activation actions change local preview state only; no authentication or reset request is sent.
 - Mode editing, app selection, schedule editing/toggles, settings links, emergency unzap, account deletion, and sign-out are local presentation simulations only.
+- Noise Rewind uses representative values; eligibility, 12-second autoplay, analytics, and reflection persistence are not running.
 - No Accessibility service or user-facing/sensitive system permission is declared.
 - No production package name, signing identity, account, schedule, backend, or Play listing is created.
 
@@ -37,6 +39,8 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
 ```
 
 Install the resulting APK from `app/build/outputs/apk/debug/app-debug.apk` on an emulator. Android Studio can also open this directory directly and render the launch, Zap, Modes, History, Schedules, and Settings previews from the prototype source files.
+
+For deterministic emulator inspection only, launch `MainActivity` with the string extra `prototype_scene` set to `noise-rewind-ready` or `noise-rewind-flow`. These extras are preview test entry points, not product navigation.
 
 ## Promotion boundary
 

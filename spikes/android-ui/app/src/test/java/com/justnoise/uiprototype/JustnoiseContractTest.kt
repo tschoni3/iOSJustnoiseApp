@@ -151,4 +151,46 @@ class JustnoiseContractTest {
             PrototypeFlowReducer.reduce(settings, PrototypeFlowAction.Back).route,
         )
     }
+
+    @Test
+    fun noiseRewindPreviewPreservesSevenPageSequenceAndDraft() {
+        var state = NoiseRewindUiState()
+        assertEquals(0, state.page)
+        assertEquals(
+            0,
+            NoiseRewindReducer.reduce(state, NoiseRewindAction.Back).page,
+        )
+
+        state = NoiseRewindReducer.reduce(state, NoiseRewindAction.Begin)
+        assertEquals(1, state.page)
+        repeat(5) {
+            state = NoiseRewindReducer.reduce(state, NoiseRewindAction.Next)
+        }
+        assertEquals(6, state.page)
+        assertEquals(
+            6,
+            NoiseRewindReducer.reduce(state, NoiseRewindAction.Next).page,
+        )
+
+        state = NoiseRewindReducer.reduce(
+            state,
+            NoiseRewindAction.ChangeReflection("Morning mode helped."),
+        )
+        state = NoiseRewindReducer.reduce(state, NoiseRewindAction.Back)
+        assertEquals(5, state.page)
+        assertEquals("Morning mode helped.", state.reflectionDraft)
+
+        assertEquals(
+            6,
+            NoiseRewindReducer.reduce(state, NoiseRewindAction.ShowPage(99)).page,
+        )
+        assertEquals(
+            0,
+            NoiseRewindReducer.reduce(state, NoiseRewindAction.ShowPage(-4)).page,
+        )
+        assertEquals(
+            NoiseRewindUiState(),
+            NoiseRewindReducer.reduce(state, NoiseRewindAction.Reset),
+        )
+    }
 }

@@ -19,8 +19,17 @@ class MainActivity : ComponentActivity() {
                 darkScrim = android.graphics.Color.TRANSPARENT,
             ),
         )
+        val prototypeScene = intent.getStringExtra("prototype_scene")
         setContent {
-            JustnoisePrototypeApp()
+            when (prototypeScene) {
+                "noise-rewind-ready" -> JustnoiseTheme {
+                    NoiseRewindSceneHost(startWithFlow = false)
+                }
+                "noise-rewind-flow" -> JustnoiseTheme {
+                    NoiseRewindSceneHost(startWithFlow = true)
+                }
+                else -> JustnoisePrototypeApp()
+            }
         }
     }
 }
