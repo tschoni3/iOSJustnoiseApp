@@ -28,6 +28,26 @@ class MainActivity : ComponentActivity() {
                 "noise-rewind-flow" -> JustnoiseTheme {
                     NoiseRewindSceneHost(startWithFlow = true)
                 }
+                "blocked-surface" -> JustnoiseTheme {
+                    BlockedSurfacePrototype(displayName = "Instagram")
+                }
+                "blocked-surface-long-name" -> JustnoiseTheme {
+                    BlockedSurfacePrototype(
+                        displayName = "A Very Long Social Media Application Name",
+                    )
+                }
+                "capability-permission-required" -> JustnoiseTheme {
+                    CapabilityRecoveryScene(RestrictionCapabilityPreview.PermissionRequired)
+                }
+                "capability-permission-denied" -> JustnoiseTheme {
+                    CapabilityRecoveryScene(RestrictionCapabilityPreview.PermissionDenied)
+                }
+                "capability-temporarily-unavailable" -> JustnoiseTheme {
+                    CapabilityRecoveryScene(RestrictionCapabilityPreview.TemporarilyUnavailable)
+                }
+                "capability-unsupported" -> JustnoiseTheme {
+                    CapabilityRecoveryScene(RestrictionCapabilityPreview.Unsupported)
+                }
                 else -> JustnoisePrototypeApp()
             }
         }

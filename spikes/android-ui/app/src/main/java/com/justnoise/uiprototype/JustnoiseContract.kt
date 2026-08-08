@@ -53,6 +53,28 @@ object JustnoiseContract {
     fun color(key: String): Color = Color(parseContractColor(colors.getValue(key)).toInt())
 }
 
+enum class ShieldTargetKind {
+    Application,
+    Website,
+}
+
+fun renderShieldMessage(
+    displayName: String?,
+    targetKind: ShieldTargetKind = ShieldTargetKind.Application,
+): String {
+    val fallbackKey = when (targetKind) {
+        ShieldTargetKind.Application -> "shield.application.fallbackName"
+        ShieldTargetKind.Website -> "shield.website.fallbackName"
+    }
+    val resolvedName = displayName
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: JustnoiseContract.text(fallbackKey)
+
+    return JustnoiseContract.text("shield.item.message")
+        .replace("{appName}", resolvedName)
+}
+
 /** Converts contract #RRGGBB or trailing-alpha #RRGGBBAA into Compose ARGB. */
 fun parseContractColor(raw: String): Long {
     require(raw.startsWith('#')) { "Contract colors must begin with #" }

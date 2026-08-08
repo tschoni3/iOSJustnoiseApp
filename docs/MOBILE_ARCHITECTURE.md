@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.8
+Status: target architecture, version 1.0.9
 
 ## Decision
 
@@ -18,7 +18,7 @@ The repository has the foundations needed for one Codex task to evolve two nativ
 
 The exact audited `main` commit passed the GitHub **iOS verification** and **Product contracts** workflows on 2026-08-04. A fresh **Android Gate 0** workflow dispatch passed on 2026-08-05. On 2026-08-07 the same spike also passed 23 JVM tests, lint/APK assembly, five API-36 emulator instrumentation tests, and a cold-launch smoke check. These checks prove buildability and portable/static boundaries; they do not replace any physical Gate 0 cell.
 
-The separate `spikes/android-ui/` project now proves the Release presentation sequence—two onboarding pages, Zap activation, signed-out authentication, Zap idle/active, Capture-disabled Session Complete, Modes, History, Schedules, Settings, and the conditional seven-page Noise Rewind—in Jetpack Compose. It maps all current copy and color contracts with drift tests, exposes Compose previews, reuses the existing onboarding videos/icon/Zap artwork through generated resources, and declares no user-facing permission or Android service. Its navigation, authentication, activation, mode/app selection, schedule controls, settings/account actions, completion sheet, Noise Rewind values/navigation, and Zap state switches are presentation-only; they are not backend, NFC, restriction, background-work, analytics, eligibility, autoplay, persistence, or account-deletion evidence and do not authorize `android-app/`.
+The separate `spikes/android-ui/` project now proves the Release presentation sequence—two onboarding pages, Zap activation, signed-out authentication, Zap idle/active, Capture-disabled Session Complete, Modes, History, Schedules, Settings, and the conditional seven-page Noise Rewind—in Jetpack Compose. It also renders the shared blocked-surface contract and truthful restriction-capability recovery cards without declaring a service or permission. It maps all current copy and color contracts with drift tests, exposes Compose previews, reuses the existing onboarding videos/icon/Zap artwork through generated resources, and declares no user-facing permission or Android service. Its navigation, authentication, activation, mode/app selection, schedule controls, settings/account actions, completion sheet, Noise Rewind values/navigation, blocked surface, recovery actions, and Zap state switches are presentation-only; they are not backend, NFC, restriction, interception, background-work, analytics, eligibility, autoplay, persistence, or account-deletion evidence and do not authorize `android-app/`.
 
 It does not authorize a production Android application. All 36 required Pixel/Samsung Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
 

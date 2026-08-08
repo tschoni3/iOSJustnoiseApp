@@ -193,4 +193,66 @@ class JustnoiseContractTest {
             NoiseRewindReducer.reduce(state, NoiseRewindAction.Reset),
         )
     }
+
+    @Test
+    fun previewShieldRendererConsumesEverySharedSubstitutionFixture() {
+        val cases = JSONObject(
+            repositoryRoot.resolve("product/behavior/portable-fixtures.v1.json").readText(),
+        ).getJSONArray("shieldMessageRendering")
+
+        assertEquals(3, cases.length())
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val targetKind = when (case.getString("fallbackCopyKey")) {
+                "shield.application.fallbackName" -> ShieldTargetKind.Application
+                "shield.website.fallbackName" -> ShieldTargetKind.Website
+                else -> error("Unknown shield fallback key")
+            }
+            val rendered = renderShieldMessage(
+                displayName = case.getString("displayName"),
+                targetKind = targetKind,
+            )
+
+            assertEquals(case.getString("id"), case.getString("expectedMessage"), rendered)
+            assertFalse(case.getString("id"), rendered.contains("{appName}"))
+        }
+    }
+
+    @Test
+    fun recoveryPreviewNeverTurnsAnUnavailableCapabilityIntoAvailable() {
+        val expectedRequests = mapOf(
+            RestrictionCapabilityPreview.PermissionRequired to RecoveryRequest.OpenSettings,
+            RestrictionCapabilityPreview.PermissionDenied to RecoveryRequest.OpenSettings,
+            RestrictionCapabilityPreview.TemporarilyUnavailable to RecoveryRequest.Retry,
+            RestrictionCapabilityPreview.Unsupported to RecoveryRequest.None,
+        )
+
+        expectedRequests.forEach { (capability, expectedRequest) ->
+            val initial = CapabilityRecoveryUiState(capability)
+            val afterPrimary = CapabilityRecoveryReducer.reduce(
+                initial,
+                CapabilityRecoveryAction.Primary,
+            )
+
+            assertEquals(capability.contractValue, capability, afterPrimary.capability)
+            assertEquals(capability.contractValue, expectedRequest, afterPrimary.request)
+            assertEquals(
+                capability.contractValue,
+                capability == RestrictionCapabilityPreview.Unsupported,
+                afterPrimary.isDismissed,
+            )
+        }
+
+        val denied = CapabilityRecoveryUiState(
+            RestrictionCapabilityPreview.PermissionDenied,
+            request = RecoveryRequest.OpenSettings,
+        )
+        val handled = CapabilityRecoveryReducer.reduce(
+            denied,
+            CapabilityRecoveryAction.RequestHandled,
+        )
+        assertEquals(RestrictionCapabilityPreview.PermissionDenied, handled.capability)
+        assertEquals(RecoveryRequest.None, handled.request)
+        assertFalse(handled.isDismissed)
+    }
 }
