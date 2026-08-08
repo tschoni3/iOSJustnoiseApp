@@ -29,6 +29,12 @@ object JustnoiseContract {
         "shield.primaryAction" to "Keep going",
         "session.complete.title" to "Session Complete",
         "session.complete.body" to "Your focus was protected.",
+        "coach.basic.zap.title" to "Tap to Start/Stop",
+        "coach.basic.zap.message" to "This is your Zap button. Tap to start focus, tap again to end.",
+        "coach.basic.mode.title" to "Choose a Mode",
+        "coach.basic.mode.message" to "Pick which apps/sites you want blocked before you start.",
+        "coach.basic.schedule.title" to "Schedules",
+        "coach.basic.schedule.message" to "Plan automatic focus sessions. Set start times and modes, and we’ll block for you.",
     )
 
     val colors: Map<String, String> = mapOf(

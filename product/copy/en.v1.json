@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "copyVersion": "1.0.0",
+  "copyVersion": "1.1.0",
   "locale": "en",
   "description": "Core cross-platform English copy. This is a deliberately small baseline, not a complete localization catalog.",
   "strings": {
@@ -24,6 +24,12 @@
     "shield.website.fallbackName": "This website",
     "shield.primaryAction": "Keep going",
     "session.complete.title": "Session Complete",
-    "session.complete.body": "Your focus was protected."
+    "session.complete.body": "Your focus was protected.",
+    "coach.basic.zap.title": "Tap to Start/Stop",
+    "coach.basic.zap.message": "This is your Zap button. Tap to start focus, tap again to end.",
+    "coach.basic.mode.title": "Choose a Mode",
+    "coach.basic.mode.message": "Pick which apps/sites you want blocked before you start.",
+    "coach.basic.schedule.title": "Schedules",
+    "coach.basic.schedule.message": "Plan automatic focus sessions. Set start times and modes, and we’ll block for you."
   }
 }

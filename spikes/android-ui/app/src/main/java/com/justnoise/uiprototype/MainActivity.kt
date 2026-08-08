@@ -73,6 +73,10 @@ class MainActivity : ComponentActivity() {
                         ),
                     )
                 }
+                "coach-tour" -> JustnoiseTheme {
+                    CoachTourScene()
+                }
+                "schedules-empty" -> EmptySchedulesScene()
                 else -> JustnoisePrototypeApp()
             }
         }

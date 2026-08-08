@@ -153,6 +153,32 @@ class JustnoiseContractTest {
     }
 
     @Test
+    fun coachTourPreservesTheThreeStepReleaseSequence() {
+        assertEquals(
+            listOf(CoachTarget.Zap, CoachTarget.Mode, CoachTarget.Schedule),
+            BasicCoachMarks.map { it.target },
+        )
+
+        var state = CoachTourUiState()
+        assertTrue(state.isVisible)
+        assertEquals(0, state.step)
+
+        state = CoachTourReducer.reduce(state, CoachTourAction.Next)
+        assertTrue(state.isVisible)
+        assertEquals(1, state.step)
+        state = CoachTourReducer.reduce(state, CoachTourAction.Next)
+        assertTrue(state.isVisible)
+        assertEquals(2, state.step)
+        state = CoachTourReducer.reduce(state, CoachTourAction.Next)
+        assertFalse(state.isVisible)
+        assertEquals(2, state.step)
+
+        val skipped = CoachTourReducer.reduce(CoachTourUiState(), CoachTourAction.Skip)
+        assertFalse(skipped.isVisible)
+        assertEquals(0, skipped.step)
+    }
+
+    @Test
     fun noiseRewindPreviewPreservesSevenPageSequenceAndDraft() {
         var state = NoiseRewindUiState()
         assertEquals(0, state.page)

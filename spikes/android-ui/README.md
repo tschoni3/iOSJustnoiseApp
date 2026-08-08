@@ -14,6 +14,8 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - The shared blocked-surface copy, app-name fallback behavior, semantic colors, and white action render in a static Compose preview, including a long-name state.
 - Truthful permission-required, permission-denied, temporarily-unavailable, and unsupported recovery cards keep the Zap surface idle and never simulate capability success.
 - Startup hydration, account-cleanup progress/blocking, auth resolution, and reset-link password-update states mirror the iOS root-routing boundaries.
+- The Release first-run Zap/mode/schedule coach tour preserves its three-step order, copy, and finish/skip controls.
+- Mode create/edit/delete-confirmation, schedule create/edit/empty, and destructive Settings confirmation states are represented without storing or mutating user data.
 - Mode selection can use native Android interaction while preserving the same product intent.
 - Compose previews expose important states without adding Storybook or a second component runtime.
 - The existing Zap artwork is reused at build time rather than copied into another source of truth.
@@ -52,7 +54,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
 
 Install the resulting APK from `app/build/outputs/apk/debug/app-debug.apk` on an emulator. Android Studio can also open this directory directly and render the launch, Zap, Modes, History, Schedules, and Settings previews from the prototype source files.
 
-For deterministic emulator inspection only, launch `MainActivity` with the string extra `prototype_scene` set to `noise-rewind-ready`, `noise-rewind-flow`, `blocked-surface`, `blocked-surface-long-name`, `capability-permission-required`, `capability-permission-denied`, `capability-temporarily-unavailable`, `capability-unsupported`, `startup-loading`, `startup-cleanup`, `startup-cleanup-blocked`, `auth-resolving`, `password-update`, or `password-update-success`. These extras are preview test entry points, not product navigation.
+For deterministic emulator inspection only, launch `MainActivity` with the string extra `prototype_scene` set to `noise-rewind-ready`, `noise-rewind-flow`, `blocked-surface`, `blocked-surface-long-name`, `capability-permission-required`, `capability-permission-denied`, `capability-temporarily-unavailable`, `capability-unsupported`, `startup-loading`, `startup-cleanup`, `startup-cleanup-blocked`, `auth-resolving`, `password-update`, `password-update-success`, `coach-tour`, or `schedules-empty`. These extras are preview test entry points, not product navigation.
 
 ## Promotion boundary
 

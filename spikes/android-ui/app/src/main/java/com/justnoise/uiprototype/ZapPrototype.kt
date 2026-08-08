@@ -76,9 +76,13 @@ fun JustnoisePrototypeApp() {
         mutableStateOf(ZapUiState())
     }
     var showModes by rememberSaveable { mutableStateOf(false) }
+    var coachStep by rememberSaveable { mutableStateOf<Int?>(null) }
 
     val dispatch: (PrototypeFlowAction) -> Unit = { action ->
         flowState = PrototypeFlowReducer.reduce(flowState, action)
+        if (action == PrototypeFlowAction.PreviewAuthenticated) {
+            coachStep = 0
+        }
     }
 
     val handlesBack = when (flowState.route) {
@@ -93,22 +97,34 @@ fun JustnoisePrototypeApp() {
     JustnoiseTheme {
         when (flowState.route) {
             PrototypeRoute.Zap -> {
-                ZapScreen(
-                    state = zapState,
-                    onZapClick = {
-                        zapState = ZapPreviewReducer.reduce(
-                            zapState,
-                            ZapPreviewAction.ToggleSession,
-                        )
-                    },
-                    onModeClick = { showModes = true },
-                    onSchedulesClick = {
-                        dispatch(PrototypeFlowAction.OpenSchedules)
-                    },
-                    onHistoryClick = {
-                        dispatch(PrototypeFlowAction.OpenHistory)
-                    },
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ZapScreen(
+                        state = zapState,
+                        onZapClick = {
+                            zapState = ZapPreviewReducer.reduce(
+                                zapState,
+                                ZapPreviewAction.ToggleSession,
+                            )
+                        },
+                        onModeClick = { showModes = true },
+                        onSchedulesClick = {
+                            dispatch(PrototypeFlowAction.OpenSchedules)
+                        },
+                        onHistoryClick = {
+                            dispatch(PrototypeFlowAction.OpenHistory)
+                        },
+                    )
+
+                    coachStep?.let { step ->
+                        CoachTourOverlay(CoachTourUiState(step = step)) { action ->
+                            val next = CoachTourReducer.reduce(
+                                CoachTourUiState(step = step),
+                                action,
+                            )
+                            coachStep = if (next.isVisible) next.step else null
+                        }
+                    }
+                }
 
                 if (zapState.isCompletionVisible) {
                     SessionCompleteSheet(

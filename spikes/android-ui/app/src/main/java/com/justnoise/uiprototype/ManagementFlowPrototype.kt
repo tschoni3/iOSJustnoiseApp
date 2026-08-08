@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -102,6 +103,7 @@ private fun ModesManagementScreen(
     onBack: () -> Unit,
 ) {
     var showNewMode by rememberSaveable { mutableStateOf(false) }
+    var editingModeId by rememberSaveable { mutableStateOf<String?>(null) }
     var showAppPickerBoundary by rememberSaveable { mutableStateOf(false) }
 
     Surface(color = Color.White, modifier = Modifier.fillMaxSize()) {
@@ -131,7 +133,6 @@ private fun ModesManagementScreen(
                 Spacer(modifier = Modifier.height(28.dp))
                 PreviewModes.forEach { mode ->
                     Surface(
-                        onClick = { onSelect(mode) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 5.dp),
@@ -144,12 +145,25 @@ private fun ModesManagementScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(mode.name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                             Text(
-                                text = if (mode.id == selectedMode.id) "✓" else "Edit",
-                                color = if (mode.id == selectedMode.id) Color.White else ManagementBlue,
-                                fontSize = 14.sp,
+                                text = mode.name,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onSelect(mode) }
+                                    .padding(vertical = 10.dp),
                             )
+                            if (mode.id == selectedMode.id) {
+                                Text("✓", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(onClick = { editingModeId = mode.id }) {
+                                Text(
+                                    text = "Edit",
+                                    color = if (mode.id == selectedMode.id) Color.White else ManagementBlue,
+                                    fontSize = 14.sp,
+                                )
+                            }
                         }
                     }
                 }
@@ -200,8 +214,18 @@ private fun ModesManagementScreen(
     if (showNewMode) {
         PrototypeEditorSheet(
             title = "New Mode",
-            primaryAction = "Save Preview",
+            initialName = "",
+            onChooseApps = { showAppPickerBoundary = true },
             onDismiss = { showNewMode = false },
+        )
+    }
+    PreviewModes.firstOrNull { it.id == editingModeId }?.let { mode ->
+        PrototypeEditorSheet(
+            title = "Edit Mode",
+            initialName = mode.name,
+            onChooseApps = { showAppPickerBoundary = true },
+            onDelete = { editingModeId = null },
+            onDismiss = { editingModeId = null },
         )
     }
     if (showAppPickerBoundary) {
@@ -356,13 +380,21 @@ private data class PreviewSchedule(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SchedulesScreen(onBack: () -> Unit) {
-    val schedules = listOf(
-        PreviewSchedule("morning", "Morning Focus", "Focus · 08:30 · M T W T F"),
-        PreviewSchedule("study", "Study Block", "Study · 19:00 · T T"),
-    )
+private fun SchedulesScreen(
+    onBack: () -> Unit,
+    startsEmpty: Boolean = false,
+) {
+    val schedules = if (startsEmpty) {
+        emptyList()
+    } else {
+        listOf(
+            PreviewSchedule("morning", "Morning Focus", "Focus · 08:30 · M T W T F"),
+            PreviewSchedule("study", "Study Block", "Study · 19:00 · T T"),
+        )
+    }
     var enabled by rememberSaveable { mutableStateOf(setOf("morning")) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
+    var editingScheduleId by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -374,7 +406,10 @@ private fun SchedulesScreen(onBack: () -> Unit) {
             title = "Schedules",
             onBack = onBack,
             action = "+",
-            onAction = { showEditor = true },
+            onAction = {
+                editingScheduleId = null
+                showEditor = true
+            },
         )
         Text(
             text = "Enable Screen Time access to run schedules automatically.",
@@ -382,8 +417,21 @@ private fun SchedulesScreen(onBack: () -> Unit) {
             fontSize = 13.sp,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
         )
+        if (schedules.isEmpty()) {
+            Text(
+                text = JustnoiseContract.text("schedule.list.empty"),
+                color = Color.Gray,
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 36.dp),
+            )
+        }
         schedules.forEach { schedule ->
             Surface(
+                onClick = {
+                    editingScheduleId = schedule.id
+                    showEditor = true
+                },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
                 color = Color.White,
                 shape = RoundedCornerShape(14.dp),
@@ -421,14 +469,25 @@ private fun SchedulesScreen(onBack: () -> Unit) {
     }
 
     if (showEditor) {
-        ScheduleEditorSheet(onDismiss = { showEditor = false })
+        ScheduleEditorSheet(
+            schedule = schedules.firstOrNull { it.id == editingScheduleId },
+            onDismiss = { showEditor = false },
+        )
     }
+}
+
+@Composable
+fun EmptySchedulesScene() {
+    JustnoiseTheme { SchedulesScreen(onBack = {}, startsEmpty = true) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScheduleEditorSheet(onDismiss: () -> Unit) {
-    var name by rememberSaveable { mutableStateOf("") }
+private fun ScheduleEditorSheet(
+    schedule: PreviewSchedule?,
+    onDismiss: () -> Unit,
+) {
+    var name by rememberSaveable(schedule?.id) { mutableStateOf(schedule?.name.orEmpty()) }
     var repeatDays by rememberSaveable { mutableStateOf(setOf<String>()) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -442,7 +501,11 @@ private fun ScheduleEditorSheet(onDismiss: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, bottom = 32.dp),
         ) {
-            Text("New Schedule", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (schedule == null) "New Schedule" else "Edit Schedule",
+                fontSize = 25.sp,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(modifier = Modifier.height(18.dp))
             OutlinedTextField(
                 value = name,
@@ -501,6 +564,7 @@ private fun PreviewFormRow(label: String, value: String) {
 @Composable
 private fun SettingsScreen(onBack: () -> Unit) {
     var notice by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmation by rememberSaveable { mutableStateOf<String?>(null) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -545,7 +609,7 @@ private fun SettingsScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
                     )
                     Button(
-                        onClick = { notice = "Preview only—no emergency token was consumed." },
+                        onClick = { confirmation = "emergency" },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD43C35)),
                     ) {
@@ -555,7 +619,7 @@ private fun SettingsScreen(onBack: () -> Unit) {
             }
             SettingsSection("DANGER ZONE") {
                 SettingsAction("Delete Account", destructive = true) {
-                    notice = "Preview only—no deletion request was sent."
+                    confirmation = "delete-account"
                 }
             }
             SettingsSection("") {
@@ -577,6 +641,29 @@ private fun SettingsScreen(onBack: () -> Unit) {
             }
             PrototypeNotice("Representative account data · no backend request is sent")
         }
+    }
+
+    when (confirmation) {
+        "emergency" -> PreviewConfirmationDialog(
+            title = "Confirm Emergency Unzap",
+            message = "This will use one of your emergency tokens (3 left). Do you want to continue?",
+            confirmLabel = "Yes, Unzap",
+            onConfirm = {
+                confirmation = null
+                notice = "Preview only—no emergency token was consumed."
+            },
+            onDismiss = { confirmation = null },
+        )
+        "delete-account" -> PreviewConfirmationDialog(
+            title = "Delete Account?",
+            message = "This action is permanent and cannot be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {
+                confirmation = null
+                notice = "Preview only—no deletion request was sent."
+            },
+            onDismiss = { confirmation = null },
+        )
     }
 }
 
@@ -637,10 +724,13 @@ private fun SettingsAction(
 @Composable
 private fun PrototypeEditorSheet(
     title: String,
-    primaryAction: String,
+    initialName: String,
+    onChooseApps: () -> Unit,
+    onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable(initialName) { mutableStateOf(initialName) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
@@ -657,17 +747,91 @@ private fun PrototypeEditorSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
+            Text(
+                "Please enter a name for your mode.",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            Text(
+                "SELECT APPS TO BLOCK",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 22.dp, bottom = 8.dp),
+            )
+            Surface(
+                onClick = onChooseApps,
+                modifier = Modifier.fillMaxWidth(),
+                color = ManagementBackground,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Choose Apps", color = Color.Black)
+                    Text("3 Apps, 1 Category Selected", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
             Spacer(modifier = Modifier.height(18.dp))
             Button(
                 onClick = onDismiss,
+                enabled = name.trim().isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
             ) {
-                Text(primaryAction, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("Save Preview", color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+            if (onDelete != null) {
+                TextButton(
+                    onClick = { confirmDelete = true },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Text("Delete Mode", color = Color(0xFFD43C35))
+                }
             }
             PrototypeNotice("Preview only · no mode is stored")
         }
     }
+
+    if (confirmDelete && onDelete != null) {
+        PreviewConfirmationDialog(
+            title = "Delete Mode",
+            message = "Are you sure you want to delete this mode? This action cannot be undone.",
+            confirmLabel = "Delete",
+            onConfirm = {
+                confirmDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmDelete = false },
+        )
+    }
+}
+
+@Composable
+private fun PreviewConfirmationDialog(
+    title: String,
+    message: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, color = Color.Black, fontWeight = FontWeight.Bold) },
+        text = { Text(message, color = Color.DarkGray) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(confirmLabel, color = Color(0xFFD43C35), fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = ManagementBlue)
+            }
+        },
+        containerColor = Color.White,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -771,6 +935,12 @@ private fun HistoryPreview() {
 @Composable
 private fun SchedulesPreview() {
     JustnoiseTheme { SchedulesScreen({}) }
+}
+
+@Preview(name = "Schedules · Empty", widthDp = 412, heightDp = 915)
+@Composable
+private fun EmptySchedulesPreview() {
+    EmptySchedulesScene()
 }
 
 @Preview(name = "Settings", widthDp = 412, heightDp = 915)
