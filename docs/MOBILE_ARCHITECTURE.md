@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.12
+Status: target architecture, version 1.0.13
 
 ## Decision
 
@@ -144,7 +144,7 @@ Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftU
 | Blocked surface | Managed Settings shield configured with app/site name, fallback copy, and white action | Shield template, fallbacks, action copy, and semantic colors are shared | Gate 0 blocker; Android owns a Compose/View overlay and must pass accessibility, layout, bypass, and escape-path checks |
 | Emergency Unzap and recovery | Token-gated recovery plus relaunch/platform-state reconciliation | Recovery intent is portable; token replenishment is intentionally undefined | Include recovery in primary Android v1, but do not invent replenishment or stronger enforcement semantics |
 | History and weekly Noise Rewind | Session totals, day grid, 90-day/year views, completion summary, and weekly insight | Session duration is portable; aggregate/display semantics and most copy/tokens are not yet frozen | Add after the core focus slice; define fixtures for aggregates and empty states before implementation |
-| Schedules and notifications | Create/edit/enable/delete schedule, Device Activity extension, and notification nudges | Only schedule identity/safety and weekday names are shared; time-zone, DST, collision, missed-fire, and recovery semantics are unresolved | Defer Android schedules until those decisions and fixtures are approved; do not copy the current iOS monitoring window |
+| Schedules and notifications | Create/edit/enable/delete schedule, Device Activity extension, and notification nudges | Schedule identity, kind, named weekdays, and eligibility/failure precedence are shared in fixtures; time-zone, DST, collision, duration, missed-fire, ownership, and recovery semantics remain unresolved in `docs/SCHEDULE_PORTABILITY_AUDIT.md` | Defer Android schedules until those decisions and fixtures are approved; do not copy the current iOS monitoring window |
 | Settings, deletion, and support | Account details, language, onboarding reset, support/legal links, Emergency Unzap, deletion, and sign-out | Account deletion/isolation rules are shared; store links, language UI, and provider details remain native | Add account/deletion settings with the first authenticated slice; add secondary support/settings rows incrementally |
 | Active-session system surface | WidgetKit extension supplies a Live Activity, Lock Screen, StandBy, and Dynamic Island presentation | Active/idle truth is portable; system presentation is not | Use an Android ongoing notification after the core restriction flow is stable; behavioral truth matters, not pixel identity |
 | Capture and Signal | Capture entry points are compiled out of Release; development source remains available | Signal API contract is pinned, but Capture is not in the launch surface | Excluded from Android v1 until the iOS feature is launch-ready and separately scoped |

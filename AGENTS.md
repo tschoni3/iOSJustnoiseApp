@@ -20,6 +20,7 @@ Before implementing a mobile feature or refactor, read:
 5. `product/copy/en.v1.json`
 6. `docs/ANDROID_GATE_0.md` for any Android restriction work
 7. `docs/ANDROID_UI_PARITY.md` for Android presentation work
+8. `docs/SCHEDULE_PORTABILITY_AUDIT.md` before any schedule implementation
 
 These files describe the intended target architecture. Existing iOS literals are still being migrated, so do not assume the runtime already loads the JSON files.
 

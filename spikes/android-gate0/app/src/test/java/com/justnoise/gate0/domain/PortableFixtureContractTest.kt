@@ -79,7 +79,7 @@ class PortableFixtureContractTest {
 
     @Test
     fun `consumes every session lifecycle fixture through production reducer`() {
-        assertEquals("1.1.0", fixture.getString("fixtureSetVersion"))
+        assertEquals("1.2.0", fixture.getString("fixtureSetVersion"))
         val cases = fixture.getJSONArray("sessionLifecycle")
         assertEquals(7, cases.length())
 
@@ -113,6 +113,36 @@ class PortableFixtureContractTest {
                 case.getString("expectedRestrictionAction"),
                 decision.restrictionAction.contractValue,
             )
+        }
+    }
+
+    @Test
+    fun `consumes every schedule eligibility fixture through production rule`() {
+        val cases = fixture.getJSONArray("scheduleEligibility")
+        assertEquals(5, cases.length())
+
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val weekdayValues = case.getJSONArray("repeatWeekdays")
+            val weekdays = (0 until weekdayValues.length()).map { weekdayIndex ->
+                PortableWeekday.entries.single {
+                    it.contractValue == weekdayValues.getString(weekdayIndex)
+                }
+            }
+            val decision = PortableScheduleRules.evaluate(
+                isEnabled = case.getBoolean("isEnabled"),
+                modeResolvable = case.getBoolean("modeResolvable"),
+                targetSelectionValid = case.getBoolean("targetSelectionValid"),
+                kind = if (weekdays.isEmpty()) {
+                    PortableScheduleKind.ONE_TIME
+                } else {
+                    PortableScheduleKind.REPEATING
+                },
+            )
+
+            assertEquals(case.getString("id"), case.getString("expectedKind"), decision.kind.contractValue)
+            assertEquals(case.getString("id"), case.getBoolean("expectedEligible"), decision.isEligible)
+            assertEquals(case.getString("id"), case.getString("expectedReason"), decision.reason.contractValue)
         }
     }
 

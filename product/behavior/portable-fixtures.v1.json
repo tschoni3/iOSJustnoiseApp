@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixtureSetVersion": "1.1.0",
+  "fixtureSetVersion": "1.2.0",
   "description": "Framework-neutral examples that both native clients must exercise in domain tests.",
   "targetSelectionValidity": [
     {
@@ -198,6 +198,58 @@
       "expectedTransition": "noChange",
       "expectedState": "active",
       "expectedRestrictionAction": "none"
+    }
+  ],
+  "scheduleEligibility": [
+    {
+      "id": "eligible-one-time",
+      "isEnabled": true,
+      "modeResolvable": true,
+      "targetSelectionValid": true,
+      "repeatWeekdays": [],
+      "expectedKind": "oneTime",
+      "expectedEligible": true,
+      "expectedReason": "eligible"
+    },
+    {
+      "id": "eligible-repeating",
+      "isEnabled": true,
+      "modeResolvable": true,
+      "targetSelectionValid": true,
+      "repeatWeekdays": ["monday", "wednesday"],
+      "expectedKind": "repeating",
+      "expectedEligible": true,
+      "expectedReason": "eligible"
+    },
+    {
+      "id": "disabled-repeating",
+      "isEnabled": false,
+      "modeResolvable": true,
+      "targetSelectionValid": true,
+      "repeatWeekdays": ["friday"],
+      "expectedKind": "repeating",
+      "expectedEligible": false,
+      "expectedReason": "disabled"
+    },
+    {
+      "id": "unresolved-mode",
+      "isEnabled": true,
+      "modeResolvable": false,
+      "targetSelectionValid": true,
+      "repeatWeekdays": [],
+      "expectedKind": "oneTime",
+      "expectedEligible": false,
+      "expectedReason": "modeUnavailable"
+    },
+    {
+      "id": "empty-target-selection",
+      "isEnabled": true,
+      "modeResolvable": true,
+      "targetSelectionValid": false,
+      "repeatWeekdays": ["sunday"],
+      "expectedKind": "repeating",
+      "expectedEligible": false,
+      "expectedReason": "targetSelectionEmpty"
     }
   ],
   "weekdayIdentifiers": {

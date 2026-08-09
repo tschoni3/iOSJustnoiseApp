@@ -15,6 +15,55 @@ object AccidentalStopGuard {
         elapsedMilliseconds >= MINIMUM_ELAPSED_MILLISECONDS
 }
 
+enum class PortableWeekday(val contractValue: String) {
+    MONDAY("monday"),
+    TUESDAY("tuesday"),
+    WEDNESDAY("wednesday"),
+    THURSDAY("thursday"),
+    FRIDAY("friday"),
+    SATURDAY("saturday"),
+    SUNDAY("sunday"),
+}
+
+enum class PortableScheduleKind(val contractValue: String) {
+    ONE_TIME("oneTime"),
+    REPEATING("repeating"),
+}
+
+enum class PortableScheduleEligibilityReason(val contractValue: String) {
+    ELIGIBLE("eligible"),
+    DISABLED("disabled"),
+    MODE_UNAVAILABLE("modeUnavailable"),
+    TARGET_SELECTION_EMPTY("targetSelectionEmpty"),
+}
+
+data class PortableScheduleEligibilityDecision(
+    val kind: PortableScheduleKind,
+    val isEligible: Boolean,
+    val reason: PortableScheduleEligibilityReason,
+)
+
+object PortableScheduleRules {
+    fun evaluate(
+        isEnabled: Boolean,
+        modeResolvable: Boolean,
+        targetSelectionValid: Boolean,
+        kind: PortableScheduleKind,
+    ): PortableScheduleEligibilityDecision {
+        val reason = when {
+            !isEnabled -> PortableScheduleEligibilityReason.DISABLED
+            !modeResolvable -> PortableScheduleEligibilityReason.MODE_UNAVAILABLE
+            !targetSelectionValid -> PortableScheduleEligibilityReason.TARGET_SELECTION_EMPTY
+            else -> PortableScheduleEligibilityReason.ELIGIBLE
+        }
+        return PortableScheduleEligibilityDecision(
+            kind = kind,
+            isEligible = reason == PortableScheduleEligibilityReason.ELIGIBLE,
+            reason = reason,
+        )
+    }
+}
+
 enum class PayloadClassification(val contractValue: String) {
     AUTHORIZED("authorized"),
     UNAUTHORIZED("unauthorized"),

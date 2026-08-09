@@ -1,6 +1,6 @@
 # Mobile behavior contract v1
 
-Contract version: 1.0.0
+Contract version: 1.1.0
 
 This document describes observable Justnoise behavior that should remain consistent across iOS and Android. It separates portable product rules from platform adapters. It characterizes the published iOS direction without turning framework quirks or unverified schedule behavior into permanent requirements.
 
@@ -69,12 +69,14 @@ Current iOS storage has a stable identifier, name, mode identifier, Foundation `
 
 A future portable schedule contract must use these named weekday identifiers instead of platform calendar integers: `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, and `sunday`. The same reserved set appears in `product/behavior/portable-fixtures.v1.json`. The identifiers do not decide locale-specific display order or which day starts a displayed week.
 
-The following rules are safe to share now:
+The following rules are safe to share now and are exercised by the `scheduleEligibility` fixtures:
 
 1. A schedule cannot apply restrictions without a resolvable mode and non-empty target selection.
 2. Disabled schedules do not start sessions.
 3. One-time and repeating schedules remain distinguishable in persisted data and UI.
 4. Any eventual time-zone, daylight-saving, reboot, force-stop, and permission-revocation outcomes must be explicit and tested on each platform before schedule parity is claimed.
+
+Eligibility diagnostics use this portable precedence when several gates fail: `disabled`, then `modeUnavailable`, then `targetSelectionEmpty`. Empty named weekdays classify the schedule as `oneTime`; one or more named weekdays classify it as `repeating`. These decisions do not select a fire instant or scheduler.
 
 The following are **not frozen as v1 product behavior** because current iOS behavior is not yet sufficiently characterized:
 
@@ -89,6 +91,8 @@ The following are **not frozen as v1 product behavior** because current iOS beha
 - Which calendar is used for date input and persistence, and whether week display order follows locale.
 
 Do not reproduce those implementation details on Android as guesses. Resolve each item with tests and a product decision first. This contract intentionally makes no daylight-saving or time-zone choice yet.
+
+`docs/SCHEDULE_PORTABILITY_AUDIT.md` records the current iOS source behavior and an interval-end ownership risk separately from portable product intent.
 
 ### Persistence, account boundaries, and deletion
 
@@ -127,10 +131,11 @@ Baseline: this repository state, including the mobile-contract foundation, porta
 | SHIELD-01: display-name substitution, fallback copy, and white action | **Conforms in code; device evidence required** | The shield configuration substitutes the platform display name or fallback, uses the approved two-line template, and configures a white primary action. Long names and real shield rendering remain on the device checklist. |
 | ACCOUNT-01: sign-out/account deletion prevent cross-account local-data leakage | **Partial; deletion conforms in code; sign-out and device evidence remain** | Account deletion is remote-first and fail-closed: it durably marks cleanup before local mutation, quiesces restrictions, Live Activities, Signal work, and analytics, clears the inventoried account-owned defaults and capture files, retains only installation-owned activation/onboarding/emergency state, and retries interrupted cleanup before product hydration. Native tests cover failure, retry, late async results, analytics queues, extension races, path containment, and preservation. Ordinary sign-out still leaves globally stored product data, and per-user namespacing is the next required change. |
 | AUDIO-01: one owned file after save; no unowned file after cancellation/failure | **Conforms in code; device evidence required** | Capture audio ownership is crash-safe in code after PR #8 (merge `a81c8aa3a6f3903d348e5a5a877f4f64e43f8ddd`): drafts are moved into `CaptureClips`, cancellation removes owned drafts, and durable pending markers recover interrupted commits. The merged verifier passed 22 simulator tests; record/cancel/save/relaunch still requires physical-device and TestFlight evidence. |
-| SCHEDULE-01: a schedule requires a resolvable mode with non-empty targets | **Partial** | New schedule Save rejects a missing or empty mode, and bridge candidate selection excludes schedules whose modes are missing or empty. Mode deletion can still leave a persisted orphan and does not synchronously prove that a previously copied arm payload was cleared, so this row is not closed. |
+| SCHEDULE-01: a schedule requires a resolvable mode with non-empty targets | **Portable rule frozen; iOS partial** | Both native tests consume all shared `scheduleEligibility` fixtures, and iOS bridge candidate selection now calls the portable rule without changing its linear-time filtering behavior. New schedule Save rejects a missing or empty mode. Mode deletion can still leave a persisted orphan and does not synchronously prove that a previously copied arm payload was cleared, so the iOS row is not closed. |
 | SCHEDULE-02: disabled schedules do not start | **Partial; device evidence required** | The coordinator filters enabled schedules and rebalances after mutations, but background/extension behavior has not passed the physical matrix. |
 | SCHEDULE-03: one-time versus repeating stays distinguishable | **Conforms in persisted shape only** | An empty integer weekday array represents one-time and a non-empty array represents repeating. The temporal meaning is still unresolved and the integer encoding is iOS-only. |
 | SCHEDULE-04: date, weekday, duration, collision, missed-fire, and recovery semantics | **Unresolved** | iOS currently arms only the earliest enabled candidate and uses a narrow interval. Those behaviors are not accepted portable product decisions and must not be copied to Android yet. |
+| SCHEDULE-05: unattended interval-end ownership and cleanup | **Unverified risk** | The extension writes a session-start marker at scheduled start and later treats any such marker as a manual-session signal before clearing shields. Source inspection alone cannot prove unattended cleanup; characterize and close this on physical iOS hardware before using it as Android product intent. |
 
 Closing a row requires a native behavior test where feasible and the listed physical-device evidence where the rule crosses NFC, Screen Time, background execution, storage, or system UI.
 

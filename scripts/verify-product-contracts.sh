@@ -35,6 +35,7 @@ required_contract_paths = (
     "docs/ANDROID_GATE_0.md",
     "docs/ANDROID_PREDEVICE_READINESS.md",
     "docs/ANDROID_UI_PARITY.md",
+    "docs/SCHEDULE_PORTABILITY_AUDIT.md",
     "product/behavior/portable-fixtures.v1.json",
     "product/copy/en.v1.json",
     "product/design/tokens.v1.json",
@@ -49,6 +50,8 @@ required_contract_paths = (
     "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "justnoiseradio/Core/ContentView.swift",
+    "justnoiseradio/Shared/PortableScheduleRules.swift",
+    "justnoiseradio/Shared/DeviceActivityBridge.swift",
     "scripts/verify-product-contracts.sh",
     "scripts/verify-android-predevice-readiness.sh",
     ".github/workflows/product-contracts.yml",
@@ -58,6 +61,8 @@ required_contract_paths = (
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
+    "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt",
+    "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt",
 )
 
 
@@ -522,8 +527,7 @@ for index, case_value in enumerate(session_cases):
 if seen_session_ids != set(expected_session_cases):
     fail("session-lifecycle fixtures are missing a required start, failure, stop, or no-change case")
 
-weekdays = require_mapping(fixtures.get("weekdayIdentifiers"), "fixtures.weekdayIdentifiers")
-required_weekdays = {
+reserved_weekdays = {
     "monday",
     "tuesday",
     "wednesday",
@@ -532,6 +536,69 @@ required_weekdays = {
     "saturday",
     "sunday",
 }
+schedule_cases = require_list(fixtures.get("scheduleEligibility"), "fixtures.scheduleEligibility")
+expected_schedule_cases = {
+    "eligible-one-time": (True, True, True, [], "oneTime", True, "eligible"),
+    "eligible-repeating": (
+        True,
+        True,
+        True,
+        ["monday", "wednesday"],
+        "repeating",
+        True,
+        "eligible",
+    ),
+    "disabled-repeating": (False, True, True, ["friday"], "repeating", False, "disabled"),
+    "unresolved-mode": (True, False, True, [], "oneTime", False, "modeUnavailable"),
+    "empty-target-selection": (
+        True,
+        True,
+        False,
+        ["sunday"],
+        "repeating",
+        False,
+        "targetSelectionEmpty",
+    ),
+}
+schedule_fields = (
+    "isEnabled",
+    "modeResolvable",
+    "targetSelectionValid",
+    "repeatWeekdays",
+    "expectedKind",
+    "expectedEligible",
+    "expectedReason",
+)
+seen_schedule_ids = set()
+for index, case_value in enumerate(schedule_cases):
+    case = require_mapping(case_value, f"fixtures.scheduleEligibility[{index}]")
+    case_id = case.get("id")
+    if not isinstance(case_id, str) or not case_id or case_id in seen_schedule_ids:
+        fail("schedule-eligibility fixture ids must be unique non-empty strings")
+    seen_schedule_ids.add(case_id)
+    expected = expected_schedule_cases.get(case_id)
+    if expected is None:
+        fail(f"unexpected schedule-eligibility fixture id: {case_id}")
+    if set(case) != {"id", *schedule_fields}:
+        fail(f"schedule-eligibility fixture {case_id} must use exactly the canonical fields")
+    for key in ("isEnabled", "modeResolvable", "targetSelectionValid", "expectedEligible"):
+        if not isinstance(case.get(key), bool):
+            fail(f"schedule-eligibility fixture {case_id}.{key} must be a boolean")
+    repeat_weekdays = case.get("repeatWeekdays")
+    if not isinstance(repeat_weekdays, list) or any(
+        not isinstance(value, str) or value not in reserved_weekdays for value in repeat_weekdays
+    ):
+        fail(f"schedule-eligibility fixture {case_id}.repeatWeekdays must use named weekdays")
+    if len(repeat_weekdays) != len(set(repeat_weekdays)):
+        fail(f"schedule-eligibility fixture {case_id}.repeatWeekdays must not contain duplicates")
+    actual = tuple(case.get(field) for field in schedule_fields)
+    if actual != expected:
+        fail(f"schedule-eligibility fixture {case_id} contradicts the portable safety rule")
+if seen_schedule_ids != set(expected_schedule_cases):
+    fail("schedule-eligibility fixtures are missing a required eligible or ineligible case")
+
+weekdays = require_mapping(fixtures.get("weekdayIdentifiers"), "fixtures.weekdayIdentifiers")
+required_weekdays = reserved_weekdays
 if set(weekdays) != required_weekdays:
     fail("fixtures.weekdayIdentifiers must contain exactly the seven named weekday identifiers")
 for identifier, label in weekdays.items():
@@ -548,6 +615,7 @@ for fragment in (
     "targetSelectionValidity",
     "accidentalStopGuard",
     "zapReadHandling",
+    "scheduleEligibility",
 ):
     if fragment not in portable_rules_test_text:
         fail(f"portable iOS fixture tests are missing shared behavior marker: {fragment!r}")
@@ -560,6 +628,7 @@ required_document_fragments = {
         "d445e7a45025b59ced388465cff3c84dd9ee86fd",
         "product/api/signal/v1/",
         "scripts/verify-android-predevice-readiness.sh",
+        "docs/SCHEDULE_PORTABILITY_AUDIT.md",
     ),
     "docs/MOBILE_ARCHITECTURE.md": (
         "## Color-token mapping",
@@ -569,6 +638,7 @@ required_document_fragments = {
         "product/api/signal/v1/",
         "d445e7a45025b59ced388465cff3c84dd9ee86fd",
         "docs/ANDROID_UI_PARITY.md",
+        "docs/SCHEDULE_PORTABILITY_AUDIT.md",
     ),
     "docs/MOBILE_BEHAVIOR_V1.md": (
         "## Current iOS conformance audit",
@@ -578,6 +648,8 @@ required_document_fragments = {
         "zapReadHandling",
         "Capture audio ownership is crash-safe in code",
         "This contract intentionally makes no daylight-saving or time-zone choice yet.",
+        "scheduleEligibility",
+        "SCHEDULE-05: unattended interval-end ownership and cleanup",
     ),
     "docs/ANDROID_GATE_0.md": (
         'android:isAccessibilityTool="false"',
@@ -600,6 +672,13 @@ required_document_fragments = {
         "Capture tab and Capture/Signal feature family",
         "100% route/state coverage",
         "prototype_scene=coach-tour",
+    ),
+    "docs/SCHEDULE_PORTABILITY_AUDIT.md": (
+        "SAFE ELIGIBILITY RULES FROZEN",
+        "TEMPORAL SEMANTICS DEFERRED",
+        "disabled` → `modeUnavailable` → `targetSelectionEmpty",
+        "device-test risk",
+        "Product decisions required before Android schedule implementation",
     ),
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/CoachMarksPrototype.kt": (
         "CoachTarget.Zap",
@@ -625,6 +704,28 @@ required_document_fragments = {
         '"New Schedule" else "Edit Schedule"',
         'title = "Delete Account?"',
         'JustnoiseContract.text("schedule.list.empty")',
+    ),
+    "justnoiseradio/Shared/PortableScheduleRules.swift": (
+        "PortableScheduleRules",
+        "PortableScheduleEligibilityDecision",
+        "modeUnavailable",
+        "targetSelectionEmpty",
+    ),
+    "justnoiseradio/Shared/DeviceActivityBridge.swift": (
+        "modeTargetValidity",
+        "PortableScheduleRules.evaluate",
+        ").isEligible",
+    ),
+    "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt": (
+        "object PortableScheduleRules",
+        "PortableScheduleEligibilityDecision",
+        'MODE_UNAVAILABLE("modeUnavailable")',
+        'TARGET_SELECTION_EMPTY("targetSelectionEmpty")',
+    ),
+    "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt": (
+        "schedule eligibility fixture",
+        'getJSONArray("scheduleEligibility")',
+        'assertEquals("1.2.0"',
     ),
     "justnoiseradio/Core/ContentView.swift": (
         'title: "Tap to Start/Stop"',
@@ -657,6 +758,8 @@ for required_path_filter in (
     '"justnoiseradioTests/PortableZapRulesTests.swift"',
     '"justnoiseradioTests/SignalBackendContractFixtureTests.swift"',
     '"justnoiseradio/Core/ContentView.swift"',
+    '"justnoiseradio/Shared/PortableScheduleRules.swift"',
+    '"justnoiseradio/Shared/DeviceActivityBridge.swift"',
     '"scripts/verify-product-contracts.sh"',
     '".github/workflows/product-contracts.yml"',
     '".github/workflows/ios-verification.yml"',
@@ -679,6 +782,7 @@ for required_path_filter in (
     '"docs/ANDROID_PREDEVICE_READINESS.md"',
     '"docs/ANDROID_UI_PARITY.md"',
     '"docs/MOBILE_ARCHITECTURE.md"',
+    '"docs/SCHEDULE_PORTABILITY_AUDIT.md"',
     '"product/**"',
     '"scripts/verify-android-predevice-readiness.sh"',
     '"scripts/verify-product-contracts.sh"',
@@ -703,6 +807,8 @@ contract_scopes = [
     "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "justnoiseradio/Core/ContentView.swift",
+    "justnoiseradio/Shared/PortableScheduleRules.swift",
+    "justnoiseradio/Shared/DeviceActivityBridge.swift",
     "scripts/verify-product-contracts.sh",
     "scripts/verify-android-predevice-readiness.sh",
     ".github/workflows/product-contracts.yml",
@@ -712,6 +818,8 @@ contract_scopes = [
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
+    "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt",
+    "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt",
 ]
 try:
     tracked = subprocess.run(
@@ -742,7 +850,7 @@ for path in contract_files:
 
 print(
     f"Verified {len(colors)} semantic colors, {len(strings)} English copy entries, "
-    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(session_cases)} portable behavior cases."
+    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(session_cases) + len(schedule_cases)} portable behavior cases."
 )
 print("Product contracts passed.")
 PY

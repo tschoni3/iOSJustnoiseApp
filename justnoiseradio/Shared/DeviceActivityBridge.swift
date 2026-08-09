@@ -205,12 +205,19 @@ enum DeviceActivityBridge {
         allModes: [Mode],
         now: Date = Date()
     ) -> (schedule: Schedule, fire: Date)? {
-        let validModeIDs = Set(
-            allModes
-                .filter { $0.selectedApps.hasBlockingTargets }
-                .map(\.id)
-        )
-        let enabled = schedules.filter { $0.isEnabled && validModeIDs.contains($0.modeId) }
+        var modeTargetValidity: [UUID: Bool] = [:]
+        for mode in allModes {
+            modeTargetValidity[mode.id] = mode.selectedApps.hasBlockingTargets
+        }
+        let enabled = schedules.filter { schedule in
+            let targetSelectionValid = modeTargetValidity[schedule.modeId]
+            return PortableScheduleRules.evaluate(
+                isEnabled: schedule.isEnabled,
+                modeResolvable: targetSelectionValid != nil,
+                targetSelectionValid: targetSelectionValid ?? false,
+                kind: schedule.repeatWeekdays.isEmpty ? .oneTime : .repeating
+            ).isEligible
+        }
         guard !enabled.isEmpty else { return nil }
         var best: (Schedule, Date)? = nil
         for s in enabled {

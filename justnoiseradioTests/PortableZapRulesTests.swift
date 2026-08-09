@@ -195,6 +195,29 @@ final class AccidentalStopGuardTests: XCTestCase {
     }
 }
 
+final class PortableScheduleRulesTests: XCTestCase {
+    func testPortableScheduleEligibilityCases() throws {
+        let fixtures = try PortableBehaviorFixtureLoader.load()
+
+        for testCase in fixtures.scheduleEligibility {
+            XCTAssertEqual(
+                PortableScheduleRules.evaluate(
+                    isEnabled: testCase.isEnabled,
+                    modeResolvable: testCase.modeResolvable,
+                    targetSelectionValid: testCase.targetSelectionValid,
+                    kind: testCase.repeatWeekdays.isEmpty ? .oneTime : .repeating
+                ),
+                PortableScheduleEligibilityDecision(
+                    kind: testCase.expectedKind,
+                    isEligible: testCase.expectedEligible,
+                    reason: testCase.expectedReason
+                ),
+                testCase.id
+            )
+        }
+    }
+}
+
 private enum PortableBehaviorFixtureLoader {
     static func load() throws -> PortableBehaviorFixtureDocument {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
@@ -220,6 +243,18 @@ private struct PortableBehaviorFixtureDocument: Decodable {
     let targetSelectionValidity: [TargetSelectionFixture]
     let accidentalStopGuard: AccidentalStopGuardFixture
     let zapReadHandling: [ZapReadHandlingFixture]
+    let scheduleEligibility: [PortableScheduleEligibilityFixture]
+}
+
+private struct PortableScheduleEligibilityFixture: Decodable {
+    let id: String
+    let isEnabled: Bool
+    let modeResolvable: Bool
+    let targetSelectionValid: Bool
+    let repeatWeekdays: [PortableWeekday]
+    let expectedKind: PortableScheduleKind
+    let expectedEligible: Bool
+    let expectedReason: PortableScheduleEligibilityReason
 }
 
 private struct TargetSelectionFixture: Decodable {
