@@ -49,6 +49,81 @@ class JustnoiseContractTest {
     }
 
     @Test
+    fun historyPresentationRulesConsumeEverySharedFixture() {
+        val history = JSONObject(
+            repositoryRoot.resolve("product/behavior/portable-fixtures.v1.json").readText(),
+        ).getJSONObject("historyPresentation")
+        val thresholds = history.getJSONObject("densityThresholdSeconds")
+
+        assertEquals(
+            thresholds.getDouble("light"),
+            PortableHistoryRules.LIGHT_MINIMUM_SECONDS,
+            0.0,
+        )
+        assertEquals(
+            thresholds.getDouble("medium"),
+            PortableHistoryRules.MEDIUM_MINIMUM_SECONDS,
+            0.0,
+        )
+        assertEquals(
+            thresholds.getDouble("dense"),
+            PortableHistoryRules.DENSE_MINIMUM_SECONDS,
+            0.0,
+        )
+
+        val densityCases = history.getJSONArray("densityCases")
+        assertEquals(8, densityCases.length())
+        for (index in 0 until densityCases.length()) {
+            val case = densityCases.getJSONObject(index)
+            assertEquals(
+                case.getString("id"),
+                case.getString("expectedDensity"),
+                PortableHistoryRules.density(case.getDouble("totalSeconds")).contractValue,
+            )
+        }
+
+        val durationCases = history.getJSONArray("durationLabelCases")
+        assertEquals(7, durationCases.length())
+        for (index in 0 until durationCases.length()) {
+            val case = durationCases.getJSONObject(index)
+            val style = PortableHistoryDurationStyle.entries.single {
+                it.contractValue == case.getString("style")
+            }
+            assertEquals(
+                case.getString("id"),
+                case.getString("expectedLabel"),
+                PortableHistoryRules.formatDuration(
+                    totalSeconds = case.getDouble("totalSeconds"),
+                    style = style,
+                ),
+            )
+        }
+
+        val summaryCases = history.getJSONArray("summaryCases")
+        assertEquals(3, summaryCases.length())
+        for (index in 0 until summaryCases.length()) {
+            val case = summaryCases.getJSONObject(index)
+            val durations = case.getJSONArray("durationSeconds")
+            val summary = PortableHistoryRules.summarize(
+                (0 until durations.length()).map(durations::getDouble),
+            )
+
+            assertEquals(case.getString("id"), case.getInt("expectedZapCount"), summary.zapCount)
+            assertEquals(
+                case.getString("id"),
+                case.getDouble("expectedTotalSeconds"),
+                summary.totalSeconds,
+                0.000_001,
+            )
+            assertEquals(
+                case.getString("id"),
+                case.getString("expectedProtectedAttentionLabel"),
+                summary.protectedAttentionLabel,
+            )
+        }
+    }
+
+    @Test
     fun previewReducerChangesOnlyRequestedState() {
         val initial = ZapUiState()
         val active = ZapPreviewReducer.reduce(initial, ZapPreviewAction.ToggleSession)

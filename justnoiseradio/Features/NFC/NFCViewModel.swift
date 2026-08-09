@@ -35,12 +35,6 @@ enum DotLevel: Int, Codable {
     case dense
 }
 
-private enum DotDensityThresholds {
-    static let lightMinutes = 15.0
-    static let goodMinutes = 120.0
-    static let greatMinutes = 360.0
-}
-
 struct DaySummary: Identifiable, Hashable {
     var id: Date { Calendar.current.startOfDay(for: date) }
     let date: Date
@@ -1334,12 +1328,13 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
         return slices
     }
 
-    func dotLevel(totalMinutes: Double) -> DotLevel {
-        if totalMinutes >= DotDensityThresholds.greatMinutes { return .dense }
-        if totalMinutes >= DotDensityThresholds.goodMinutes { return .medium }
-        if totalMinutes >= DotDensityThresholds.lightMinutes { return .light }
-
-        return .empty
+    func dotLevel(totalSeconds: TimeInterval) -> DotLevel {
+        switch PortableHistoryRules.density(totalSeconds: totalSeconds) {
+        case .empty: return .empty
+        case .light: return .light
+        case .medium: return .medium
+        case .dense: return .dense
+        }
     }
 
     func generateYearSummaries() -> [DaySummary] {
@@ -1365,9 +1360,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
 
             let slices = slicesByDay[date] ?? []
             let totalSeconds = slices.reduce(0) { $0 + $1.duration }
-            let totalMinutes = totalSeconds / 60
-
-            let level = dotLevel(totalMinutes: totalMinutes)
+            let level = dotLevel(totalSeconds: totalSeconds)
 
             return DaySummary(
                 date: date,
@@ -1403,9 +1396,7 @@ class NFCViewModel: NSObject, ObservableObject, NFCNDEFReaderSessionDelegate {
             let slices = slicesByDay[date] ?? []
 
             let totalSeconds = slices.reduce(0) { $0 + $1.duration }
-            let totalMinutes = totalSeconds / 60
-
-            let level = dotLevel(totalMinutes: totalMinutes)
+            let level = dotLevel(totalSeconds: totalSeconds)
 
             summaries.append(
                 DaySummary(

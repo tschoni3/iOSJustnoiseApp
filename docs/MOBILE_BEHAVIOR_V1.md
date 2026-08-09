@@ -1,6 +1,6 @@
 # Mobile behavior contract v1
 
-Contract version: 1.1.0
+Contract version: 1.2.0
 
 This document describes observable Justnoise behavior that should remain consistent across iOS and Android. It separates portable product rules from platform adapters. It characterizes the published iOS direction without turning framework quirks or unverified schedule behavior into permanent requirements.
 
@@ -62,6 +62,18 @@ The identifier-free `zapReadHandling` fixtures freeze authorization and duplicat
 6. The shield must remain legible with long names and accessibility text settings. Pixel identity between platforms is not required.
 
 The exact application and fallback substitutions are frozen in the `shieldMessageRendering` fixtures. Trim a candidate display name before deciding whether to use a fallback; the literal placeholder must not survive rendering.
+
+### History presentation contract
+
+The `historyPresentation` fixtures freeze the release History screen’s small, observable presentation rules without making the device calendar part of the portable domain:
+
+1. The summary counts each stored session as one Zap and sums valid non-negative durations before truncating to whole minutes. Two 30-second sessions therefore display as `1m`, not `0m`.
+2. A summary duration below one minute displays `0m`; a selected-day detail with positive sub-minute duration displays `<1m`.
+3. Duration labels omit a zero minute suffix: `1h`, not `1h 0m`; otherwise they use English compact labels such as `1h 5m` and `13m`.
+4. Day density is `empty` below 15 minutes, `light` from 15 minutes, `medium` from 2 hours, and `dense` from 6 hours. Exact threshold seconds and boundary cases live in the fixtures.
+5. The characterized density colors are semantic tokens `history.dot.empty`, `history.dot.light`, `history.dot.medium`, and `history.dot.dense`.
+
+Both native rule implementations consume the same fixtures. The shipped iOS summary, selected-day label, and density mapping call the portable rules; the permission-free Compose History prototype uses the same Kotlin rules. Calendar-day bucketing remains platform-owned: the current iOS implementation uses `Calendar.current`, splits sessions at local midnight, discards each split slice shorter than 60 seconds, shows the current calendar year, and builds its “90 Days” window from 60 past through 29 future days. Those calendar, time-zone, DST, corrupt-duration, and cross-midnight slice semantics are observed implementation details, not frozen portable behavior yet.
 
 ### Schedules: portable identity and safety only
 
@@ -129,6 +141,7 @@ Baseline: this repository state, including the mobile-contract foundation, porta
 | NFC-02: session-toggle scans accept only a recognized Zap payload and handle at most one accepted read | **Conforms in code; device evidence required** | Session toggle uses the same strict parser and allow-list as activation, chooses at most one mutation-eligible result, and ignores duplicate accepted callbacks. Native tests decode every identifier-free `zapReadHandling` fixture; repeated physical scans remain on the device checklist. |
 | SESSION-01: accidental stop is blocked before three seconds | **Conforms in code; device evidence required** | Manual scan entry and the toggle path use one `AccidentalStopGuard`. Native tests decode the shared threshold and verify that 2,999 ms is rejected while 3,000 ms is accepted; a real-device Zap check remains required. |
 | SHIELD-01: display-name substitution, fallback copy, and white action | **Conforms in code; device evidence required** | The shield configuration substitutes the platform display name or fallback, uses the approved two-line template, and configures a white primary action. Long names and real shield rendering remain on the device checklist. |
+| HISTORY-01: summary aggregation, compact duration labels, and density thresholds | **Portable rule frozen; iOS conforms in code** | Swift and Kotlin tests consume every `historyPresentation` fixture. The shipped iOS History summary, selected-day label, and dot-level mapping call the portable rules; the Android UI prototype does the same with representative local data. Calendar-day bucketing and device visual acceptance remain outside this row. |
 | ACCOUNT-01: sign-out/account deletion prevent cross-account local-data leakage | **Partial; deletion conforms in code; sign-out and device evidence remain** | Account deletion is remote-first and fail-closed: it durably marks cleanup before local mutation, quiesces restrictions, Live Activities, Signal work, and analytics, clears the inventoried account-owned defaults and capture files, retains only installation-owned activation/onboarding/emergency state, and retries interrupted cleanup before product hydration. Native tests cover failure, retry, late async results, analytics queues, extension races, path containment, and preservation. Ordinary sign-out still leaves globally stored product data, and per-user namespacing is the next required change. |
 | AUDIO-01: one owned file after save; no unowned file after cancellation/failure | **Conforms in code; device evidence required** | Capture audio ownership is crash-safe in code after PR #8 (merge `a81c8aa3a6f3903d348e5a5a877f4f64e43f8ddd`): drafts are moved into `CaptureClips`, cancellation removes owned drafts, and durable pending markers recover interrupted commits. The merged verifier passed 22 simulator tests; record/cancel/save/relaunch still requires physical-device and TestFlight evidence. |
 | SCHEDULE-01: a schedule requires a resolvable mode with non-empty targets | **Portable rule frozen; iOS partial** | Both native tests consume all shared `scheduleEligibility` fixtures, and iOS bridge candidate selection now calls the portable rule without changing its linear-time filtering behavior. New schedule Save rejects a missing or empty mode. Mode deletion can still leave a persisted orphan and does not synchronously prove that a previously copied arm payload was cleared, so the iOS row is not closed. |

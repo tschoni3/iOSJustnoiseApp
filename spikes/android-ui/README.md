@@ -16,6 +16,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - Startup hydration, account-cleanup progress/blocking, auth resolution, and reset-link password-update states mirror the iOS root-routing boundaries.
 - The Release first-run Zap/mode/schedule coach tour preserves its three-step order, copy, and finish/skip controls.
 - Mode create/edit/delete-confirmation, schedule create/edit/empty, and destructive Settings confirmation states are represented without storing or mutating user data.
+- History preview durations flow through the shared Zap-count, compact-label, density-threshold, and semantic dot-color rules instead of hard-coded summary text.
 - Mode selection can use native Android interaction while preserving the same product intent.
 - Compose previews expose important states without adding Storybook or a second component runtime.
 - The existing Zap artwork is reused at build time rather than copied into another source of truth.
@@ -26,6 +27,7 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - No application is restricted or observed.
 - Email, Google, password-reset, and activation actions change local preview state only; no authentication or reset request is sent.
 - Mode editing, app selection, schedule editing/toggles, settings links, emergency unzap, account deletion, and sign-out are local presentation simulations only.
+- History durations are representative local values; no persisted sessions, local-calendar bucketing, or cross-midnight slicing is running.
 - Noise Rewind uses representative values; eligibility, 12-second autoplay, analytics, and reflection persistence are not running.
 - The blocked surface is an activity/preview only. It is not an overlay, does not intercept another app, and is not restriction evidence.
 - Recovery-card actions update local preview intent only; they do not open Settings, request permission, retry a service, or assert availability.

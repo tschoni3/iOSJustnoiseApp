@@ -251,6 +251,7 @@ private fun HistoryScreen(
     onSettings: () -> Unit,
 ) {
     var timeline by rememberSaveable { mutableStateOf("90 Days") }
+    val previewSummary = PortableHistoryRules.summarize(PreviewHistoryDurationsSeconds)
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         Box(
             modifier = Modifier
@@ -296,8 +297,16 @@ private fun HistoryScreen(
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HistorySummaryCard("Zaps", "12", Modifier.weight(1f))
-                    HistorySummaryCard("Protected Attention", "4h 35m", Modifier.weight(1f))
+                    HistorySummaryCard(
+                        "Zaps",
+                        previewSummary.zapCount.toString(),
+                        Modifier.weight(1f),
+                    )
+                    HistorySummaryCard(
+                        "Protected Attention",
+                        previewSummary.protectedAttentionLabel,
+                        Modifier.weight(1f),
+                    )
                 }
             }
             Column(
@@ -314,10 +323,10 @@ private fun HistoryScreen(
                     Text("Protected days", color = Color.Gray, fontSize = 13.sp)
                 }
                 Spacer(modifier = Modifier.height(24.dp))
-                HistoryDotGrid()
+                HistoryDotGrid(PreviewHistoryDayDurationsSeconds)
                 Spacer(modifier = Modifier.height(22.dp))
                 Text(
-                    text = "Each bright dot is a day with at least one protected session.",
+                    text = "Darker dots represent more protected attention.",
                     color = Color.Gray,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
@@ -348,8 +357,7 @@ private fun HistorySummaryCard(title: String, value: String, modifier: Modifier 
 }
 
 @Composable
-private fun HistoryDotGrid() {
-    val active = setOf(0, 2, 3, 7, 10, 14, 15, 18, 23, 29, 31, 35, 42, 46, 50, 55, 61, 67, 70, 76, 81)
+private fun HistoryDotGrid(dayDurationsSeconds: List<Double>) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         repeat(12) { row ->
             Row(
@@ -358,17 +366,48 @@ private fun HistoryDotGrid() {
             ) {
                 repeat(7) { column ->
                     val index = row * 7 + column
+                    val density = PortableHistoryRules.density(
+                        dayDurationsSeconds.getOrElse(index) { 0.0 },
+                    )
+                    val color = when (density) {
+                        PortableHistoryDensity.EMPTY -> JustnoiseContract.color("history.dot.empty")
+                        PortableHistoryDensity.LIGHT -> JustnoiseContract.color("history.dot.light")
+                        PortableHistoryDensity.MEDIUM -> JustnoiseContract.color("history.dot.medium")
+                        PortableHistoryDensity.DENSE -> JustnoiseContract.color("history.dot.dense")
+                    }
                     Box(
                         modifier = Modifier
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (index in active) Color(0xFFDFFF00) else Color.Black.copy(alpha = 0.08f),
-                            ),
+                            .background(color),
                     )
                 }
             }
         }
+    }
+}
+
+private val PreviewHistoryDurationsSeconds = listOf(
+    900.0,
+    1_200.0,
+    1_500.0,
+    1_800.0,
+    900.0,
+    2_100.0,
+    600.0,
+    2_400.0,
+    1_200.0,
+    1_500.0,
+    900.0,
+    1_500.0,
+)
+
+private val PreviewHistoryDayDurationsSeconds = List(84) { index ->
+    when {
+        index % 17 == 0 -> PortableHistoryRules.DENSE_MINIMUM_SECONDS
+        index % 11 == 0 -> PortableHistoryRules.MEDIUM_MINIMUM_SECONDS
+        index % 5 == 0 -> PortableHistoryRules.LIGHT_MINIMUM_SECONDS
+        else -> 0.0
     }
 }
 

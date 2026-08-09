@@ -118,18 +118,9 @@ struct SessionHistoryView: View {
     }
 
     private var formattedTotalTime: String {
-        let totalSeconds = Int(
-            nfcViewModel.sessionHistory.reduce(0) { $0 + $1.duration }
-        )
-        let totalMinutes = totalSeconds / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-
-        if hours > 0 {
-            return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
-        }
-
-        return "\(minutes)m"
+        PortableHistoryRules.summarize(
+            durationsSeconds: nfcViewModel.sessionHistory.lazy.map(\.duration)
+        ).protectedAttentionLabel
     }
 }
 

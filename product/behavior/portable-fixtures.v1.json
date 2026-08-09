@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixtureSetVersion": "1.2.0",
+  "fixtureSetVersion": "1.3.0",
   "description": "Framework-neutral examples that both native clients must exercise in domain tests.",
   "targetSelectionValidity": [
     {
@@ -252,6 +252,122 @@
       "expectedReason": "targetSelectionEmpty"
     }
   ],
+  "historyPresentation": {
+    "densityThresholdSeconds": {
+      "light": 900,
+      "medium": 7200,
+      "dense": 21600
+    },
+    "densityCases": [
+      {
+        "id": "zero-is-empty",
+        "totalSeconds": 0,
+        "expectedDensity": "empty"
+      },
+      {
+        "id": "before-light",
+        "totalSeconds": 899,
+        "expectedDensity": "empty"
+      },
+      {
+        "id": "at-light",
+        "totalSeconds": 900,
+        "expectedDensity": "light"
+      },
+      {
+        "id": "before-medium",
+        "totalSeconds": 7199,
+        "expectedDensity": "light"
+      },
+      {
+        "id": "at-medium",
+        "totalSeconds": 7200,
+        "expectedDensity": "medium"
+      },
+      {
+        "id": "before-dense",
+        "totalSeconds": 21599,
+        "expectedDensity": "medium"
+      },
+      {
+        "id": "at-dense",
+        "totalSeconds": 21600,
+        "expectedDensity": "dense"
+      },
+      {
+        "id": "above-dense",
+        "totalSeconds": 43200,
+        "expectedDensity": "dense"
+      }
+    ],
+    "durationLabelCases": [
+      {
+        "id": "zero-summary",
+        "totalSeconds": 0,
+        "style": "summary",
+        "expectedLabel": "0m"
+      },
+      {
+        "id": "subminute-summary",
+        "totalSeconds": 59,
+        "style": "summary",
+        "expectedLabel": "0m"
+      },
+      {
+        "id": "subminute-day-detail",
+        "totalSeconds": 59,
+        "style": "dayDetail",
+        "expectedLabel": "<1m"
+      },
+      {
+        "id": "minute-boundary",
+        "totalSeconds": 60,
+        "style": "dayDetail",
+        "expectedLabel": "1m"
+      },
+      {
+        "id": "hour-only",
+        "totalSeconds": 3600,
+        "style": "summary",
+        "expectedLabel": "1h"
+      },
+      {
+        "id": "hour-and-minutes",
+        "totalSeconds": 3900,
+        "style": "summary",
+        "expectedLabel": "1h 5m"
+      },
+      {
+        "id": "multiple-hours-day-detail",
+        "totalSeconds": 15180,
+        "style": "dayDetail",
+        "expectedLabel": "4h 13m"
+      }
+    ],
+    "summaryCases": [
+      {
+        "id": "empty-history",
+        "durationSeconds": [],
+        "expectedZapCount": 0,
+        "expectedTotalSeconds": 0,
+        "expectedProtectedAttentionLabel": "0m"
+      },
+      {
+        "id": "aggregate-before-minute-truncation",
+        "durationSeconds": [30, 30],
+        "expectedZapCount": 2,
+        "expectedTotalSeconds": 60,
+        "expectedProtectedAttentionLabel": "1m"
+      },
+      {
+        "id": "mixed-hour-summary",
+        "durationSeconds": [900, 1800, 3600],
+        "expectedZapCount": 3,
+        "expectedTotalSeconds": 6300,
+        "expectedProtectedAttentionLabel": "1h 45m"
+      }
+    ]
+  },
   "weekdayIdentifiers": {
     "monday": "Monday",
     "tuesday": "Tuesday",

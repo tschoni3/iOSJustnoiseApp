@@ -50,6 +50,10 @@ object JustnoiseContract {
         "action.zap.stop.background" to "#FFFF00E6",
         "action.zap.stop.label" to "#000000",
         "accent.noiseRewind" to "#DDFF00",
+        "history.dot.empty" to "#EBEBEB",
+        "history.dot.light" to "#C0C0C0",
+        "history.dot.medium" to "#777777",
+        "history.dot.dense" to "#191919",
         "action.shield.background" to "#FFFFFF",
         "action.shield.label" to "#0D0D0D",
     )

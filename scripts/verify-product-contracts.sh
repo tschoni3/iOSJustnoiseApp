@@ -50,6 +50,11 @@ required_contract_paths = (
     "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "justnoiseradio/Core/ContentView.swift",
+    "justnoiseradio/Features/History/DayDotGridView.swift",
+    "justnoiseradio/Features/History/DayDotView.swift",
+    "justnoiseradio/Features/History/SessionHistoryView.swift",
+    "justnoiseradio/Features/NFC/NFCViewModel.swift",
+    "justnoiseradio/Shared/PortableHistoryRules.swift",
     "justnoiseradio/Shared/PortableScheduleRules.swift",
     "justnoiseradio/Shared/DeviceActivityBridge.swift",
     "scripts/verify-product-contracts.sh",
@@ -60,6 +65,7 @@ required_contract_paths = (
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/CoachMarksPrototype.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
+    "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
     "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt",
     "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt",
@@ -235,6 +241,10 @@ required_colors = {
     "action.zap.stop.background",
     "action.zap.stop.label",
     "accent.noiseRewind",
+    "history.dot.empty",
+    "history.dot.light",
+    "history.dot.medium",
+    "history.dot.dense",
     "action.shield.background",
     "action.shield.label",
 }
@@ -268,6 +278,15 @@ if colors["accent.noiseRewind"] != "#DDFF00":
     fail("tokens.colors.accent.noiseRewind must preserve the characterized #DDFF00 accent")
 if decode_contract_color(colors["accent.noiseRewind"]) != (221, 255, 0, 255):
     fail("Noise Rewind RGBA decoding changed")
+expected_history_dot_colors = {
+    "history.dot.empty": "#EBEBEB",
+    "history.dot.light": "#C0C0C0",
+    "history.dot.medium": "#777777",
+    "history.dot.dense": "#191919",
+}
+for key, expected_color in expected_history_dot_colors.items():
+    if colors[key] != expected_color:
+        fail(f"tokens.colors.{key} must preserve the characterized iOS History density color")
 
 copy = require_mapping(load_json(copy_path), "copy")
 require_v1_version(copy, "copyVersion", "copy")
@@ -597,6 +616,126 @@ for index, case_value in enumerate(schedule_cases):
 if seen_schedule_ids != set(expected_schedule_cases):
     fail("schedule-eligibility fixtures are missing a required eligible or ineligible case")
 
+history = require_mapping(fixtures.get("historyPresentation"), "fixtures.historyPresentation")
+if set(history) != {
+    "densityThresholdSeconds",
+    "densityCases",
+    "durationLabelCases",
+    "summaryCases",
+}:
+    fail("fixtures.historyPresentation must contain only thresholds and the three canonical case groups")
+
+history_thresholds = require_mapping(
+    history.get("densityThresholdSeconds"),
+    "fixtures.historyPresentation.densityThresholdSeconds",
+)
+expected_history_thresholds = {"light": 900, "medium": 7200, "dense": 21600}
+if history_thresholds != expected_history_thresholds:
+    fail("History density thresholds must remain 15 minutes, 2 hours, and 6 hours")
+
+history_density_cases = require_list(
+    history.get("densityCases"),
+    "fixtures.historyPresentation.densityCases",
+)
+expected_history_density_cases = {
+    "zero-is-empty": (0, "empty"),
+    "before-light": (899, "empty"),
+    "at-light": (900, "light"),
+    "before-medium": (7199, "light"),
+    "at-medium": (7200, "medium"),
+    "before-dense": (21599, "medium"),
+    "at-dense": (21600, "dense"),
+    "above-dense": (43200, "dense"),
+}
+seen_history_density_ids = set()
+for index, case_value in enumerate(history_density_cases):
+    case = require_mapping(case_value, f"fixtures.historyPresentation.densityCases[{index}]")
+    case_id = case.get("id")
+    if not isinstance(case_id, str) or not case_id or case_id in seen_history_density_ids:
+        fail("History density fixture ids must be unique non-empty strings")
+    seen_history_density_ids.add(case_id)
+    if set(case) != {"id", "totalSeconds", "expectedDensity"}:
+        fail(f"History density fixture {case_id} must use exactly the canonical fields")
+    total_seconds = case.get("totalSeconds")
+    if isinstance(total_seconds, bool) or not isinstance(total_seconds, int) or total_seconds < 0:
+        fail(f"History density fixture {case_id}.totalSeconds must be a non-negative integer")
+    if (total_seconds, case.get("expectedDensity")) != expected_history_density_cases.get(case_id):
+        fail(f"History density fixture {case_id} contradicts the portable threshold rule")
+if seen_history_density_ids != set(expected_history_density_cases):
+    fail("History density fixtures must cover both sides of every threshold")
+
+history_duration_cases = require_list(
+    history.get("durationLabelCases"),
+    "fixtures.historyPresentation.durationLabelCases",
+)
+expected_history_duration_cases = {
+    "zero-summary": (0, "summary", "0m"),
+    "subminute-summary": (59, "summary", "0m"),
+    "subminute-day-detail": (59, "dayDetail", "<1m"),
+    "minute-boundary": (60, "dayDetail", "1m"),
+    "hour-only": (3600, "summary", "1h"),
+    "hour-and-minutes": (3900, "summary", "1h 5m"),
+    "multiple-hours-day-detail": (15180, "dayDetail", "4h 13m"),
+}
+seen_history_duration_ids = set()
+for index, case_value in enumerate(history_duration_cases):
+    case = require_mapping(case_value, f"fixtures.historyPresentation.durationLabelCases[{index}]")
+    case_id = case.get("id")
+    if not isinstance(case_id, str) or not case_id or case_id in seen_history_duration_ids:
+        fail("History duration-label fixture ids must be unique non-empty strings")
+    seen_history_duration_ids.add(case_id)
+    if set(case) != {"id", "totalSeconds", "style", "expectedLabel"}:
+        fail(f"History duration-label fixture {case_id} must use exactly the canonical fields")
+    total_seconds = case.get("totalSeconds")
+    if isinstance(total_seconds, bool) or not isinstance(total_seconds, int) or total_seconds < 0:
+        fail(f"History duration-label fixture {case_id}.totalSeconds must be a non-negative integer")
+    actual = (total_seconds, case.get("style"), case.get("expectedLabel"))
+    if actual != expected_history_duration_cases.get(case_id):
+        fail(f"History duration-label fixture {case_id} contradicts the portable formatting rule")
+if seen_history_duration_ids != set(expected_history_duration_cases):
+    fail("History duration-label fixtures are missing a required display boundary")
+
+history_summary_cases = require_list(
+    history.get("summaryCases"),
+    "fixtures.historyPresentation.summaryCases",
+)
+expected_history_summary_cases = {
+    "empty-history": ([], 0, 0, "0m"),
+    "aggregate-before-minute-truncation": ([30, 30], 2, 60, "1m"),
+    "mixed-hour-summary": ([900, 1800, 3600], 3, 6300, "1h 45m"),
+}
+seen_history_summary_ids = set()
+for index, case_value in enumerate(history_summary_cases):
+    case = require_mapping(case_value, f"fixtures.historyPresentation.summaryCases[{index}]")
+    case_id = case.get("id")
+    if not isinstance(case_id, str) or not case_id or case_id in seen_history_summary_ids:
+        fail("History summary fixture ids must be unique non-empty strings")
+    seen_history_summary_ids.add(case_id)
+    if set(case) != {
+        "id",
+        "durationSeconds",
+        "expectedZapCount",
+        "expectedTotalSeconds",
+        "expectedProtectedAttentionLabel",
+    }:
+        fail(f"History summary fixture {case_id} must use exactly the canonical fields")
+    duration_seconds = case.get("durationSeconds")
+    if not isinstance(duration_seconds, list) or any(
+        isinstance(value, bool) or not isinstance(value, int) or value < 0
+        for value in duration_seconds
+    ):
+        fail(f"History summary fixture {case_id}.durationSeconds must be non-negative integers")
+    actual = (
+        duration_seconds,
+        case.get("expectedZapCount"),
+        case.get("expectedTotalSeconds"),
+        case.get("expectedProtectedAttentionLabel"),
+    )
+    if actual != expected_history_summary_cases.get(case_id):
+        fail(f"History summary fixture {case_id} contradicts aggregate-before-format behavior")
+if seen_history_summary_ids != set(expected_history_summary_cases):
+    fail("History summary fixtures are missing empty, sub-minute aggregate, or hour cases")
+
 weekdays = require_mapping(fixtures.get("weekdayIdentifiers"), "fixtures.weekdayIdentifiers")
 required_weekdays = reserved_weekdays
 if set(weekdays) != required_weekdays:
@@ -616,6 +755,7 @@ for fragment in (
     "accidentalStopGuard",
     "zapReadHandling",
     "scheduleEligibility",
+    "historyPresentation",
 ):
     if fragment not in portable_rules_test_text:
         fail(f"portable iOS fixture tests are missing shared behavior marker: {fragment!r}")
@@ -639,6 +779,7 @@ required_document_fragments = {
         "d445e7a45025b59ced388465cff3c84dd9ee86fd",
         "docs/ANDROID_UI_PARITY.md",
         "docs/SCHEDULE_PORTABILITY_AUDIT.md",
+        "History density thresholds and English duration labels",
     ),
     "docs/MOBILE_BEHAVIOR_V1.md": (
         "## Current iOS conformance audit",
@@ -650,6 +791,9 @@ required_document_fragments = {
         "This contract intentionally makes no daylight-saving or time-zone choice yet.",
         "scheduleEligibility",
         "SCHEDULE-05: unattended interval-end ownership and cleanup",
+        "### History presentation contract",
+        "historyPresentation",
+        "Calendar-day bucketing remains platform-owned",
     ),
     "docs/ANDROID_GATE_0.md": (
         'android:isAccessibilityTool="false"',
@@ -664,6 +808,7 @@ required_document_fragments = {
         "scripts/verify-android-predevice-readiness.sh",
         "Do not create `android-app/`",
         "Complete all 36 Pixel/Samsung cells",
+        "History density and duration-label rules",
     ),
     "docs/ANDROID_UI_PARITY.md": (
         "PRESENTATION ROUTE/STATE COVERAGE COMPLETE",
@@ -693,6 +838,8 @@ required_document_fragments = {
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt": (
         "coachTourPreservesTheThreeStepReleaseSequence",
         "listOf(CoachTarget.Zap, CoachTarget.Mode, CoachTarget.Schedule)",
+        "historyPresentationRulesConsumeEverySharedFixture",
+        'getJSONObject("historyPresentation")',
     ),
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt": (
         '"coach-tour"',
@@ -704,6 +851,38 @@ required_document_fragments = {
         '"New Schedule" else "Edit Schedule"',
         'title = "Delete Account?"',
         'JustnoiseContract.text("schedule.list.empty")',
+        "PortableHistoryRules.summarize",
+        "PortableHistoryRules.density",
+    ),
+    "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt": (
+        "object PortableHistoryRules",
+        "LIGHT_MINIMUM_SECONDS",
+        "formatDuration",
+        "summarize",
+    ),
+    "justnoiseradio/Shared/PortableHistoryRules.swift": (
+        "PortableHistoryRules",
+        "lightMinimumSeconds",
+        "formatDuration",
+        "summarize",
+    ),
+    "justnoiseradio/Features/NFC/NFCViewModel.swift": (
+        "PortableHistoryRules.density",
+        "dotLevel(totalSeconds:",
+    ),
+    "justnoiseradio/Features/History/SessionHistoryView.swift": (
+        "PortableHistoryRules.summarize",
+        "protectedAttentionLabel",
+    ),
+    "justnoiseradio/Features/History/DayDotGridView.swift": (
+        "PortableHistoryRules.formatDuration",
+        "style: .dayDetail",
+    ),
+    "justnoiseradio/Features/History/DayDotView.swift": (
+        "case .empty:  return Color(red: 235 / 255",
+        "case .light:  return Color(red: 192 / 255",
+        "case .medium: return Color(red: 119 / 255",
+        "case .dense:  return Color(red: 25 / 255",
     ),
     "justnoiseradio/Shared/PortableScheduleRules.swift": (
         "PortableScheduleRules",
@@ -725,7 +904,7 @@ required_document_fragments = {
     "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt": (
         "schedule eligibility fixture",
         'getJSONArray("scheduleEligibility")',
-        'assertEquals("1.2.0"',
+        'assertEquals("1.3.0"',
     ),
     "justnoiseradio/Core/ContentView.swift": (
         'title: "Tap to Start/Stop"',
@@ -758,6 +937,11 @@ for required_path_filter in (
     '"justnoiseradioTests/PortableZapRulesTests.swift"',
     '"justnoiseradioTests/SignalBackendContractFixtureTests.swift"',
     '"justnoiseradio/Core/ContentView.swift"',
+    '"justnoiseradio/Features/History/DayDotGridView.swift"',
+    '"justnoiseradio/Features/History/DayDotView.swift"',
+    '"justnoiseradio/Features/History/SessionHistoryView.swift"',
+    '"justnoiseradio/Features/NFC/NFCViewModel.swift"',
+    '"justnoiseradio/Shared/PortableHistoryRules.swift"',
     '"justnoiseradio/Shared/PortableScheduleRules.swift"',
     '"justnoiseradio/Shared/DeviceActivityBridge.swift"',
     '"scripts/verify-product-contracts.sh"',
@@ -807,6 +991,11 @@ contract_scopes = [
     "justnoiseradioTests/PortableZapRulesTests.swift",
     "justnoiseradioTests/SignalBackendContractFixtureTests.swift",
     "justnoiseradio/Core/ContentView.swift",
+    "justnoiseradio/Features/History/DayDotGridView.swift",
+    "justnoiseradio/Features/History/DayDotView.swift",
+    "justnoiseradio/Features/History/SessionHistoryView.swift",
+    "justnoiseradio/Features/NFC/NFCViewModel.swift",
+    "justnoiseradio/Shared/PortableHistoryRules.swift",
     "justnoiseradio/Shared/PortableScheduleRules.swift",
     "justnoiseradio/Shared/DeviceActivityBridge.swift",
     "scripts/verify-product-contracts.sh",
@@ -817,6 +1006,7 @@ contract_scopes = [
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/CoachMarksPrototype.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
+    "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
     "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt",
     "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt",
@@ -850,7 +1040,7 @@ for path in contract_files:
 
 print(
     f"Verified {len(colors)} semantic colors, {len(strings)} English copy entries, "
-    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(session_cases) + len(schedule_cases)} portable behavior cases."
+    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(session_cases) + len(schedule_cases) + len(history_density_cases) + len(history_duration_cases) + len(history_summary_cases)} portable behavior cases."
 )
 print("Product contracts passed.")
 PY

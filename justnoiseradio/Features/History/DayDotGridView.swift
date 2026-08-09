@@ -297,23 +297,10 @@ struct DayDotGridView: View {
     }
 
     private func formattedProtectedDuration(_ duration: TimeInterval) -> String {
-        let roundedMinutes = Int(duration.rounded(.down)) / 60
-        let hours = roundedMinutes / 60
-        let minutes = roundedMinutes % 60
-
-        if roundedMinutes <= 0 {
-            return duration > 0 ? "<1m" : "0m"
-        }
-
-        if hours > 0, minutes > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-
-        if hours > 0 {
-            return "\(hours)h"
-        }
-
-        return "\(minutes)m"
+        PortableHistoryRules.formatDuration(
+            totalSeconds: duration,
+            style: .dayDetail
+        )
     }
 
     private func reflectionLabel(_ count: Int) -> String {

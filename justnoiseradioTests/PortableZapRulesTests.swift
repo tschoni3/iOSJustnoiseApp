@@ -218,6 +218,70 @@ final class PortableScheduleRulesTests: XCTestCase {
     }
 }
 
+final class PortableHistoryRulesTests: XCTestCase {
+    func testPortableHistoryDensityCases() throws {
+        let history = try PortableBehaviorFixtureLoader.load().historyPresentation
+
+        XCTAssertEqual(
+            PortableHistoryRules.lightMinimumSeconds,
+            history.densityThresholdSeconds.light
+        )
+        XCTAssertEqual(
+            PortableHistoryRules.mediumMinimumSeconds,
+            history.densityThresholdSeconds.medium
+        )
+        XCTAssertEqual(
+            PortableHistoryRules.denseMinimumSeconds,
+            history.densityThresholdSeconds.dense
+        )
+
+        for testCase in history.densityCases {
+            XCTAssertEqual(
+                PortableHistoryRules.density(totalSeconds: testCase.totalSeconds),
+                testCase.expectedDensity,
+                testCase.id
+            )
+        }
+    }
+
+    func testPortableHistoryDurationLabels() throws {
+        let history = try PortableBehaviorFixtureLoader.load().historyPresentation
+
+        for testCase in history.durationLabelCases {
+            XCTAssertEqual(
+                PortableHistoryRules.formatDuration(
+                    totalSeconds: testCase.totalSeconds,
+                    style: testCase.style
+                ),
+                testCase.expectedLabel,
+                testCase.id
+            )
+        }
+    }
+
+    func testPortableHistorySummaryCases() throws {
+        let history = try PortableBehaviorFixtureLoader.load().historyPresentation
+
+        for testCase in history.summaryCases {
+            let summary = PortableHistoryRules.summarize(
+                durationsSeconds: testCase.durationSeconds
+            )
+            XCTAssertEqual(summary.zapCount, testCase.expectedZapCount, testCase.id)
+            XCTAssertEqual(
+                summary.totalSeconds,
+                testCase.expectedTotalSeconds,
+                accuracy: 0.000_001,
+                testCase.id
+            )
+            XCTAssertEqual(
+                summary.protectedAttentionLabel,
+                testCase.expectedProtectedAttentionLabel,
+                testCase.id
+            )
+        }
+    }
+}
+
 private enum PortableBehaviorFixtureLoader {
     static func load() throws -> PortableBehaviorFixtureDocument {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
@@ -244,6 +308,41 @@ private struct PortableBehaviorFixtureDocument: Decodable {
     let accidentalStopGuard: AccidentalStopGuardFixture
     let zapReadHandling: [ZapReadHandlingFixture]
     let scheduleEligibility: [PortableScheduleEligibilityFixture]
+    let historyPresentation: PortableHistoryPresentationFixture
+}
+
+private struct PortableHistoryPresentationFixture: Decodable {
+    let densityThresholdSeconds: PortableHistoryDensityThresholdFixture
+    let densityCases: [PortableHistoryDensityFixture]
+    let durationLabelCases: [PortableHistoryDurationLabelFixture]
+    let summaryCases: [PortableHistorySummaryFixture]
+}
+
+private struct PortableHistoryDensityThresholdFixture: Decodable {
+    let light: TimeInterval
+    let medium: TimeInterval
+    let dense: TimeInterval
+}
+
+private struct PortableHistoryDensityFixture: Decodable {
+    let id: String
+    let totalSeconds: TimeInterval
+    let expectedDensity: PortableHistoryDensity
+}
+
+private struct PortableHistoryDurationLabelFixture: Decodable {
+    let id: String
+    let totalSeconds: TimeInterval
+    let style: PortableHistoryDurationStyle
+    let expectedLabel: String
+}
+
+private struct PortableHistorySummaryFixture: Decodable {
+    let id: String
+    let durationSeconds: [TimeInterval]
+    let expectedZapCount: Int
+    let expectedTotalSeconds: TimeInterval
+    let expectedProtectedAttentionLabel: String
 }
 
 private struct PortableScheduleEligibilityFixture: Decodable {

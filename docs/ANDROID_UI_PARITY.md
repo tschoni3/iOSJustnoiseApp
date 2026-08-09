@@ -13,7 +13,7 @@ This audit compares the launch-ready iOS surface (`CAPTURE_ENABLED` absent) with
 | Zap idle/active hero, artwork, mode sheet, toolbar, timer, and Unzap CTA | `ZapPrototype.kt` | **Covered.** State transitions are local preview actions. |
 | First-run three-step Zap/mode/schedule coach tour | `CoachMarksPrototype.kt` | **Covered.** The order, copy, skip, next, and finish behavior match the Release iOS tour. |
 | Mode selection, create, edit, delete confirmation, target counts, and app-picker entry | `ManagementFlowPrototype.kt` | **Covered.** The Android picker remains an explicit Gate 0 boundary. Nothing is stored. |
-| History 90-day/year choice, summary cards, dot grid, and Settings entry | `ManagementFlowPrototype.kt` | **Covered.** Uses representative local values. |
+| History 90-day/year choice, summary cards, dot grid, and Settings entry | `ManagementFlowPrototype.kt`, `HistoryPresentationRules.kt` | **Covered.** Representative local durations flow through the shared Zap-count, duration-label, density-threshold, and semantic dot-color contracts; no session history is read or calendar-bucketed. |
 | Schedule list, empty state, enable switch, create form, edit entry, and repeat-day controls | `ManagementFlowPrototype.kt` | **Covered.** No background schedule is registered and portable timing semantics remain deferred. |
 | Settings account rows, onboarding, support/about links, emergency flow, account deletion confirmation, and sign out | `ManagementFlowPrototype.kt` | **Covered.** Destructive/external actions terminate in truthful preview notices. |
 | Capture-disabled Session Complete | `SessionFeedbackPrototype.kt` | **Covered.** No reflection route is offered in the Release surface. |
@@ -36,7 +36,7 @@ Run:
 bash scripts/verify-android-predevice-readiness.sh
 ```
 
-The UI test suite rejects shared-copy/color drift, verifies launch and management routing, checks the first-run coach sequence, verifies the seven-page Noise Rewind sequence, and protects recovery/startup/account boundaries. Lint and APK assembly cover every Compose source file. The manifest/source policy check rejects permissions, services, and restricted capability APIs in this project.
+The UI test suite rejects shared-copy/color drift, consumes every portable History presentation fixture, verifies launch and management routing, checks the first-run coach sequence, verifies the seven-page Noise Rewind sequence, and protects recovery/startup/account boundaries. Lint and APK assembly cover every Compose source file. The manifest/source policy check rejects permissions, services, and restricted capability APIs in this project.
 
 For deterministic inspection, launch `MainActivity` with `prototype_scene=coach-tour` or `prototype_scene=schedules-empty`, in addition to the scenes listed in `spikes/android-ui/README.md`.
 

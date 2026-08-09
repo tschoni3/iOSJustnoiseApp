@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "tokenSetVersion": "1.0.0",
-  "description": "Small semantic color baseline characterized from the current iOS Zap, Noise Rewind, and shield surfaces.",
+  "tokenSetVersion": "1.1.0",
+  "description": "Small semantic color baseline characterized from the current iOS Zap, History, Noise Rewind, and shield surfaces.",
   "colorSpace": "sRGB",
   "colorEncoding": "#RRGGBB or #RRGGBBAA, with non-premultiplied alpha in the trailing byte",
   "colors": {
@@ -17,6 +17,10 @@
     "action.zap.stop.background": "#FFFF00E6",
     "action.zap.stop.label": "#000000",
     "accent.noiseRewind": "#DDFF00",
+    "history.dot.empty": "#EBEBEB",
+    "history.dot.light": "#C0C0C0",
+    "history.dot.medium": "#777777",
+    "history.dot.dense": "#191919",
     "action.shield.background": "#FFFFFF",
     "action.shield.label": "#0D0D0D"
   }
