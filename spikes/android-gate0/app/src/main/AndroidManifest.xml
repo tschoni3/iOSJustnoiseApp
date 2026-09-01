@@ -38,6 +38,22 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".app.DirectNfcActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:theme="@style/Theme.JustnoiseGate0.DirectNfc">
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".platform.restriction.Gate0AccessibilityService"
             android:description="@string/accessibility_service_description"

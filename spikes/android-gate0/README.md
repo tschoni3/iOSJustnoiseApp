@@ -13,6 +13,7 @@ The canonical decision criteria remain in [`../../docs/ANDROID_GATE_0.md`](../..
 - A prominent disclosure and unchecked affirmative consent before opening Accessibility settings.
 - One locally selected, non-protected package identifier.
 - Foreground-only, one-shot NFC reader mode for one NDEF message containing exactly one bounded UTF-8 NDEF Text record. Non-Text auxiliary records are allowed; multiple Text records are rejected as ambiguous.
+- A narrow unlocked-device `ACTION_NDEF_DISCOVERED` candidate for legacy Text Zaps. It requires and re-reads a live `EXTRA_TAG`; copied `EXTRA_NDEF_MESSAGES` alone can never mutate session state.
 - A lifecycle generation guard invalidates an armed or in-flight scan on pause, cancellation, or replacement. Reader mode is disabled after tag I/O and before any accepted state mutation.
 - Android Keystore HMAC-SHA256 pairing. Only the digest is stored; tag IDs and raw NDEF records are not stored or logged.
 - An Accessibility service subscribed only to `TYPE_WINDOW_STATE_CHANGED`, with window-content retrieval disabled and no accessibility flags.
@@ -60,8 +61,9 @@ Review the generated `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.ja
 5. Select Chrome, YouTube, and one third-party launcher app in turn. Record any app omitted by scoped visibility.
 6. Accept the disclosure, use the button to open Accessibility settings, and manually enable the service. Confirm no draw-over-other-apps permission is requested.
 7. Press **Pair or replace test Zap** and scan one real UTF-8 NDEF Text tag. Use a different real NDEF tag for unauthorized cases.
-8. Press **Scan Zap to start or stop** and complete every scenario in `evidence/DEVICE_MATRIX.md`, including default battery mode, unrestricted battery mode, reboot, natural Doze, eight-hour overnight, service death, Force Stop, and uninstall.
-9. Run the instrumentation APK on-device only as supporting evidence. It cannot replace any physical matrix cell.
+8. Press **Scan Zap to start or stop**, then repeat from the unlocked home screen by tapping the paired Zap without opening Justnoise. Record whether Android routes directly, displays a chooser, or does nothing.
+9. Complete every scenario in `evidence/DEVICE_MATRIX.md`, including default battery mode, unrestricted battery mode, reboot, natural Doze, eight-hour overnight, service death, Force Stop, and uninstall.
+10. Run the instrumentation APK on-device only as supporting evidence. It cannot replace any physical matrix cell.
 
 Collect screen recordings and redacted system/log evidence. Do not capture a raw Zap record or unrelated foreground package history. Record model, full OS build, security patch, battery mode, tester, prototype commit, and exact alternate entry paths.
 

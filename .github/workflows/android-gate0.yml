@@ -15,6 +15,7 @@ on:
       - "scripts/verify-android-predevice-readiness.sh"
       - "scripts/verify-product-contracts.sh"
       - "spikes/android-gate0/**"
+      - "spikes/android-integrated/**"
       - "spikes/android-ui/**"
   push:
     branches:
@@ -32,6 +33,7 @@ on:
       - "scripts/verify-android-predevice-readiness.sh"
       - "scripts/verify-product-contracts.sh"
       - "spikes/android-gate0/**"
+      - "spikes/android-integrated/**"
       - "spikes/android-ui/**"
   workflow_dispatch:
 
@@ -103,6 +105,21 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Collect integrated development APK and checksum
+        run: |
+          mkdir -p "$RUNNER_TEMP/android-integrated-debug"
+          cp spikes/android-integrated/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/android-integrated-debug/justnoise-android-dev-debug.apk"
+          cd "$RUNNER_TEMP/android-integrated-debug"
+          sha256sum --binary *.apk > SHA256SUMS
+
+      - name: Upload integrated development APK and checksum
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: android-integrated-debug
+          path: ${{ runner.temp }}/android-integrated-debug
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -115,5 +132,7 @@ jobs:
             spikes/android-ui/app/build/reports
             spikes/android-ui/app/build/test-results
             spikes/android-ui/app/build/intermediates/lint*
+            spikes/android-integrated/app/build/reports
+            spikes/android-integrated/app/build/intermediates/lint*
           if-no-files-found: ignore
           retention-days: 14

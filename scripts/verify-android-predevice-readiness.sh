@@ -6,9 +6,11 @@ SCRIPT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_ROOT="$(cd "$SCRIPT_DIRECTORY/.." && pwd)"
 GATE_ROOT="$REPOSITORY_ROOT/spikes/android-gate0"
 UI_ROOT="$REPOSITORY_ROOT/spikes/android-ui"
+INTEGRATED_ROOT="$REPOSITORY_ROOT/spikes/android-integrated"
 GRADLE_WRAPPER="$GATE_ROOT/gradlew"
 UI_MANIFEST="$UI_ROOT/app/src/main/AndroidManifest.xml"
 UI_SOURCE="$UI_ROOT/app/src/main"
+INTEGRATED_MANIFEST="$INTEGRATED_ROOT/app/src/main/AndroidManifest.xml"
 
 fail() {
     echo "Android pre-device verification failed: $1" >&2
@@ -19,6 +21,7 @@ fail() {
     || fail "android-app/ exists before the physical Gate 0 decision is PASS"
 [[ -x "$GRADLE_WRAPPER" ]] || fail "the pinned Gate 0 Gradle wrapper is unavailable"
 [[ -f "$UI_MANIFEST" ]] || fail "the permission-free UI prototype manifest is missing"
+[[ -f "$INTEGRATED_MANIFEST" ]] || fail "the integrated Android development manifest is missing"
 
 if command -v rg >/dev/null 2>&1; then
     rg --quiet '<uses-permission|<service' "$UI_MANIFEST" \
@@ -36,6 +39,18 @@ else
         && fail "the UI prototype crossed into a restricted platform capability"
 fi
 
+if command -v rg >/dev/null 2>&1; then
+    rg --quiet 'android.nfc.action.NDEF_DISCOVERED' "$INTEGRATED_MANIFEST" \
+        || fail "the integrated development app is missing direct NDEF dispatch"
+    rg --quiet 'Justnoise Android Dev app blocking' "$INTEGRATED_ROOT/app/src/main/res" \
+        || fail "the integrated Accessibility service has no unambiguous user-facing label"
+else
+    grep -q 'android.nfc.action.NDEF_DISCOVERED' "$INTEGRATED_MANIFEST" \
+        || fail "the integrated development app is missing direct NDEF dispatch"
+    grep -R -q 'Justnoise Android Dev app blocking' "$INTEGRATED_ROOT/app/src/main/res" \
+        || fail "the integrated Accessibility service has no unambiguous user-facing label"
+fi
+
 bash "$GATE_ROOT/scripts/verify-static-policy.sh"
 
 "$GRADLE_WRAPPER" --no-daemon -p "$GATE_ROOT" \
@@ -49,4 +64,8 @@ bash "$GATE_ROOT/scripts/verify-static-policy.sh"
     lintDebug \
     assembleDebug
 
-echo "Android pre-device baseline verified; production remains HOLD pending physical and store gates."
+"$GRADLE_WRAPPER" --no-daemon -p "$INTEGRATED_ROOT" \
+    lintDebug \
+    assembleDebug
+
+echo "Android spikes and integrated development APK verified; production remains HOLD pending physical and store gates."

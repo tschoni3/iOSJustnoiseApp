@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="integrated_accessibility_service_label">Justnoise Android Dev app blocking</string>
+    <string name="integrated_accessibility_service_description">Checks only the foreground app identifier against your selected app while a Justnoise session is active. It cannot retrieve screen content.</string>
+</resources>

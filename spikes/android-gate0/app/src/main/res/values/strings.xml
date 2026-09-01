@@ -37,6 +37,7 @@
     <string name="status_scan_io_failed">Android could not finish reading this NDEF tag. Hold it in place and try again.</string>
     <string name="status_scan_security_denied">Android denied access to this NFC tag. State did not change.</string>
     <string name="status_scan_read_failed">The NFC read failed unexpectedly. State did not change.</string>
+    <string name="status_direct_duplicate_ignored">Duplicate NFC read ignored. Session state did not change.</string>
     <string name="status_scan_no_text">NDEF was read, but it contains no Text record. State did not change.</string>
     <string name="status_scan_invalid_text">The single NDEF Text record is not valid bounded UTF-8. State did not change.</string>
     <string name="status_scan_ambiguous_text">The tag contains multiple NDEF Text records. Exactly one is required, so state did not change.</string>

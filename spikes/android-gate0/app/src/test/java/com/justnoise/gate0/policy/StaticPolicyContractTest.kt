@@ -19,6 +19,8 @@ class StaticPolicyContractTest {
 
         assertTrue(manifest.contains("android.permission.NFC"))
         assertTrue(manifest.contains("android.intent.category.LAUNCHER"))
+        assertTrue(manifest.contains("android.nfc.action.NDEF_DISCOVERED"))
+        assertTrue(manifest.contains("android:mimeType=\"text/plain\""))
         assertFalse(manifest.contains("android.permission.INTERNET"))
         assertFalse(manifest.contains("android.permission.QUERY_ALL_PACKAGES"))
         assertFalse(manifest.contains("android.permission.SYSTEM_ALERT_WINDOW"))
@@ -26,6 +28,22 @@ class StaticPolicyContractTest {
         assertTrue(manifest.contains("android:allowBackup=\"false\""))
         assertTrue(manifest.contains("android:fullBackupContent=\"false\""))
         assertTrue(manifest.contains("android:dataExtractionRules=\"@xml/data_extraction_rules\""))
+    }
+
+    @Test
+    fun `direct NFC dispatch requires a live tag and ignores copied messages`() {
+        val source = file(
+            "app/src/main/java/com/justnoise/gate0/app/DirectNfcActivity.kt",
+        ).readText()
+        val rules = file(
+            "app/src/main/java/com/justnoise/gate0/platform/nfc/DirectNfcDispatchRules.kt",
+        ).readText()
+
+        assertTrue(source.contains("candidate.liveNfcTag()"))
+        assertTrue(source.contains("NdefTagReader.readSingleStrictTextRecord"))
+        assertTrue(source.contains("ProcessDirectNfcMutationGate.tryClaim"))
+        assertFalse(source.contains("EXTRA_NDEF_MESSAGES"))
+        assertTrue(rules.contains("hasLiveTag"))
     }
 
     @Test
