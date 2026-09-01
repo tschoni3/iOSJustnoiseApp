@@ -69,6 +69,7 @@ class StaticPolicyContractTest {
         val extractionRules = file("app/src/main/res/xml/data_extraction_rules.xml").readText()
 
         assertTrue(layout.contains("android:id=\"@+id/overlayMessage\""))
+        assertTrue(layout.contains("android:clickable=\"true\""))
         assertTrue(layout.contains("android:backgroundTint=\"@color/action_background\""))
         assertTrue(colors.contains("<color name=\"action_background\">#FFFFFF</color>"))
         assertTrue(strings.contains("<string name=\"shield_open_justnoise\">Keep going</string>"))
