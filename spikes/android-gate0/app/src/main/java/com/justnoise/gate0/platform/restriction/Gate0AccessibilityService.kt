@@ -79,32 +79,34 @@ class Gate0AccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            if (::overlayController.isInitialized) overlayController.hide()
-            return
-        }
-
-        val foregroundPackage = event.packageName?.toString()?.takeIf(String::isNotBlank)
-        if (foregroundPackage == null) {
-            overlayController.hide()
-            return
-        }
+        val foregroundPackage = event?.packageName?.toString()?.takeIf(String::isNotBlank)
         val stored = preferences.snapshot()
         val selectedPackage = stored.selectedPackage
         val protectedPackages = protectedPackageResolver.resolve()
-        val mayIntercept = stored.acceptedDisclosureVersion ==
+        val enforcementEligible = stored.acceptedDisclosureVersion ==
             Gate0Preferences.CURRENT_DISCLOSURE_VERSION &&
             stored.acceptedDisclosureEpochMilliseconds > 0L &&
             stored.desiredActive &&
             !stored.recoveryRequired &&
             selectedPackage != null &&
-            !ProtectedPackagePolicy.isProtected(selectedPackage, protectedPackages) &&
-            foregroundPackage == selectedPackage
+            !ProtectedPackagePolicy.isProtected(selectedPackage, protectedPackages)
 
-        if (mayIntercept) {
-            overlayController.show(resolveAppLabel(selectedPackage))
-        } else {
-            overlayController.hide()
+        when (
+            OverlayEventRules.decide(
+                isWindowStateChange =
+                    event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
+                foregroundPackage = foregroundPackage,
+                justnoisePackage = packageName,
+                selectedPackage = selectedPackage,
+                enforcementEligible = enforcementEligible,
+                overlayIsShowing = overlayController.isShowing,
+            )
+        ) {
+            OverlayEventDecision.SHOW ->
+                overlayController.show(resolveAppLabel(requireNotNull(selectedPackage)))
+
+            OverlayEventDecision.HIDE -> overlayController.hide()
+            OverlayEventDecision.IGNORE -> Unit
         }
     }
 

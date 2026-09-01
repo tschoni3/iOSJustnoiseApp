@@ -86,7 +86,7 @@ class StaticPolicyContractTest {
                 "Gate0AccessibilityService.kt",
         ).readText()
 
-        assertTrue(source.contains("event.packageName"))
+        assertTrue(source.contains("event?.packageName"))
         listOf(
             "event.source",
             "event.text",

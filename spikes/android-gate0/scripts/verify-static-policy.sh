@@ -8,6 +8,7 @@ REPOSITORY_ROOT="$(cd "$SPIKE_ROOT/../.." && pwd)"
 MANIFEST="$SPIKE_ROOT/app/src/main/AndroidManifest.xml"
 ACCESSIBILITY_METADATA="$SPIKE_ROOT/app/src/main/res/xml/gate0_accessibility_service.xml"
 SERVICE_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/restriction/Gate0AccessibilityService.kt"
+OVERLAY_EVENT_RULES_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/restriction/OverlayEventRules.kt"
 NDEF_READER_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/nfc/NdefTagReader.kt"
 NDEF_PARSER_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/nfc/NdefTextPayloadParser.kt"
 SCAN_COORDINATOR_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/nfc/OneShotScanCoordinator.kt"
@@ -98,7 +99,10 @@ require_literal 'android:isAccessibilityTool="false"' "$ACCESSIBILITY_METADATA"
 require_literal 'android:notificationTimeout="0"' "$ACCESSIBILITY_METADATA"
 reject_literal 'android:accessibilityFlags' "$ACCESSIBILITY_METADATA"
 
-require_literal 'event.packageName' "$SERVICE_SOURCE"
+require_literal 'event?.packageName' "$SERVICE_SOURCE"
+require_literal 'OverlayEventDecision.IGNORE' "$SERVICE_SOURCE"
+require_literal 'overlayController.isShowing' "$SERVICE_SOURCE"
+require_literal 'foregroundPackage == justnoisePackage' "$OVERLAY_EVENT_RULES_SOURCE"
 for content_api in \
     event.source \
     event.text \
