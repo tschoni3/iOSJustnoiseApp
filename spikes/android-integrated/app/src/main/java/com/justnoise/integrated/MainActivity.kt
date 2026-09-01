@@ -1,9 +1,12 @@
 package com.justnoise.integrated
 
 import android.content.Intent
+import android.nfc.NfcAdapter
+import android.nfc.Tag
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -11,17 +14,31 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.justnoise.gate0.R
 import com.justnoise.gate0.app.MainActivity as Gate0SetupActivity
 import com.justnoise.gate0.data.Gate0Preferences
+import com.justnoise.gate0.domain.SessionTransition
+import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.feature.Gate0Truth
+import com.justnoise.gate0.platform.nfc.NdefReadFailure
+import com.justnoise.gate0.platform.nfc.NdefReadResult
+import com.justnoise.gate0.platform.nfc.NdefTagReader
+import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
+import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private lateinit var controller: Gate0Controller
     private lateinit var preferences: Gate0Preferences
+    private var nfcAdapter: NfcAdapter? = null
+    private val scanCoordinator = OneShotScanCoordinator<Unit>()
     private val handler = Handler(Looper.getMainLooper())
     private var screenState by mutableStateOf(IntegratedZapState())
+
+    private val clearTransientStatus = Runnable {
+        screenState = screenState.copy(transientStatus = null)
+    }
 
     private val refresh = object : Runnable {
         override fun run() {
@@ -34,6 +51,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         controller = Gate0Controller(this)
         preferences = Gate0Preferences(this)
+        nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 lightScrim = android.graphics.Color.TRANSPARENT,
@@ -48,6 +66,7 @@ class MainActivity : ComponentActivity() {
             JustnoiseIntegratedTheme {
                 IntegratedZapSurface(
                     state = screenState,
+                    onZap = ::handleZapPress,
                     onOpenSetup = ::openSetup,
                 )
             }
@@ -61,8 +80,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        cancelReaderMode()
+        handler.removeCallbacks(clearTransientStatus)
+        screenState = screenState.copy(transientStatus = null)
         handler.removeCallbacks(refresh)
         super.onPause()
+    }
+
+    private fun handleZapPress() {
+        if (screenState.canScan) beginOneShotScan() else openSetup()
     }
 
     private fun openSetup() {
@@ -72,9 +98,10 @@ class MainActivity : ComponentActivity() {
     private fun refreshTruth() {
         val truth = controller.truth()
         val stored = preferences.snapshot()
-        screenState = IntegratedZapState(
+        screenState = screenState.copy(
             truth = truth,
             selectedAppName = resolveAppLabel(controller.selectedPackage()),
+            desiredActive = stored.desiredActive,
             elapsedText = if (truth == Gate0Truth.ACTIVE) {
                 formatElapsed(
                     (System.currentTimeMillis() - stored.activeSinceEpochMilliseconds)
@@ -84,6 +111,158 @@ class MainActivity : ComponentActivity() {
                 "00:00:00"
             },
         )
+    }
+
+    private fun beginOneShotScan() {
+        if (scanCoordinator.isActive()) return
+        val adapter = nfcAdapter
+        if (adapter == null || !adapter.isEnabled) {
+            showTransientStatus(R.string.status_nfc_unavailable)
+            return
+        }
+
+        val token = scanCoordinator.begin(Unit)
+        try {
+            adapter.enableReaderMode(
+                this,
+                { tag -> onTagDiscovered(token, tag) },
+                NfcAdapter.FLAG_READER_NFC_A or
+                    NfcAdapter.FLAG_READER_NFC_B or
+                    NfcAdapter.FLAG_READER_NFC_F or
+                    NfcAdapter.FLAG_READER_NFC_V,
+                Bundle().apply {
+                    putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250)
+                },
+            )
+        } catch (_: RuntimeException) {
+            scanCoordinator.cancel(token)
+            showTransientStatus(R.string.status_nfc_unavailable)
+            return
+        }
+        handler.removeCallbacks(clearTransientStatus)
+        screenState = screenState.copy(
+            isScanning = true,
+            transientStatus = getString(R.string.status_scanning),
+        )
+    }
+
+    private fun onTagDiscovered(
+        token: OneShotScanCoordinator.Token<Unit>,
+        tag: Tag,
+    ) {
+        if (!scanCoordinator.claim(token)) return
+        val result = NdefTagReader.readSingleStrictTextRecord(tag)
+        runOnUiThread { completeOneShotScan(token, result) }
+    }
+
+    private fun completeOneShotScan(
+        token: OneShotScanCoordinator.Token<Unit>,
+        result: NdefReadResult,
+    ) {
+        if (!scanCoordinator.isClaimActive(token)) {
+            result.clearSensitiveData()
+            return
+        }
+
+        val foregroundInteractionClaimed = if (result is NdefReadResult.Accepted) {
+            ProcessDirectNfcMutationGate.tryClaim(SystemClock.elapsedRealtime())
+        } else {
+            true
+        }
+        // Claim this physical interaction before direct system dispatch is restored.
+        disableReaderModeHardware()
+        try {
+            val statusResource = when (result) {
+                is NdefReadResult.Rejected -> result.statusResource()
+                is NdefReadResult.Accepted -> {
+                    val interaction = if (foregroundInteractionClaimed) {
+                        try {
+                            controller.handleZap(
+                                transientCanonicalRecord = result.transientCanonicalRecord,
+                                acceptedReadAlreadyHandled = false,
+                            )
+                        } catch (_: Exception) {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+                    when {
+                        !foregroundInteractionClaimed ->
+                            R.string.status_direct_duplicate_ignored
+
+                        interaction == null -> R.string.status_start_failed
+                        interaction.readDecision.outcome == ZapReadOutcome.UNAUTHORIZED ->
+                            R.string.status_scan_unauthorized
+
+                        interaction.readDecision.outcome == ZapReadOutcome.INVALID ->
+                            R.string.status_scan_invalid
+
+                        interaction.sessionDecision?.transition == SessionTransition.START ->
+                            R.string.status_started
+
+                        interaction.sessionDecision?.transition == SessionTransition.STOP ->
+                            R.string.status_stopped
+
+                        interaction.sessionDecision?.transition == SessionTransition.STOP_REJECTED ->
+                            R.string.status_stop_guard
+
+                        interaction.sessionDecision?.transition == SessionTransition.START_FAILED ->
+                            R.string.status_start_failed
+
+                        else -> R.string.status_no_change
+                    }
+                }
+            }
+            showTransientStatus(statusResource)
+        } finally {
+            result.clearSensitiveData()
+            scanCoordinator.finish(token)
+            screenState = screenState.copy(isScanning = false)
+            refreshTruth()
+        }
+    }
+
+    private fun NdefReadResult.Rejected.statusResource(): Int = when (reason) {
+        NdefReadFailure.NDEF_UNAVAILABLE -> R.string.status_scan_not_ndef
+        NdefReadFailure.EMPTY_NDEF_MESSAGE -> R.string.status_scan_empty_ndef
+        NdefReadFailure.TAG_LOST -> R.string.status_scan_tag_lost
+        NdefReadFailure.MALFORMED_NDEF -> R.string.status_scan_malformed_ndef
+        NdefReadFailure.IO_FAILED -> R.string.status_scan_io_failed
+        NdefReadFailure.SECURITY_DENIED -> R.string.status_scan_security_denied
+        NdefReadFailure.READ_FAILED -> R.string.status_scan_read_failed
+        NdefReadFailure.NO_TEXT_RECORD -> R.string.status_scan_no_text
+        NdefReadFailure.INVALID_TEXT_RECORD -> R.string.status_scan_invalid_text
+        NdefReadFailure.AMBIGUOUS_TEXT_RECORDS -> R.string.status_scan_ambiguous_text
+    }
+
+    private fun showTransientStatus(messageResource: Int) {
+        handler.removeCallbacks(clearTransientStatus)
+        screenState = screenState.copy(
+            isScanning = false,
+            transientStatus = getString(messageResource),
+        )
+        handler.postDelayed(clearTransientStatus, TRANSIENT_STATUS_MILLISECONDS)
+    }
+
+    private fun cancelReaderMode() {
+        scanCoordinator.cancel()
+        disableReaderModeHardware()
+        if (screenState.isScanning) {
+            screenState = screenState.copy(isScanning = false, transientStatus = null)
+        }
+    }
+
+    private fun disableReaderModeHardware() {
+        try {
+            nfcAdapter?.disableReaderMode(this)
+        } catch (_: Exception) {
+            // The Activity may already be paused or NFC may have been disabled.
+        }
+    }
+
+    private fun NdefReadResult.clearSensitiveData() {
+        if (this is NdefReadResult.Accepted) transientCanonicalRecord.fill(0)
     }
 
     private fun resolveAppLabel(packageName: String?): String? {
@@ -106,5 +285,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val REFRESH_INTERVAL_MILLISECONDS = 1_000L
+        const val TRANSIENT_STATUS_MILLISECONDS = 5_000L
     }
 }

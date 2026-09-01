@@ -53,9 +53,17 @@ data class IntegratedZapState(
     val truth: Gate0Truth = Gate0Truth.CONSENT_REQUIRED,
     val selectedAppName: String? = null,
     val elapsedText: String = "00:00:00",
+    val desiredActive: Boolean = false,
+    val isScanning: Boolean = false,
+    val transientStatus: String? = null,
 ) {
     val isActive: Boolean
         get() = truth == Gate0Truth.ACTIVE
+
+    val canScan: Boolean
+        get() = truth == Gate0Truth.IDLE ||
+            truth == Gate0Truth.ACTIVE ||
+            (truth == Gate0Truth.RECOVERY_REQUIRED && desiredActive)
 }
 
 @Composable
@@ -73,6 +81,7 @@ fun JustnoiseIntegratedTheme(content: @Composable () -> Unit) {
 @Composable
 fun IntegratedZapSurface(
     state: IntegratedZapState,
+    onZap: () -> Unit,
     onOpenSetup: () -> Unit,
 ) {
     val background by animateColorAsState(
@@ -135,10 +144,10 @@ fun IntegratedZapSurface(
                         .offset(y = buttonTop)
                         .size(buttonSlot)
                         .semantics {
-                            contentDescription = "Open Zap scan and setup"
+                            contentDescription = zapActionLabel(state)
                             role = Role.Button
                         }
-                        .clickable(onClick = onOpenSetup)
+                        .clickable(enabled = !state.isScanning, onClick = onZap)
                         .padding(10.dp)
                         .shadow(2.dp, CircleShape),
                 )
@@ -154,6 +163,7 @@ fun IntegratedZapSurface(
 
                 CapabilityCard(
                     state = state,
+                    onZap = onZap,
                     onOpenSetup = onOpenSetup,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -276,6 +286,7 @@ private fun StateLabel(
 @Composable
 private fun CapabilityCard(
     state: IntegratedZapState,
+    onZap: () -> Unit,
     onOpenSetup: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -291,14 +302,19 @@ private fun CapabilityCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = statusDetail(state.truth),
+                text = state.transientStatus ?: statusDetail(state.truth),
                 color = if (active) Color.Black.copy(alpha = 0.62f)
                 else Color.White.copy(alpha = 0.62f),
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
             )
             Button(
-                onClick = onOpenSetup,
+                onClick = if (state.canScan) {
+                    onZap
+                } else {
+                    onOpenSetup
+                },
+                enabled = !state.isScanning,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -309,13 +325,20 @@ private fun CapabilityCard(
                 ),
             ) {
                 Text(
-                    text = if (active) "Open scan to stop" else "Open scan & setup",
+                    text = zapActionLabel(state),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
         }
     }
+}
+
+private fun zapActionLabel(state: IntegratedZapState): String = when {
+    state.isScanning -> "Hold Zap near phone"
+    state.desiredActive -> "Scan Zap to stop"
+    state.truth == Gate0Truth.IDLE -> "Scan Zap to start"
+    else -> "Open setup"
 }
 
 private fun statusTitle(truth: Gate0Truth): String = when (truth) {

@@ -11,6 +11,7 @@ GRADLE_WRAPPER="$GATE_ROOT/gradlew"
 UI_MANIFEST="$UI_ROOT/app/src/main/AndroidManifest.xml"
 UI_SOURCE="$UI_ROOT/app/src/main"
 INTEGRATED_MANIFEST="$INTEGRATED_ROOT/app/src/main/AndroidManifest.xml"
+INTEGRATED_ACTIVITY="$INTEGRATED_ROOT/app/src/main/java/com/justnoise/integrated/MainActivity.kt"
 
 fail() {
     echo "Android pre-device verification failed: $1" >&2
@@ -44,11 +45,19 @@ if command -v rg >/dev/null 2>&1; then
         || fail "the integrated development app is missing direct NDEF dispatch"
     rg --quiet 'Justnoise Android Dev app blocking' "$INTEGRATED_ROOT/app/src/main/res" \
         || fail "the integrated Accessibility service has no unambiguous user-facing label"
+    rg --quiet 'enableReaderMode' "$INTEGRATED_ACTIVITY" \
+        || fail "the polished integrated Zap surface is not wired to a real NFC reader"
+    rg --quiet 'ProcessDirectNfcMutationGate.tryClaim' "$INTEGRATED_ACTIVITY" \
+        || fail "the integrated foreground reader does not reserve the shared mutation gate"
 else
     grep -q 'android.nfc.action.NDEF_DISCOVERED' "$INTEGRATED_MANIFEST" \
         || fail "the integrated development app is missing direct NDEF dispatch"
     grep -R -q 'Justnoise Android Dev app blocking' "$INTEGRATED_ROOT/app/src/main/res" \
         || fail "the integrated Accessibility service has no unambiguous user-facing label"
+    grep -q 'enableReaderMode' "$INTEGRATED_ACTIVITY" \
+        || fail "the polished integrated Zap surface is not wired to a real NFC reader"
+    grep -q 'ProcessDirectNfcMutationGate.tryClaim' "$INTEGRATED_ACTIVITY" \
+        || fail "the integrated foreground reader does not reserve the shared mutation gate"
 fi
 
 bash "$GATE_ROOT/scripts/verify-static-policy.sh"

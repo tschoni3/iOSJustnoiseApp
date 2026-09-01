@@ -8,6 +8,7 @@ import android.nfc.Tag
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.View
 import android.widget.AdapterView
@@ -26,6 +27,7 @@ import com.justnoise.gate0.platform.nfc.NdefReadFailure
 import com.justnoise.gate0.platform.nfc.NdefReadResult
 import com.justnoise.gate0.platform.nfc.NdefTagReader
 import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
+import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
 
 class MainActivity : Activity() {
     private lateinit var controller: Gate0Controller
@@ -105,7 +107,13 @@ class MainActivity : Activity() {
             return
         }
 
-        // Tag I/O is complete. Restore normal NFC behavior before applying any state mutation.
+        val foregroundInteractionClaimed = if (result is NdefReadResult.Accepted) {
+            ProcessDirectNfcMutationGate.tryClaim(SystemClock.elapsedRealtime())
+        } else {
+            true
+        }
+        // Reserve this physical interaction before restoring normal NFC dispatch, then restore
+        // normal behavior before applying any state mutation.
         disableReaderModeHardware()
         try {
             if (result is NdefReadResult.Rejected) {
@@ -160,15 +168,22 @@ class MainActivity : Activity() {
                 }
 
                 ScanPurpose.TOGGLE -> {
-                    val interaction = try {
-                        controller.handleZap(
-                            transientCanonicalRecord = transientCanonicalRecord,
-                            acceptedReadAlreadyHandled = false,
-                        )
-                    } catch (_: Exception) {
+                    val interaction = if (foregroundInteractionClaimed) {
+                        try {
+                            controller.handleZap(
+                                transientCanonicalRecord = transientCanonicalRecord,
+                                acceptedReadAlreadyHandled = false,
+                            )
+                        } catch (_: Exception) {
+                            null
+                        }
+                    } else {
                         null
                     }
                     val message = when {
+                        !foregroundInteractionClaimed ->
+                            R.string.status_direct_duplicate_ignored
+
                         interaction == null -> R.string.status_start_failed
                         interaction.readDecision.outcome == ZapReadOutcome.UNAUTHORIZED ->
                             R.string.status_scan_unauthorized
