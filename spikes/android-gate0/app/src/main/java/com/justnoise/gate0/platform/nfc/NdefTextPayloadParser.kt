@@ -10,6 +10,49 @@ object NdefTextPayloadParser {
     const val MAX_UTF8_TEXT_BYTES = 512
     const val MAX_LANGUAGE_BYTES = 35
 
+    fun selectSingleCanonicalStrictUtf8Record(
+        records: Iterable<NdefRecordFields>,
+    ): NdefTextSelection {
+        var recordCount = 0
+        val textRecords = mutableListOf<NdefRecordFields>()
+        records.forEach { record ->
+            recordCount += 1
+            if (isTextRecord(record.tnf, record.type)) {
+                textRecords += record
+            }
+        }
+
+        if (textRecords.isEmpty()) {
+            return NdefTextSelection.Rejected(
+                reason = NdefTextSelectionFailure.NO_TEXT_RECORD,
+                recordCount = recordCount,
+                textRecordCount = 0,
+            )
+        }
+        if (textRecords.size != 1) {
+            return NdefTextSelection.Rejected(
+                reason = NdefTextSelectionFailure.AMBIGUOUS_TEXT_RECORDS,
+                recordCount = recordCount,
+                textRecordCount = textRecords.size,
+            )
+        }
+
+        val record = textRecords.single()
+        val canonicalRecord = parseCanonicalStrictUtf8Record(
+            tnf = record.tnf,
+            type = record.type,
+            payload = record.payload,
+        ) ?: return NdefTextSelection.Rejected(
+            reason = NdefTextSelectionFailure.INVALID_TEXT_RECORD,
+            recordCount = recordCount,
+            textRecordCount = 1,
+        )
+        return NdefTextSelection.Accepted(
+            transientCanonicalRecord = canonicalRecord,
+            recordCount = recordCount,
+        )
+    }
+
     fun parseCanonicalStrictUtf8Record(
         tnf: Int,
         type: ByteArray,
@@ -45,6 +88,9 @@ object NdefTextPayloadParser {
         return byteArrayOf(TNF_WELL_KNOWN.toByte(), RTD_TEXT.single()) + payload
     }
 
+    fun isTextRecord(tnf: Int, type: ByteArray): Boolean =
+        tnf == TNF_WELL_KNOWN && type.contentEquals(RTD_TEXT)
+
     private fun isLanguageByte(value: Byte): Boolean {
         val character = value.toInt() and 0xFF
         return character in 'A'.code..'Z'.code ||
@@ -63,3 +109,28 @@ object NdefTextPayloadParser {
         false
     }
 }
+
+sealed interface NdefTextSelection {
+    data class Accepted(
+        val transientCanonicalRecord: ByteArray,
+        val recordCount: Int,
+    ) : NdefTextSelection
+
+    data class Rejected(
+        val reason: NdefTextSelectionFailure,
+        val recordCount: Int,
+        val textRecordCount: Int,
+    ) : NdefTextSelection
+}
+
+enum class NdefTextSelectionFailure {
+    NO_TEXT_RECORD,
+    INVALID_TEXT_RECORD,
+    AMBIGUOUS_TEXT_RECORDS,
+}
+
+data class NdefRecordFields(
+    val tnf: Int,
+    val type: ByteArray,
+    val payload: ByteArray,
+)

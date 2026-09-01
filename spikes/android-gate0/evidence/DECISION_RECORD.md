@@ -4,9 +4,9 @@ Decision: **HOLD / NO-GO for the full Android port**
 
 Date opened: 2026-07-22
 
-Last updated: 2026-08-07
+Last updated: 2026-09-01
 
-The repository now contains a reviewable candidate and CI design, but the required consumer-device and policy evidence does not exist. All 36 Pixel/Samsung cells remain `BLOCKED`, which is a gate failure. No production `android-app/` should be created from this spike yet.
+The repository now contains a reviewable candidate and CI design, but the required consumer-device and policy evidence does not exist. All 38 A16/A17 launch-family cells remain `BLOCKED`, which is a gate failure. No production `android-app/` should be created from this spike yet.
 
 ## Pre-device evidence now recorded
 
@@ -27,11 +27,12 @@ This evidence changes no device-matrix cell. It validates only the build, declar
 - Interception happens before target content is usable.
 - Navigation, split-screen, alternate entry, or OEM behavior cannot bypass it.
 - No persistent overlay or lockout can occur under real lifecycle stress.
-- Default-battery and overnight durability pass on Pixel and Samsung.
+- Default-battery and overnight durability pass on the exact Galaxy A16 and A17 variants intended for launch.
 - Real authorized/unauthorized NFC behavior is reliable.
+- An unlocked direct Zap tap routes to Justnoise and toggles once without app-open, Scan-button, chooser, or confirmation friction.
 - Google Play accepts the declared Accessibility use.
 - Product accepts the onboarding, battery, OEM, and escape-path tradeoffs.
 
 ## Decision owner checklist
 
-Only change this record to `PASS` when every `G0-01` through `G0-18` cell is `PASS` on both required device families, all evidence is attached, and product plus policy reviewers sign off. Any `FAIL` or `BLOCKED` remains a broad-port `NO-GO`; policy uncertainty remains `HOLD`.
+Only change this record to `PASS` when every `G0-01` through `G0-19` cell is `PASS` on both required device families, all evidence is attached, and product plus policy reviewers sign off. Any `FAIL` or `BLOCKED` remains a broad-port `NO-GO`; policy uncertainty remains `HOLD`.

@@ -1,33 +1,107 @@
 package com.justnoise.gate0.platform.nfc
 
+import android.nfc.FormatException
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.nfc.Tag
+import android.nfc.TagLostException
 import android.nfc.tech.Ndef
+import java.io.IOException
 
 object NdefMessageParser {
-    fun parseSingleStrictTextRecord(message: NdefMessage): ByteArray? {
-        if (message.records.size != 1) return null
-        val record = message.records.single()
-        return NdefTextPayloadParser.parseCanonicalStrictUtf8Record(
-            tnf = record.tnf.toInt(),
-            type = record.type,
-            payload = record.payload,
-        )
+    fun parseSingleStrictTextRecord(message: NdefMessage): NdefReadResult {
+        val records = message.records
+        val textRecordIndexes = records.indices.filter { index ->
+            isTextRecord(records[index])
+        }
+        if (textRecordIndexes.isEmpty()) {
+            return NdefReadResult.Rejected(
+                reason = NdefReadFailure.NO_TEXT_RECORD,
+                recordCount = records.size,
+                textRecordCount = 0,
+            )
+        }
+        if (textRecordIndexes.size != 1) {
+            return NdefReadResult.Rejected(
+                reason = NdefReadFailure.AMBIGUOUS_TEXT_RECORDS,
+                recordCount = records.size,
+                textRecordCount = textRecordIndexes.size,
+            )
+        }
+
+        val candidateIndex = textRecordIndexes.single()
+        val transientFields = records.mapIndexed { index, record ->
+            NdefRecordFields(
+                tnf = record.tnf.toInt(),
+                type = record.type,
+                payload = if (index == candidateIndex) record.payload.copyOf() else byteArrayOf(),
+            )
+        }
+        return try {
+            when (
+                val selection = NdefTextPayloadParser.selectSingleCanonicalStrictUtf8Record(
+                    transientFields,
+                )
+            ) {
+                is NdefTextSelection.Accepted -> NdefReadResult.Accepted(
+                    transientCanonicalRecord = selection.transientCanonicalRecord,
+                    recordCount = selection.recordCount,
+                )
+
+                is NdefTextSelection.Rejected -> NdefReadResult.Rejected(
+                    reason = when (selection.reason) {
+                        NdefTextSelectionFailure.NO_TEXT_RECORD ->
+                            NdefReadFailure.NO_TEXT_RECORD
+
+                        NdefTextSelectionFailure.INVALID_TEXT_RECORD ->
+                            NdefReadFailure.INVALID_TEXT_RECORD
+
+                        NdefTextSelectionFailure.AMBIGUOUS_TEXT_RECORDS ->
+                            NdefReadFailure.AMBIGUOUS_TEXT_RECORDS
+                    },
+                    recordCount = selection.recordCount,
+                    textRecordCount = selection.textRecordCount,
+                )
+            }
+        } finally {
+            transientFields.forEach { fields -> fields.payload.fill(0) }
+        }
     }
 
     fun isTextRecord(record: NdefRecord): Boolean =
-        record.tnf == NdefRecord.TNF_WELL_KNOWN && record.type.contentEquals(NdefRecord.RTD_TEXT)
+        NdefTextPayloadParser.isTextRecord(
+            tnf = record.tnf.toInt(),
+            type = record.type,
+        )
 }
 
 object NdefTagReader {
-    fun readSingleStrictTextRecord(tag: Tag): ByteArray? {
-        val ndef = Ndef.get(tag) ?: return null
+    fun readSingleStrictTextRecord(tag: Tag): NdefReadResult {
+        val ndef = try {
+            Ndef.get(tag)
+        } catch (_: SecurityException) {
+            return NdefReadResult.Rejected(NdefReadFailure.SECURITY_DENIED)
+        } catch (_: RuntimeException) {
+            return NdefReadResult.Rejected(NdefReadFailure.READ_FAILED)
+        }
+        if (ndef == null) {
+            return NdefReadResult.Rejected(NdefReadFailure.NDEF_UNAVAILABLE)
+        }
         return try {
             ndef.connect()
-            NdefMessageParser.parseSingleStrictTextRecord(ndef.ndefMessage)
-        } catch (_: Exception) {
-            null
+            val message = ndef.ndefMessage
+                ?: return NdefReadResult.Rejected(NdefReadFailure.EMPTY_NDEF_MESSAGE)
+            NdefMessageParser.parseSingleStrictTextRecord(message)
+        } catch (_: TagLostException) {
+            NdefReadResult.Rejected(NdefReadFailure.TAG_LOST)
+        } catch (_: FormatException) {
+            NdefReadResult.Rejected(NdefReadFailure.MALFORMED_NDEF)
+        } catch (_: IOException) {
+            NdefReadResult.Rejected(NdefReadFailure.IO_FAILED)
+        } catch (_: SecurityException) {
+            NdefReadResult.Rejected(NdefReadFailure.SECURITY_DENIED)
+        } catch (_: RuntimeException) {
+            NdefReadResult.Rejected(NdefReadFailure.READ_FAILED)
         } finally {
             try {
                 ndef.close()
@@ -36,4 +110,30 @@ object NdefTagReader {
             }
         }
     }
+}
+
+sealed interface NdefReadResult {
+    data class Accepted(
+        val transientCanonicalRecord: ByteArray,
+        val recordCount: Int,
+    ) : NdefReadResult
+
+    data class Rejected(
+        val reason: NdefReadFailure,
+        val recordCount: Int = 0,
+        val textRecordCount: Int = 0,
+    ) : NdefReadResult
+}
+
+enum class NdefReadFailure {
+    NDEF_UNAVAILABLE,
+    EMPTY_NDEF_MESSAGE,
+    TAG_LOST,
+    MALFORMED_NDEF,
+    IO_FAILED,
+    SECURITY_DENIED,
+    READ_FAILED,
+    NO_TEXT_RECORD,
+    INVALID_TEXT_RECORD,
+    AMBIGUOUS_TEXT_RECORDS,
 }

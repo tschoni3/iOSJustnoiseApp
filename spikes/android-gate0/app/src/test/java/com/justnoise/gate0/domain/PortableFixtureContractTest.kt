@@ -78,8 +78,28 @@ class PortableFixtureContractTest {
     }
 
     @Test
+    fun `consumes every direct Zap entry mode fixture through production rule`() {
+        val cases = fixture.getJSONArray("zapEntryModeResolution")
+        assertEquals(4, cases.length())
+
+        for (index in 0 until cases.length()) {
+            val case = cases.getJSONObject(index)
+            val action = ZapEntryModeRules.resolve(
+                sessionActive = case.getBoolean("sessionActive"),
+                recentModeExists = case.getBoolean("recentModeExists"),
+                recentModeSelectionValid = case.getBoolean("recentModeSelectionValid"),
+            )
+            assertEquals(
+                case.getString("id"),
+                case.getString("expectedAction"),
+                action.contractValue,
+            )
+        }
+    }
+
+    @Test
     fun `consumes every session lifecycle fixture through production reducer`() {
-        assertEquals("1.3.0", fixture.getString("fixtureSetVersion"))
+        assertEquals("1.4.0", fixture.getString("fixtureSetVersion"))
         val cases = fixture.getJSONArray("sessionLifecycle")
         assertEquals(7, cases.length())
 

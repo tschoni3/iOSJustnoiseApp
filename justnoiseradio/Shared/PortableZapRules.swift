@@ -52,6 +52,28 @@ struct ZapReadDecision: Equatable {
     let mutationEligible: Bool
 }
 
+enum ZapEntryModeAction: String, Decodable, Equatable {
+    case stopActiveSession
+    case startRecentMode
+    case modeUnavailable
+}
+
+enum ZapEntryModeRules {
+    static func resolve(
+        sessionActive: Bool,
+        recentModeExists: Bool,
+        recentModeSelectionValid: Bool
+    ) -> ZapEntryModeAction {
+        if sessionActive {
+            return .stopActiveSession
+        }
+        if recentModeExists && recentModeSelectionValid {
+            return .startRecentMode
+        }
+        return .modeUnavailable
+    }
+}
+
 enum ZapReadPolicy {
     static func classify(
         record: ZapNDEFRecordInput,

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixtureSetVersion": "1.3.0",
+  "fixtureSetVersion": "1.4.0",
   "description": "Framework-neutral examples that both native clients must exercise in domain tests.",
   "targetSelectionValidity": [
     {
@@ -119,6 +119,36 @@
       "acceptedReadAlreadyHandled": false,
       "expectedOutcome": "canceled",
       "expectedMutationEligible": false
+    }
+  ],
+  "zapEntryModeResolution": [
+    {
+      "id": "active-stops-without-recent-mode",
+      "sessionActive": true,
+      "recentModeExists": false,
+      "recentModeSelectionValid": false,
+      "expectedAction": "stopActiveSession"
+    },
+    {
+      "id": "idle-starts-valid-recent-mode",
+      "sessionActive": false,
+      "recentModeExists": true,
+      "recentModeSelectionValid": true,
+      "expectedAction": "startRecentMode"
+    },
+    {
+      "id": "idle-without-recent-mode-fails",
+      "sessionActive": false,
+      "recentModeExists": false,
+      "recentModeSelectionValid": false,
+      "expectedAction": "modeUnavailable"
+    },
+    {
+      "id": "idle-with-empty-recent-mode-fails",
+      "sessionActive": false,
+      "recentModeExists": true,
+      "recentModeSelectionValid": false,
+      "expectedAction": "modeUnavailable"
     }
   ],
   "sessionLifecycle": [

@@ -503,6 +503,40 @@ for index, case_value in enumerate(zap_cases):
 if seen_zap_ids != set(expected_zap_cases):
     fail("Zap-read fixtures are missing an authorization, duplicate, malformed, or canceled case")
 
+entry_mode_cases = require_list(
+    fixtures.get("zapEntryModeResolution"),
+    "fixtures.zapEntryModeResolution",
+)
+expected_entry_mode_cases = {
+    "active-stops-without-recent-mode": (True, False, False, "stopActiveSession"),
+    "idle-starts-valid-recent-mode": (False, True, True, "startRecentMode"),
+    "idle-without-recent-mode-fails": (False, False, False, "modeUnavailable"),
+    "idle-with-empty-recent-mode-fails": (False, True, False, "modeUnavailable"),
+}
+entry_mode_fields = (
+    "sessionActive",
+    "recentModeExists",
+    "recentModeSelectionValid",
+    "expectedAction",
+)
+seen_entry_mode_ids = set()
+for index, case_value in enumerate(entry_mode_cases):
+    case = require_mapping(case_value, f"fixtures.zapEntryModeResolution[{index}]")
+    case_id = case.get("id")
+    if not isinstance(case_id, str) or not case_id or case_id in seen_entry_mode_ids:
+        fail("Zap-entry mode fixture ids must be unique non-empty strings")
+    seen_entry_mode_ids.add(case_id)
+    if set(case) != {"id", *entry_mode_fields}:
+        fail(f"Zap-entry mode fixture {case_id} must use exactly the canonical fields")
+    for field in entry_mode_fields[:3]:
+        if not isinstance(case.get(field), bool):
+            fail(f"Zap-entry mode fixture {case_id}.{field} must be a boolean")
+    actual = tuple(case.get(field) for field in entry_mode_fields)
+    if actual != expected_entry_mode_cases.get(case_id):
+        fail(f"Zap-entry mode fixture {case_id} contradicts the recent-mode rule")
+if seen_entry_mode_ids != set(expected_entry_mode_cases):
+    fail("Zap-entry mode fixtures must cover active, valid recent, missing, and empty modes")
+
 session_cases = require_list(fixtures.get("sessionLifecycle"), "fixtures.sessionLifecycle")
 expected_session_cases = {
     "authorized-idle-start": ("idle", "accepted", True, "available", 0, "start", "active", "apply"),
@@ -754,6 +788,7 @@ for fragment in (
     "targetSelectionValidity",
     "accidentalStopGuard",
     "zapReadHandling",
+    "zapEntryModeResolution",
     "scheduleEligibility",
     "historyPresentation",
 ):
@@ -768,6 +803,7 @@ required_document_fragments = {
         "d445e7a45025b59ced388465cff3c84dd9ee86fd",
         "product/api/signal/v1/",
         "scripts/verify-android-predevice-readiness.sh",
+        "docs/ANDROID_NFC_ACTIVATION.md",
         "docs/SCHEDULE_PORTABILITY_AUDIT.md",
     ),
     "docs/MOBILE_ARCHITECTURE.md": (
@@ -778,6 +814,7 @@ required_document_fragments = {
         "product/api/signal/v1/",
         "d445e7a45025b59ced388465cff3c84dd9ee86fd",
         "docs/ANDROID_UI_PARITY.md",
+        "docs/ANDROID_NFC_ACTIVATION.md",
         "docs/SCHEDULE_PORTABILITY_AUDIT.md",
         "History density thresholds and English duration labels",
     ),
@@ -794,12 +831,27 @@ required_document_fragments = {
         "### History presentation contract",
         "historyPresentation",
         "Calendar-day bucketing remains platform-owned",
+        "most recently explicitly selected mode",
+        "The NDEF envelope and provisioning model are not yet portable.",
     ),
     "docs/ANDROID_GATE_0.md": (
         'android:isAccessibilityTool="false"',
         'android:canRetrieveWindowContent="false"',
-        "G0-18",
+        "G0-19",
+        "Direct unlocked NFC activation",
         "local-only data inventory",
+        "Force Stop",
+    ),
+    "docs/ANDROID_NFC_ACTIVATION.md": (
+        "PROPOSED GATE 0 EXTENSION",
+        "Routing only; it does not authorize the Zap",
+        "Foreground reader mode",
+        "Direct system tag dispatch",
+        "DISPATCH_NFC_MESSAGE",
+        "live `Tag`",
+        "Existing Zap profile",
+        "Future Zap profile",
+        "Authorization decision still required",
         "Force Stop",
     ),
     "docs/ANDROID_PREDEVICE_READINESS.md": (
@@ -807,7 +859,7 @@ required_document_fragments = {
         "PRODUCTION IMPLEMENTATION HOLD",
         "scripts/verify-android-predevice-readiness.sh",
         "Do not create `android-app/`",
-        "Complete all 36 Pixel/Samsung cells",
+        "Complete all 38 A16/A17 launch-family cells",
         "History density and duration-label rules",
     ),
     "docs/ANDROID_UI_PARITY.md": (
@@ -890,6 +942,17 @@ required_document_fragments = {
         "modeUnavailable",
         "targetSelectionEmpty",
     ),
+    "justnoiseradio/Shared/PortableZapRules.swift": (
+        "enum ZapEntryModeAction",
+        "enum ZapEntryModeRules",
+        "startRecentMode",
+        "modeUnavailable",
+    ),
+    "justnoiseradioTests/PortableZapRulesTests.swift": (
+        "ZapEntryModeRulesTests",
+        "zapEntryModeResolution",
+        "expectedAction: ZapEntryModeAction",
+    ),
     "justnoiseradio/Shared/DeviceActivityBridge.swift": (
         "modeTargetValidity",
         "PortableScheduleRules.evaluate",
@@ -900,11 +963,14 @@ required_document_fragments = {
         "PortableScheduleEligibilityDecision",
         'MODE_UNAVAILABLE("modeUnavailable")',
         'TARGET_SELECTION_EMPTY("targetSelectionEmpty")',
+        "object ZapEntryModeRules",
+        'START_RECENT_MODE("startRecentMode")',
     ),
     "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt": (
         "schedule eligibility fixture",
         'getJSONArray("scheduleEligibility")',
-        'assertEquals("1.3.0"',
+        'getJSONArray("zapEntryModeResolution")',
+        'assertEquals("1.4.0"',
     ),
     "justnoiseradio/Core/ContentView.swift": (
         'title: "Tap to Start/Stop"',
@@ -963,6 +1029,7 @@ android_workflow_text = android_workflow_path.read_text(encoding="utf-8")
 for required_path_filter in (
     '"AGENTS.md"',
     '"docs/ANDROID_GATE_0.md"',
+    '"docs/ANDROID_NFC_ACTIVATION.md"',
     '"docs/ANDROID_PREDEVICE_READINESS.md"',
     '"docs/ANDROID_UI_PARITY.md"',
     '"docs/MOBILE_ARCHITECTURE.md"',
@@ -1040,7 +1107,7 @@ for path in contract_files:
 
 print(
     f"Verified {len(colors)} semantic colors, {len(strings)} English copy entries, "
-    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(session_cases) + len(schedule_cases) + len(history_density_cases) + len(history_duration_cases) + len(history_summary_cases)} portable behavior cases."
+    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(entry_mode_cases) + len(session_cases) + len(schedule_cases) + len(history_density_cases) + len(history_duration_cases) + len(history_summary_cases)} portable behavior cases."
 )
 print("Product contracts passed.")
 PY

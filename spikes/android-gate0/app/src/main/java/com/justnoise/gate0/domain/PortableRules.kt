@@ -84,6 +84,24 @@ data class ZapReadDecision(
     val mutationEligible: Boolean,
 )
 
+enum class ZapEntryModeAction(val contractValue: String) {
+    STOP_ACTIVE_SESSION("stopActiveSession"),
+    START_RECENT_MODE("startRecentMode"),
+    MODE_UNAVAILABLE("modeUnavailable"),
+}
+
+object ZapEntryModeRules {
+    fun resolve(
+        sessionActive: Boolean,
+        recentModeExists: Boolean,
+        recentModeSelectionValid: Boolean,
+    ): ZapEntryModeAction = when {
+        sessionActive -> ZapEntryModeAction.STOP_ACTIVE_SESSION
+        recentModeExists && recentModeSelectionValid -> ZapEntryModeAction.START_RECENT_MODE
+        else -> ZapEntryModeAction.MODE_UNAVAILABLE
+    }
+}
+
 object ZapReadRules {
     fun decide(
         payloadClassification: PayloadClassification,

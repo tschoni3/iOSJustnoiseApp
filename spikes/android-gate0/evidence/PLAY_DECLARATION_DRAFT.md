@@ -32,7 +32,7 @@ The service is manually enabled in system Accessibility settings and can be manu
 
 ## Reviewer evidence to attach later
 
-- Completed Pixel and Samsung matrix with build/device metadata.
+- Completed Galaxy A16/A17 launch-family matrix with exact model, region, RAM, build, and device metadata.
 - Video of disclosure, unchecked consent, manual settings enablement, revocation, Force Stop, uninstall, and all overlay escape routes.
 - Merged-manifest and static-policy reports.
 - Redacted logs plus network observation matching `DATA_INVENTORY.md`.

@@ -1,6 +1,6 @@
 # Mobile behavior contract v1
 
-Contract version: 1.2.0
+Contract version: 1.3.0
 
 This document describes observable Justnoise behavior that should remain consistent across iOS and Android. It separates portable product rules from platform adapters. It characterizes the published iOS direction without turning framework quirks or unverified schedule behavior into permanent requirements.
 
@@ -49,8 +49,12 @@ The boundary cases for rule 7 are frozen in `product/behavior/portable-fixtures.
 3. With an active session, an accepted session-toggle scan stops it after the accidental-stop guard.
 4. A scan session handles at most one accepted read and exposes cancel, unavailable, busy, invalid, and unauthorized outcomes without changing restriction state.
 5. Authorized hardware identifiers and payload-validation details are security configuration, not portable copy or source-controlled product examples. Raw Zap payloads must not be sent to analytics. Before platform parity is claimed, each native adapter must document how authorized identifiers are provisioned, migrated, rotated, and kept out of telemetry.
+6. A Zap entry point that does not present mode selection uses the most recently explicitly selected mode when starting from idle. If that mode is missing or its target selection is empty, the start fails truthfully and must not silently choose another mode. Stopping an active session does not depend on whether that remembered mode is still available.
+7. NFC routing is platform-owned and must not weaken authorization. Android direct tag dispatch may remove the app-open and Scan-button steps, while foreground reader mode remains valid for pairing and recovery; both paths must feed the same authorization decision and session reducer. Intent action, MIME/external type, AAR, and parsed intent-message extras are routing evidence only; direct entry requires a usable live tag read before mutation.
 
 The identifier-free `zapReadHandling` fixtures freeze authorization and duplicate-read outcomes without publishing a real Zap payload. The `sessionLifecycle` fixtures then apply those outcomes to idle/active state, selection validity, capability availability, and the three-second stop guard.
+
+The NDEF envelope and provisioning model are not yet portable. The shipped iOS adapter walks delivered records and may accept a later recognized Text record. The Android Gate 0 safety parser allows non-Text auxiliary records but requires exactly one bounded Text candidate, rejecting multiple Text candidates as ambiguous. iOS uses a compatibility allow-list while the disposable Android spike uses local HMAC pairing. Resolve these differences, add ordered multi-record fixtures, and define ownership/replacement/migration before claiming production authorization parity. `docs/ANDROID_NFC_ACTIVATION.md` records the proposed Android routing architecture separately from this unresolved authorization decision.
 
 ### Shield copy and presentation
 

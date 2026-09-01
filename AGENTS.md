@@ -19,8 +19,9 @@ Before implementing a mobile feature or refactor, read:
 4. `product/design/tokens.v1.json`
 5. `product/copy/en.v1.json`
 6. `docs/ANDROID_GATE_0.md` for any Android restriction work
-7. `docs/ANDROID_UI_PARITY.md` for Android presentation work
-8. `docs/SCHEDULE_PORTABILITY_AUDIT.md` before any schedule implementation
+7. `docs/ANDROID_NFC_ACTIVATION.md` for Android Zap routing, pairing, or direct activation work
+8. `docs/ANDROID_UI_PARITY.md` for Android presentation work
+9. `docs/SCHEDULE_PORTABILITY_AUDIT.md` before any schedule implementation
 
 These files describe the intended target architecture. Existing iOS literals are still being migrated, so do not assume the runtime already loads the JSON files.
 

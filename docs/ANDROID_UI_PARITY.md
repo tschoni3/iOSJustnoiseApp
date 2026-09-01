@@ -25,7 +25,7 @@ This audit compares the launch-ready iOS surface (`CAPTURE_ENABLED` absent) with
 ## What the percentage means
 
 - **100% route/state coverage** means every launch-ready iOS destination and major user-visible branch above has a native Compose representation or an explicit truthful platform boundary.
-- It does **not** mean 100% visual acceptance. Typography, insets, animation feel, touch ergonomics, video playback, long/localized copy, and device-specific rendering still require emulator screenshot comparison and then the physical Pixel/Samsung matrix.
+- It does **not** mean 100% visual acceptance. Typography, insets, animation feel, touch ergonomics, video playback, long/localized copy, and device-specific rendering still require emulator screenshot comparison and then the physical Galaxy A16/A17 launch-family matrix.
 - It does **not** increase the functional Android completion percentage by itself. NFC, restrictions, persistence, authentication/backend adapters, schedules, notifications, billing, and Play distribution remain outside the UI prototype.
 
 ## Repeatable evidence
@@ -44,5 +44,5 @@ For deterministic inspection, launch `MainActivity` with `prototype_scene=coach-
 
 1. Compare captured Compose states against the current App Store iOS build at representative compact, standard, and large phone sizes.
 2. Check Dynamic Type/font scaling, screen-reader labels, contrast, focus order, and reduced-motion behavior.
-3. Repeat the visual pass on the exact physical Pixel and Samsung models used for Gate 0.
+3. Repeat the visual pass on the exact physical Galaxy A16 and A17 variants used for Gate 0, including the lowest intended RAM tier.
 4. Record intentional Android differences and their user impact before promoting the prototype into `android-app/`.

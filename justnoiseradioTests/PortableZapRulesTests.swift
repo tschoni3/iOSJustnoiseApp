@@ -175,6 +175,24 @@ final class ZapReadPolicyTests: XCTestCase {
 
 }
 
+final class ZapEntryModeRulesTests: XCTestCase {
+    func testPortableDirectEntryUsesOnlyTheRecentExplicitMode() throws {
+        let fixtures = try PortableBehaviorFixtureLoader.load()
+
+        for testCase in fixtures.zapEntryModeResolution {
+            XCTAssertEqual(
+                ZapEntryModeRules.resolve(
+                    sessionActive: testCase.sessionActive,
+                    recentModeExists: testCase.recentModeExists,
+                    recentModeSelectionValid: testCase.recentModeSelectionValid
+                ),
+                testCase.expectedAction,
+                testCase.id
+            )
+        }
+    }
+}
+
 final class AccidentalStopGuardTests: XCTestCase {
     func testPortableThreeSecondBoundaryCases() throws {
         let fixture = try PortableBehaviorFixtureLoader.load().accidentalStopGuard
@@ -307,8 +325,17 @@ private struct PortableBehaviorFixtureDocument: Decodable {
     let targetSelectionValidity: [TargetSelectionFixture]
     let accidentalStopGuard: AccidentalStopGuardFixture
     let zapReadHandling: [ZapReadHandlingFixture]
+    let zapEntryModeResolution: [ZapEntryModeResolutionFixture]
     let scheduleEligibility: [PortableScheduleEligibilityFixture]
     let historyPresentation: PortableHistoryPresentationFixture
+}
+
+private struct ZapEntryModeResolutionFixture: Decodable {
+    let id: String
+    let sessionActive: Bool
+    let recentModeExists: Bool
+    let recentModeSelectionValid: Bool
+    let expectedAction: ZapEntryModeAction
 }
 
 private struct PortableHistoryPresentationFixture: Decodable {

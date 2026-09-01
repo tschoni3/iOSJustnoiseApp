@@ -22,10 +22,12 @@ import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.feature.Gate0Truth
 import com.justnoise.gate0.platform.discovery.LauncherAppRepository
+import com.justnoise.gate0.platform.nfc.NdefReadFailure
+import com.justnoise.gate0.platform.nfc.NdefReadResult
 import com.justnoise.gate0.platform.nfc.NdefTagReader
-import java.util.concurrent.atomic.AtomicBoolean
+import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
 
-class MainActivity : Activity(), NfcAdapter.ReaderCallback {
+class MainActivity : Activity() {
     private lateinit var controller: Gate0Controller
     private lateinit var appRepository: LauncherAppRepository
     private lateinit var statusText: TextView
@@ -33,14 +35,15 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
     private lateinit var consentCheckbox: CheckBox
     private lateinit var accessibilitySettingsButton: Button
     private var nfcAdapter: NfcAdapter? = null
-    private var scanPurpose: ScanPurpose? = null
-    private val scanHandled = AtomicBoolean(false)
+    private val scanCoordinator = OneShotScanCoordinator<ScanPurpose>()
     private var bindingSpinner = false
     private val handler = Handler(Looper.getMainLooper())
 
     private val refreshStatus = object : Runnable {
         override fun run() {
-            renderTruth()
+            if (!scanCoordinator.isActive()) {
+                renderTruth()
+            }
             handler.postDelayed(this, STATUS_REFRESH_INTERVAL_MILLISECONDS)
         }
     }
@@ -82,19 +85,69 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
         super.onPause()
     }
 
-    override fun onTagDiscovered(tag: Tag) {
-        if (!scanHandled.compareAndSet(false, true)) return
-        val purpose = scanPurpose ?: return
-        runOnUiThread { disableReaderModeOnly() }
+    private fun onTagDiscovered(
+        token: OneShotScanCoordinator.Token<ScanPurpose>,
+        tag: Tag,
+    ) {
+        if (!scanCoordinator.claim(token)) return
+        val result = NdefTagReader.readSingleStrictTextRecord(tag)
+        runOnUiThread {
+            completeOneShotScan(token, result)
+        }
+    }
 
-        val transientCanonicalRecord = NdefTagReader.readSingleStrictTextRecord(tag)
-        if (transientCanonicalRecord == null) {
-            showTransientStatus(R.string.status_scan_invalid)
+    private fun completeOneShotScan(
+        token: OneShotScanCoordinator.Token<ScanPurpose>,
+        result: NdefReadResult,
+    ) {
+        if (!scanCoordinator.isClaimActive(token)) {
+            result.clearSensitiveData()
             return
         }
 
+        // Tag I/O is complete. Restore normal NFC behavior before applying any state mutation.
+        disableReaderModeHardware()
         try {
-            when (purpose) {
+            if (result is NdefReadResult.Rejected) {
+                showScanDiagnosticStatus(
+                    when (result.reason) {
+                        NdefReadFailure.NDEF_UNAVAILABLE ->
+                            getString(R.string.status_scan_not_ndef)
+
+                        NdefReadFailure.EMPTY_NDEF_MESSAGE ->
+                            getString(R.string.status_scan_empty_ndef)
+
+                        NdefReadFailure.TAG_LOST ->
+                            getString(R.string.status_scan_tag_lost)
+
+                        NdefReadFailure.MALFORMED_NDEF ->
+                            getString(R.string.status_scan_malformed_ndef)
+
+                        NdefReadFailure.IO_FAILED ->
+                            getString(R.string.status_scan_io_failed)
+
+                        NdefReadFailure.SECURITY_DENIED ->
+                            getString(R.string.status_scan_security_denied)
+
+                        NdefReadFailure.READ_FAILED ->
+                            getString(R.string.status_scan_read_failed)
+
+                        NdefReadFailure.NO_TEXT_RECORD ->
+                            getString(R.string.status_scan_no_text)
+
+                        NdefReadFailure.INVALID_TEXT_RECORD ->
+                            getString(R.string.status_scan_invalid_text)
+
+                        NdefReadFailure.AMBIGUOUS_TEXT_RECORDS ->
+                            getString(R.string.status_scan_ambiguous_text)
+                    },
+                )
+                return
+            }
+
+            val acceptedResult = result as NdefReadResult.Accepted
+            val transientCanonicalRecord = acceptedResult.transientCanonicalRecord
+            when (token.purpose) {
                 ScanPurpose.PAIR -> {
                     val paired = try {
                         controller.pairZap(transientCanonicalRecord)
@@ -102,7 +155,7 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
                         false
                     }
                     showTransientStatus(
-                        if (paired) R.string.status_pair_success else R.string.status_scan_invalid,
+                        if (paired) R.string.status_pair_success else R.string.status_pair_storage_failed,
                     )
                 }
 
@@ -141,7 +194,8 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
                 }
             }
         } finally {
-            transientCanonicalRecord.fill(0)
+            result.clearSensitiveData()
+            scanCoordinator.finish(token)
         }
     }
 
@@ -232,36 +286,41 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
             showTransientStatus(R.string.status_nfc_unavailable)
             return
         }
-        scanPurpose = purpose
-        scanHandled.set(false)
-        adapter.enableReaderMode(
-            this,
-            this,
-            NfcAdapter.FLAG_READER_NFC_A or
-                NfcAdapter.FLAG_READER_NFC_B or
-                NfcAdapter.FLAG_READER_NFC_F or
-                NfcAdapter.FLAG_READER_NFC_V,
-            Bundle().apply {
-                putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250)
-            },
-        )
+        cancelReaderMode()
+        val token = scanCoordinator.begin(purpose)
+        try {
+            adapter.enableReaderMode(
+                this,
+                { tag -> onTagDiscovered(token, tag) },
+                NfcAdapter.FLAG_READER_NFC_A or
+                    NfcAdapter.FLAG_READER_NFC_B or
+                    NfcAdapter.FLAG_READER_NFC_F or
+                    NfcAdapter.FLAG_READER_NFC_V,
+                Bundle().apply {
+                    putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250)
+                },
+            )
+        } catch (_: RuntimeException) {
+            scanCoordinator.cancel(token)
+            showTransientStatus(R.string.status_nfc_unavailable)
+            return
+        }
         statusText.setText(
             if (purpose == ScanPurpose.PAIR) R.string.status_pairing else R.string.status_scanning,
         )
     }
 
     private fun cancelReaderMode() {
-        disableReaderModeOnly()
-        scanHandled.set(false)
+        scanCoordinator.cancel()
+        disableReaderModeHardware()
     }
 
-    private fun disableReaderModeOnly() {
+    private fun disableReaderModeHardware() {
         try {
             nfcAdapter?.disableReaderMode(this)
         } catch (_: Exception) {
             // The activity may already be paused or NFC may have been disabled.
         }
-        scanPurpose = null
     }
 
     private fun renderTruth() {
@@ -279,10 +338,27 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
     }
 
     private fun showTransientStatus(message: Int) {
+        showTransientStatus(getString(message))
+    }
+
+    private fun showTransientStatus(
+        message: CharSequence,
+        durationMilliseconds: Long = TRANSIENT_STATUS_MILLISECONDS,
+    ) {
         runOnUiThread {
-            statusText.setText(message)
+            statusText.text = message
             handler.removeCallbacks(refreshStatus)
-            handler.postDelayed(refreshStatus, TRANSIENT_STATUS_MILLISECONDS)
+            handler.postDelayed(refreshStatus, durationMilliseconds)
+        }
+    }
+
+    private fun showScanDiagnosticStatus(message: CharSequence) {
+        showTransientStatus(message, SCAN_DIAGNOSTIC_STATUS_MILLISECONDS)
+    }
+
+    private fun NdefReadResult.clearSensitiveData() {
+        if (this is NdefReadResult.Accepted) {
+            transientCanonicalRecord.fill(0)
         }
     }
 
@@ -300,6 +376,7 @@ class MainActivity : Activity(), NfcAdapter.ReaderCallback {
 
     companion object {
         private const val STATUS_REFRESH_INTERVAL_MILLISECONDS = 2_500L
-        private const val TRANSIENT_STATUS_MILLISECONDS = 2_000L
+        private const val TRANSIENT_STATUS_MILLISECONDS = 3_500L
+        private const val SCAN_DIAGNOSTIC_STATUS_MILLISECONDS = 15_000L
     }
 }

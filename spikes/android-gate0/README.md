@@ -12,7 +12,8 @@ The canonical decision criteria remain in [`../../docs/ANDROID_GATE_0.md`](../..
 - Scoped discovery of launcher activities through a manifest `<queries>` intent; no `QUERY_ALL_PACKAGES`.
 - A prominent disclosure and unchecked affirmative consent before opening Accessibility settings.
 - One locally selected, non-protected package identifier.
-- Foreground-only, one-shot NFC reader mode for exactly one bounded UTF-8 NDEF Text record.
+- Foreground-only, one-shot NFC reader mode for one NDEF message containing exactly one bounded UTF-8 NDEF Text record. Non-Text auxiliary records are allowed; multiple Text records are rejected as ambiguous.
+- A lifecycle generation guard invalidates an armed or in-flight scan on pause, cancellation, or replacement. Reader mode is disabled after tag I/O and before any accepted state mutation.
 - Android Keystore HMAC-SHA256 pairing. Only the digest is stored; tag IDs and raw NDEF records are not stored or logged.
 - An Accessibility service subscribed only to `TYPE_WINDOW_STATE_CHANGED`, with window-content retrieval disabled and no accessibility flags.
 - Exact equality between the transient event `packageName` and the locally selected package.
@@ -34,7 +35,7 @@ Recorded 2026-08-07 at repository commit `4bb4631148a1c5fdab0455c4e09b247c3ca744
 - The debug APK installed and cold-launched successfully on the same emulator.
 - GitHub **Android Gate 0** run [`31009963974`](https://github.com/tschoni3/iOSJustnoiseApp/actions/runs/31009963974) passed on the exact commit.
 
-This is supporting preflight evidence only. The Android Emulator has no NFC hardware and does not reproduce Pixel/Samsung lifecycle, battery, escape-path, or interception timing behavior. Therefore it changes zero cells in `evidence/DEVICE_MATRIX.md`; all 36 cells remain `BLOCKED`.
+This is supporting preflight evidence only. The Android Emulator has no NFC hardware and does not reproduce Galaxy A16/A17 lifecycle, battery, escape-path, interception timing, or direct tag-routing behavior. Therefore it changes zero cells in `evidence/DEVICE_MATRIX.md`; all 38 cells remain `BLOCKED`.
 
 ## Toolchain and wrapper bootstrap
 
@@ -54,7 +55,7 @@ Review the generated `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.ja
 
 1. Run the **Android Gate 0** workflow and require the static policy check, JVM tests, lint, debug APK, and instrumentation-test APK build to pass.
 2. Download the `android-gate0-debug` artifact and verify each APK against `SHA256SUMS`.
-3. On an unmanaged Pixel 8-or-newer or Galaxy S23-or-newer with the current public stable OS, install `app-debug.apk` normally. `adb install app-debug.apk` is acceptable for installation only; do not grant a production permission through ADB.
+3. On an unmanaged Galaxy A16 or Galaxy A17 launch-target variant with the current public stable OS, install `app-debug.apk` normally. Record the full model code, region/CSC, RAM tier, OS build, and One UI version. `adb install app-debug.apk` is acceptable for installation only; do not grant a production permission through ADB.
 4. Open Justnoise Gate 0. Confirm the disclosure appears before an unchecked control and that declining leaves the service off.
 5. Select Chrome, YouTube, and one third-party launcher app in turn. Record any app omitted by scoped visibility.
 6. Accept the disclosure, use the button to open Accessibility settings, and manually enable the service. Confirm no draw-over-other-apps permission is requested.
