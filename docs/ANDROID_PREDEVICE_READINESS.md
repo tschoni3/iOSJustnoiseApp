@@ -1,6 +1,6 @@
 # Android pre-device readiness
 
-Status: **READY TO RUN PHYSICAL GATE 0 — PRODUCTION IMPLEMENTATION HOLD**
+Status: **PHYSICAL GATE 0 IN PROGRESS — PRODUCTION IMPLEMENTATION HOLD**
 
 This is the handoff between repository preparation and evidence that only consumer hardware, policy review, and Google Play can provide. It does not authorize `android-app/`.
 
@@ -17,6 +17,9 @@ The command fails unless all of the following remain true:
 - the versioned behavior, copy, design, and pinned API contracts validate;
 - the disposable Gate 0 project passes its static policy boundary, JVM tests, lint, debug APK build, and instrumentation APK build;
 - the Compose UI prototype passes its contract/reducer tests, lint, and debug APK build;
+- the integrated development shell compiles the reviewed Gate 0 capability sources,
+  real foreground NFC reader, direct NDEF entry candidate, and polished truth-driven
+  Zap surface into one disposable APK;
 - the UI prototype declares no permission or service and imports no restricted Android capability API; and
 - no production `android-app/` exists before Gate 0 is recorded as `PASS`.
 
@@ -31,8 +34,8 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 | Shared product decisions | **Ready baseline** | `product/behavior/portable-fixtures.v1.json`, `product/copy/en.v1.json`, `product/design/tokens.v1.json`, and `product/api/signal/v1/` are versioned and verified. Direct Zap entry now freezes start-the-last-explicit-valid-mode versus stop-active behavior in Swift/Kotlin fixtures. History density and duration-label rules are deterministic in both native rule sets, while calendar bucketing remains explicit platform work. Schedule temporal/recovery semantics and Zap provisioning/envelope parity remain explicitly unresolved rather than guessed. |
 | Android presentation fidelity | **Ready prototype** | `docs/ANDROID_UI_PARITY.md` maps every launch-ready iOS destination and major state to `spikes/android-ui/`, including the first-run coach tour and management editor/confirmation states. Device visual acceptance remains pending. It is presentation evidence only. |
 | Consumer restriction candidate | **Buildable, not proven** | `spikes/android-gate0/` contains the disposable capability candidate, static privacy/policy constraints, evidence templates, and native tests. Emulator/CI results cannot satisfy a physical matrix cell. |
-| Low-friction NFC activation | **Architecture recorded; implementation/evidence blocked** | `docs/ANDROID_NFC_ACTIVATION.md` separates direct Android tag routing from authorization and Accessibility enforcement. G0-19 requires unlocked Home start/stop without app-open or Scan-button steps on both required devices; the current spike does not implement that entry Activity. |
-| Physical feasibility | **BLOCKED / failing gate** | Every Galaxy A16 and A17 launch-family cell in `spikes/android-gate0/evidence/DEVICE_MATRIX.md` is `BLOCKED`; `spikes/android-gate0/evidence/DECISION_RECORD.md` therefore remains `HOLD / NO-GO`. The available phone can close its exact model column now; a trusted manual tester may supply the other family later. |
+| Low-friction NFC activation | **Candidate implemented; physical evidence blocked** | `docs/ANDROID_NFC_ACTIVATION.md` separates direct Android tag routing from authorization and Accessibility enforcement. The integrated disposable APK now contains the live-tag direct NDEF entry Activity and shared mutation gate. G0-19 still requires unlocked Home start/stop without app-open, Scan button, chooser, or second confirmation on both required device families. |
+| Physical feasibility | **PARTIAL A16 RUN / failing gate** | The owner-assisted Galaxy A16 run recorded in `spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-01.md` proved setup, pairing, one foreground start, and one immediate Chrome interception while exposing and fixing a real overlay self-event loop. It does not pass a matrix cell. Every A16 and A17 cell remains `BLOCKED`, so `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. |
 | Google Play distribution | **HOLD** | The account, policy declaration, testing-track, privacy/deletion, billing, signing, reviewer-access, and final review gates are listed in `docs/ANDROID_GATE_0.md`. Internal checks cannot promise Play approval. |
 
 ## Work allowed before a physical PASS
@@ -40,7 +43,8 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 - Maintain the shared contracts and native mappings.
 - Improve permission-free Compose presentation states and previews.
 - Build and install the two disposable spike APKs on emulators or test phones.
-- Add the minimal direct-dispatch Activity to the disposable Gate 0 module and run G0-19 without promoting it into production code.
+- Exercise and harden the existing direct-dispatch Activity under G0-19 without
+  promoting it into production code.
 - Prepare policy language, privacy inventory, Play account decisions, and test logistics.
 - Run the exact physical matrix and attach redacted evidence.
 

@@ -28,6 +28,17 @@ The iOS `ACCOUNT-01` ordinary-sign-out storage gap remains visible in `docs/MOBI
 
 The owner reported that iOS 1.1.0 build 6 from this release line is live on the App Store. `docs/APP_STORE_1.1.0.md` records the repository evidence and the boundary between that evidence and App Store-side actions.
 
+Device-development update, 2026-09-01: `spikes/android-integrated/` now combines the
+reviewed Gate 0 sources with a native Compose Zap surface in one disposable development
+APK. The polished surface starts a real lifecycle-scoped foreground NFC scan, and the
+same APK includes the live-tag direct NDEF candidate and Accessibility overlay. An
+owner-assisted Galaxy A16 run completed setup, local pairing, one foreground start, and
+one immediate Chrome interception; it also exposed an overlay self-event loop that was
+fixed and covered by pure event-rule tests. The full-screen overlay now explicitly
+consumes unused touches. This is implementation progress and partial evidence, not a
+Gate 0 pass: all 38 matrix cells remain `BLOCKED`, sustained interaction and direct-Home
+testing are pending, and no production `android-app/` is authorized.
+
 Complexity is governed by responsibility, not by the smallest file count. Do not collapse legitimate Xcode target folders or combine unrelated features to reduce a number. Conversely, do not add layers, modules, or component catalogs solely to make both platforms look symmetrical. Extract a boundary only when it removes duplicated product decisions, isolates a system capability, or reduces measured change risk.
 
 ## Repository shape
@@ -45,7 +56,8 @@ The existing iOS project remains at the repository root to avoid a high-churn mo
 ├── scripts/
 ├── spikes/
 │   ├── android-gate0/           # disposable capability candidate
-│   └── android-ui/              # permission-free Compose presentation proof
+│   ├── android-ui/              # permission-free Compose presentation proof
+│   └── android-integrated/      # disposable real-capability + polished Zap shell
 ├── android-app/                 # future Gradle root
 │   └── app/                     # one module initially
 ├── justnoise.xcodeproj          # existing iOS project

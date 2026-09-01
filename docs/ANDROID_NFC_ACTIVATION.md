@@ -1,8 +1,16 @@
 # Android NFC activation architecture
 
-Status: **PROPOSED GATE 0 EXTENSION — PRODUCTION IMPLEMENTATION HOLD**
+Status: **GATE 0 CANDIDATE IMPLEMENTED — PHYSICAL EVIDENCE AND PRODUCTION HOLD**
 
 This document records the Android activation direction established after reviewing Android's NFC dispatch model and comparable focus products. It does not authorize `android-app/`, choose a permanent package name, or claim that direct activation works on the required devices.
+
+As of 2026-09-01, the disposable Gate 0 sources and integrated development APK
+implement the narrow `ACTION_NDEF_DISCOVERED` Activity described below. It requires a
+live `EXTRA_TAG`, re-reads NDEF from the physical tag, ignores message-only intent
+forgeries, feeds the shared parser/controller, and shares a short process mutation gate
+with the foreground reader. Those source and test properties are not routing evidence:
+the unlocked-Home, warm/cold process, chooser, lock, competing-handler, and Force Stop
+cases in G0-19 remain physically unverified.
 
 ## Product outcome
 
@@ -44,7 +52,7 @@ The reader must perform tag I/O before disabling reader mode, then disable it be
 
 ### 2. Direct system tag dispatch
 
-The proposed Android session-toggle path is a small exported NFC entry Activity that:
+The Gate 0 Android session-toggle candidate is a small exported NFC entry Activity that:
 
 1. accepts only the approved NDEF action/dispatch shape and uses `DISPATCH_NFC_MESSAGE` where supported;
 2. requires `EXTRA_TAG` and performs a live `Ndef` re-read while the physical tag is present;
