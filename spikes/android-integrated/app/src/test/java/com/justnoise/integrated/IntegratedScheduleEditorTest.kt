@@ -8,6 +8,7 @@ import com.justnoise.gate0.domain.ScheduleTiming
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -15,6 +16,46 @@ import java.time.Instant
 class IntegratedScheduleEditorTest {
     private val now = epoch("2026-09-03T10:15:40Z")
     private val zone = "Europe/Berlin"
+
+    @Test
+    fun editableDraftAcceptsChangesAndClearsItsValidationError() {
+        val editor = namedEditor()
+        val state = IntegratedScheduleState(editor = editor, editorError = "Previous validation error")
+        val changed = editor.copy(name = "Updated")
+        assertTrue(state.canEditDraft)
+        val updated = state.withEditorChange(changed)
+        assertEquals(changed, updated.editor)
+        assertNull(updated.editorError)
+    }
+
+    @Test
+    fun reloadSaveAndUncertainMutationRejectLateEditorCallbacks() {
+        val editor = namedEditor()
+        val initial = IntegratedScheduleState(editor = editor, editorError = "Retained error")
+        for (blocked in listOf(
+            initial.copy(loading = true),
+            initial.copy(saving = true),
+            initial.copy(mutationUncertain = true),
+        )) {
+            assertFalse(blocked.canEditDraft)
+            assertSame(blocked, blocked.withEditorChange(editor.copy(name = "Must not replace draft")))
+        }
+    }
+
+    @Test
+    fun latePickerCallbackCannotReopenACancelledNewDraft() {
+        val cancelled = IntegratedScheduleState()
+        assertFalse(cancelled.canEditDraft)
+        assertSame(cancelled, cancelled.withEditorChange(namedEditor().copy(hour = 15)))
+    }
+
+    @Test
+    fun editorCallbacksCannotReplaceAnotherScheduleOrRevision() {
+        val editor = namedEditor().copy(id = "schedule-one", expectedRevision = 2)
+        val state = IntegratedScheduleState(editor = editor)
+        assertSame(state, state.withEditorChange(editor.copy(id = "schedule-two")))
+        assertSame(state, state.withEditorChange(editor.copy(expectedRevision = 1)))
+    }
 
     @Test
     fun newEditorDefaultsAboutOneHourAheadInNamedZone() {

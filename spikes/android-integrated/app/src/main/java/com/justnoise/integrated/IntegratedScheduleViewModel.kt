@@ -25,7 +25,16 @@ data class IntegratedScheduleState(
     val editor: IntegratedScheduleEditor? = null,
     val editorError: String? = null,
     val mutationUncertain: Boolean = false,
-)
+) {
+    val canEditDraft: Boolean
+        get() = editor != null && !loading && !saving && !mutationUncertain
+
+    fun withEditorChange(changed: IntegratedScheduleEditor): IntegratedScheduleState {
+        val current = editor ?: return this
+        if (!canEditDraft || current.id != changed.id || current.expectedRevision != changed.expectedRevision) return this
+        return copy(editor = changed, editorError = null)
+    }
+}
 
 /** Retains the one in-flight mutation across rotation; no Activity or NFC reader is retained. */
 class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(application) {
@@ -112,10 +121,8 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
     }
 
     fun changeEditor(editor: IntegratedScheduleEditor) {
-        if (state.saving || state.mutationUncertain) return
-        // Only fields of the current draft may change; refresh never replaces its revision.
-        if (state.editor?.id != editor.id || state.editor?.expectedRevision != editor.expectedRevision) return
-        state = state.copy(editor = editor, editorError = null)
+        // Reject callbacks during reload and after cancellation, including delayed pickers.
+        state = state.withEditorChange(editor)
     }
 
     fun cancelEditor() {

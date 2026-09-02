@@ -199,7 +199,7 @@ private fun ScheduleEditorForm(
     val snapshot = state.snapshot
     val context = LocalContext.current
     val locale = LocalLocale.current.platformLocale
-    val editable = !state.saving && !state.mutationUncertain
+    val editable = state.canEditDraft
     val canSave = editable && !state.loading && snapshot?.consentAccepted == true && !snapshot.error
     var dateDialog by remember { mutableStateOf<DatePickerDialog?>(null) }
     var timeDialog by remember { mutableStateOf<TimePickerDialog?>(null) }

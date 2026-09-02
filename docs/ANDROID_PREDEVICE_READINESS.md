@@ -286,6 +286,28 @@ states, draft rotation, explicit alarm Settings denial/return, create/edit-cance
 disable and delete confirmation. Its screenshots and limits are recorded there;
 this does not establish full visual acceptance, A16 alarm delivery or Play readiness.
 
+### Draft-reload guard and A16 update preflight — 2026-09-03
+
+A bounded review after `df5dc05` found that editor fields remained enabled during
+an explicit saved-version reload. The same guard now disables those controls and
+rejects callbacks in the ViewModel while loading, saving or mutation-uncertain.
+A late callback also cannot reopen a cancelled new draft or replace another
+schedule/revision. Four added JVM regression cases exercise the actual shared
+state-update function, not a duplicate test-only rule.
+
+The full local verifier passed **161 JVM tests** (124 Gate 0, 15 UI prototype,
+22 integrated), lint/build tasks, **13 Python release-checker tests** and the
+unsigned-release package boundary. The earlier 83 emulator tests and UI smoke
+remain historical evidence for the previous integration; they were not rerun
+or newly claimed for this small state-guard fix.
+
+The [next A16 candidate record](../spikes/android-gate0/evidence/A16_MVP_CANDIDATE_2026-09-03.md)
+contains exact APK hashes and the passive preflight. The connected A16 still has
+the old v1-consent single-app candidate, session intent/revision 22 and pairing
+retained, with Accessibility off. No phone setting, app installation or session
+was changed. An update requires the pending owner approval; current disclosure
+and manually enabled capability are required before resuming blocking.
+
 ### Rejected-Zap notification safety fix — 2026-09-03
 
 The Android controller no longer broadcasts a state change for an unchanged
