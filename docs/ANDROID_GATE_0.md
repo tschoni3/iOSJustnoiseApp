@@ -1,10 +1,10 @@
 # Android Gate 0: consumer-device app restriction
 
-Status: required feasibility gate before the full Android port
+Status: full reliability/public-launch gate; smaller internal-beta checkpoint permitted
 
 ## Decision to make
 
-Prove that Justnoise can provide a reliable, understandable, and Google Play-policy-compatible restriction experience on ordinary personally owned Android phones. Do not build the full Android product until this gate has a recorded decision.
+Prove that Justnoise can provide a reliable, understandable, and Google Play-policy-compatible restriction experience on ordinary personally owned Android phones. The full Android product/public launch remains gated by the complete matrix. Under the owner's 2026-09-02 lean-delivery decision, a constrained internal beta may proceed through the smaller checkpoint below without claiming a full Gate 0 PASS.
 
 The spike is not expected to recreate Apple Family Controls. It must prove the user outcome or show that the outcome is not viable enough to promise.
 
@@ -40,22 +40,21 @@ Build a disposable native Kotlin prototype with one application module. It may c
 - Use a real authorized and unauthorized NDEF Zap during testing; do not treat a debug button as NFC evidence.
 - Keep NFC routing separate from authorization. A MIME/external-type filter, Android Application Record, intent action, or parsed intent extra can route a tag but must never authorize it. Foreground reader mode and direct system tag dispatch must feed one parser, authorization decision, and session reducer. Direct dispatch requires a usable live `EXTRA_TAG` re-read; copied `EXTRA_NDEF_MESSAGES` alone never mutate state. Use `android.permission.DISPATCH_NFC_MESSAGE` when the production target/platform combination supports it.
 
-## Required devices
+## Required device and deferred compatibility
 
-Run the complete matrix on both user-required launch families, using the latest public stable OS available to each tested SKU on the test date:
+Scope decision, 2026-09-02: the owner has no time or budget for another phone. The existing Samsung Galaxy A16 `SM-A165F` is the only required initial hardware target. Run all 19 scenarios on that exact device, using its current public stable OS and recording the installed build. No A17 purchase, loan, or tester is required to continue or to reach the initial Gate 0 decision.
 
-1. Samsung Galaxy A16 family, with the German/EU `SM-A165F` LTE model as the minimum baseline.
-2. Samsung Galaxy A17 family, with the German/EU `SM-A175F` LTE model as the minimum baseline.
+Galaxy A17 validation is **deferred, unverified, and non-blocking**. Retain its evidence column for a future opportunistic tester run, not as a second-device prerequisite. This narrows the initial hardware-validation scope, not the Android feature scope; it does not add a model whitelist or claim tested A17 compatibility.
 
-Samsung's German specifications list NFC on both the [Galaxy A16 SM-A165F](https://www.samsung.com/de/business/smartphones/galaxy-a/galaxy-a16-black-128gb-sm-a165fzkbeub/) and [Galaxy A17 SM-A175F](https://www.samsung.com/de/smartphones/galaxy-a/galaxy-a17-black-128gb-sm-a175fzkbeub/). That does not prove every regional or LTE/5G variant has identical hardware or firmware. Record the exact model code, sales region/CSC, RAM tier, OS build, security patch, One UI version, prototype commit, battery mode, and tester. A family cell is valid only for the named variants in its attached evidence; add a physical run before claiming another A16/A17 variant. The owner does not need to switch phones: the available device is the primary development target, and missing-family or missing-variant evidence may come from a trusted manual tester later.
+Record the exact model code, sales region/CSC, RAM tier, OS build, security patch, One UI version, prototype commit, battery mode, and tester. Evidence applies only to the tested variant/build; neither shared Samsung branding nor NFC availability proves another variant's enforcement, lifecycle, or navigation behavior.
 
-Before advertising broad non-Samsung Android compatibility, repeat the safety-critical subset on a current stock-Android NFC reference phone. That later cross-OEM evidence does not replace either A16/A17 launch-family matrix and is not required to continue disposable-spike development now. If an OS update changes a result, rerun the affected family matrix.
+Wider-device validation can follow through existing users or voluntary beta testers when available. Do not advertise tested A17 or broad cross-OEM reliability from A16-only evidence. Broader compatibility claims require matching evidence, but obtaining additional hardware is not an initial development gate. If an OS update changes a result, rerun the affected A16 checks. Product acceptance, Accessibility disclosure/consent, and Google Play policy review remain required; deferring A17 does not waive them.
 
 ## Exact pass/fail matrix
 
-Use `PASS`, `FAIL`, or `BLOCKED` in both device columns. `BLOCKED` counts as `FAIL` for the gate.
+Use `PASS`, `FAIL`, or `BLOCKED` in both device columns. Only the 19 required A16 cells count toward the initial gate; an A16 `BLOCKED` counts as `FAIL`. The optional A17 column stays `BLOCKED` until evidence exists, meaning untested/deferred rather than a blocker for this scoped gate.
 
-| ID | Scenario | Exact pass criterion | Galaxy A16 | Galaxy A17 |
+| ID | Scenario | Exact pass criterion | Galaxy A16 (required) | Galaxy A17 (deferred) |
 | --- | --- | --- | --- | --- |
 | G0-01 | Clean install, disclosure, and consent | Installs normally; prominent disclosure and an unchecked affirmative consent control appear before Accessibility settings; declining leaves the service off; accepting opens the correct settings page; service can be enabled without root, ADB, device owner, work profile, or draw-over-other-apps permission. |  |  |
 | G0-02 | Scoped app discovery | Without `QUERY_ALL_PACKAGES`, the picker lists Chrome, YouTube, and one installed third-party launchable test app; selecting and restoring each choice works after process death. |  |  |
@@ -83,17 +82,34 @@ Test G0-05 with links and notifications that are available on the chosen targets
 
 The gate is **PASS** only when:
 
-- every G0-01 through G0-19 cell passes on both A16/A17 launch families for the exact variants being listed;
+- every G0-01 through G0-19 cell passes on the required A16 variant/build, with A17 explicitly excluded from the initial gate arithmetic;
 - the implementation uses no prohibited or undeclared permission/data access;
 - product review accepts the observed bypass resistance, onboarding burden, and battery/OEM caveats;
 - policy review finds a supportable Play declaration and disclosure path; and
 - screen recordings, logs with private content removed, and the completed matrix are attached to the decision record.
 
-Any technical failure on either launch family is **NO-GO** for the A16/A17 support promise until a revised prototype passes. A policy uncertainty is **HOLD**, not permission to build around it. Google Play approval cannot be guaranteed by internal review, so a later closed-track submission and cross-OEM validation remain release gates.
+Any technical failure on the required A16 is **NO-GO** until a revised prototype passes. An optional-device failure blocks a reliability claim for that device; investigate shared causes without treating an absent A17 run as an A16 failure. A policy uncertainty is **HOLD**, not permission to build around it. Google Play approval cannot be guaranteed by internal review, so a later Play test-track submission remains a release gate. An A16-scoped PASS authorizes production development, not a claim of verified reliability on every Android phone.
 
-## After a pass
+## Smaller checkpoint for the first internal beta
 
-Only after Gate 0 passes:
+The first beta is local-only and may select one target app. Full iOS parity, multi-mode management, A17 coverage, and the full endurance matrix are not prerequisites for building this learning release. This is not a public-launch waiver.
+
+Before promoting the existing capability into a signed internal-test app, record one end-to-end A16 safety smoke run on the candidate build covering:
+
+1. Normal disclosure, unchecked consent, manual Accessibility enablement, local pairing, and restored app selection.
+2. Authorized real-Zap start, stable interception with target touches blocked, authorized stop, and the target actually usable afterward; exercise the advertised direct route as well as the foreground recovery scan.
+3. Invalid/unauthorized input and a rapid repeated tap do not cause unintended state changes.
+4. Native Home/Back, Justnoise, Settings, and the phone/emergency route remain reachable; the overlay must not obstruct system navigation or emergency access. Never place a live emergency call for testing.
+5. Revocation/service loss reports recovery truthfully; disable, Force Stop, and uninstall remain reachable without ADB rescue, with no stale blocker. Reinstall requires fresh consent.
+6. Withdrawal/cleanup feedback is truthful, and the reviewed packaged permissions, disclosure and local data handling have no unresolved policy issue for the beta's actual behavior.
+
+Record the build, evidence, limitations, and owner acceptance as a separate **Internal beta decision: GO/HOLD** in `DECISION_RECORD.md`. GO authorizes the constrained release-app implementation, not a Play upload or a full Gate 0 PASS. After package/signing changes, repeat this smoke check on the release build before distribution and on the Play-delivered build. Play account eligibility, signing, privacy/declarations, reviewer access, and owner approval still apply. Longer repetitions, multi-target/alternate-entry coverage and overnight/default-battery evidence stay open for controlled beta testing and public-release acceptance. A known safety defect blocks beta distribution; do not defer it as polish.
+
+The pre-device verifier intentionally continues to reject `android-app/` during the current HOLD. When the internal-beta decision becomes GO, replace that phase-specific absence check with release-app verification as part of the explicit promotion change; do not keep it as a demand for full-matrix completion or merely delete the safety checks.
+
+## After the appropriate checkpoint
+
+After a recorded internal-beta GO, implement only the minimal local release app. After full Gate 0 PASS, expand the later product slices:
 
 1. Scaffold `android-app/` with one `app` module.
 2. Implement modes, Zap state, and recovery around a `RestrictionCapability` port.
@@ -105,16 +121,16 @@ If Gate 0 does not pass, reconsider the Android promise: offer a lighter intenti
 
 ## Google Play and distribution gates
 
-Policy checkpoint audited 2026-09-01 against the linked official Google and Android documentation. Recheck it before account creation, before the first closed-track upload, and before production submission because Play requirements can change. These distribution tasks may be prepared in parallel, but none overrides the technical Gate 0 `HOLD`.
+Policy checkpoint audited 2026-09-01 against the linked official Google and Android documentation. Recheck it before account creation, before the first test-track upload, and before production submission because Play requirements can change. These distribution tasks may be prepared in parallel. The limited internal-beta route above does not turn the full technical Gate 0 `HOLD` into a public-release approval.
 
 1. **Choose and verify the Play Console owner deliberately.** Google offers Personal and Organization accounts; an Organization account requires a D-U-N-S number. A new Personal account may require verification through the Play Console mobile app on a non-rooted physical Android 10-or-newer phone. See [account types](https://support.google.com/googleplay/android-developer/answer/13634885), [required account information](https://support.google.com/googleplay/android-developer/answer/13628312), and [device verification](https://support.google.com/googleplay/android-developer/answer/14316361).
 2. **Choose the production application ID once.** Play package names are unique and permanent, so do not reuse the disposable `com.justnoise.gate0` identifier or create the Play app record before the production name is reviewed. Play package registration is required by September 30, 2026. See [app setup](https://support.google.com/googleplay/android-developer/answer/9859152) and [package registration](https://support.google.com/googleplay/android-developer/answer/16984799).
 3. **Keep the release toolchain compliant.** Starting August 31, 2026, new phone/tablet apps and updates must target Android 16/API 36 or newer. The spike already targets 36, but every future production dependency and App Bundle must be revalidated. See the [target API requirement](https://developer.android.com/google/play/requirements/target-sdk).
 4. **Submit the Accessibility use for review.** Because Justnoise is not an accessibility tool, the production app must keep `isAccessibilityTool=false`, provide a separate in-app prominent disclosure and affirmative consent before settings enablement, complete the Play Accessibility declaration, and attach a short video showing consent, refusal/re-entry, enablement, and the core restriction behavior. See the [AccessibilityService policy](https://support.google.com/googleplay/android-developer/answer/10964491) and [disclosure/video guidance](https://support.google.com/googleplay/android-developer/answer/11150561).
-5. **Plan the required testing track.** A Personal developer account created after November 13, 2023 must complete a closed test with at least 12 continuously opted-in testers for at least 14 days before applying for production access. This is separate from the A16/A17 Gate 0 matrix. See the [new-account testing requirement](https://support.google.com/googleplay/android-developer/answer/14151465).
-6. **Complete privacy and deletion disclosures from actual production behavior.** Every published/test-track app needs an accurate Data safety form and privacy policy, including third-party SDK behavior. If Android allows account creation, it must expose an in-app deletion path and a functional public web deletion-request path. See [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469), [User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311), and [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111).
+5. **Plan the required testing track.** A Personal developer account created after November 13, 2023 must complete a closed test with at least 12 continuously opted-in testers for at least 14 days before applying for production access. This is separate from the A16-scoped Gate 0 matrix. See the [new-account testing requirement](https://support.google.com/googleplay/android-developer/answer/14151465).
+6. **Complete applicable privacy and deletion disclosures from actual behavior.** Apps exclusively active on internal testing are exempt from the Data safety form; complete it accurately before moving to a closed/open/production track, including third-party SDK behavior. Applicable privacy-policy, user-data and Accessibility disclosure duties still apply during internal testing. If Android later allows account creation, it must expose the required in-app deletion path and public web deletion-request path; do not add accounts merely to satisfy a checklist for the local-only beta. See [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469), [User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311), and [account deletion](https://support.google.com/googleplay/android-developer/answer/13327111).
 7. **Decide Android entitlement and billing behavior before implementing purchases.** StoreKit receipts are not a portable entitlement source. If the Android app sells digital access, use the applicable Play billing path and verify purchase state through a secure backend before granting or synchronizing entitlement. If the first Android release is consumption-only, document that limitation explicitly. See the [Payments policy](https://support.google.com/googleplay/android-developer/answer/9858738), [Play Billing integration](https://developer.android.com/google/play/billing/integrate), and [backend lifecycle guidance](https://developer.android.com/google/play/billing/backend).
 8. **Create and protect the release identity.** Publish an Android App Bundle, enroll in Play App Signing, keep the upload key outside source control, and register Play's app-signing certificate fingerprints with every OAuth/API provider that authenticates the Android package. See [Play App Signing](https://support.google.com/googleplay/android-developer/answer/9842756) and [app setup](https://support.google.com/googleplay/android-developer/answer/9859152).
-9. **Give reviewers durable access.** App content declarations must include instructions for every restricted screen and a reusable review account with full required entitlement. The physical-Zap requirement and Accessibility flow need explicit reviewer instructions and the declaration video; do not create a hidden production bypass merely to satisfy review. See [prepare an app for review](https://support.google.com/googleplay/android-developer/answer/9859455).
+9. **Give reviewers durable access.** App content declarations must include instructions for restricted functionality. Provide a reusable review account and required entitlement only if the actual app uses login/access restrictions; the local-only internal beta does not require inventing an account system. The physical-Zap requirement and Accessibility flow still need explicit reviewer instructions and the applicable declaration video; do not create a hidden production bypass merely to satisfy review. See [prepare an app for review](https://support.google.com/googleplay/android-developer/answer/9859455).
 
 A production Android release remains blocked until both sets of evidence exist: the full physical Gate 0 matrix and the applicable Play account, policy, testing, privacy, billing, signing, and closed-track approvals.

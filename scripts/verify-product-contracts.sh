@@ -862,7 +862,8 @@ required_document_fragments = {
         "PRODUCTION IMPLEMENTATION HOLD",
         "scripts/verify-android-predevice-readiness.sh",
         "Do not create `android-app/`",
-        "Complete all 38 A16/A17 launch-family cells",
+        "Complete all 19 required A16 cells",
+        "A17 validation is deferred and non-blocking",
         "History density and duration-label rules",
     ),
     "docs/ANDROID_UI_PARITY.md": (

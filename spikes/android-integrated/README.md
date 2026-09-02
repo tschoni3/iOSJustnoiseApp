@@ -41,3 +41,24 @@ Physical NFC/blocking checks follow the
 [non-interfering inspection protocol](../android-gate0/README.md#do-not-let-inspection-interrupt-the-blocker).
 In particular, do not use `uiautomator dump` to inspect this app while testing its
 Accessibility service. Preserve the paired installation and use screenshots instead.
+
+## Unsigned release preflight — 2026-09-02
+
+On Android source commit `dbe2469` (only documentation/checker changes in the
+worktree), `assembleRelease bundleRelease lintRelease` completed successfully.
+Release lint reported zero errors and 23 warnings. Packaged-manifest inspection
+found no debuggable flag or Compose `PreviewActivity`; permissions remained NFC
+plus AndroidX's app-scoped signature receiver permission. Packaged Accessibility
+metadata remained window-state-only, with content retrieval and accessibility-tool
+flags false and no retrieval flags. The unsigned APK passed `zipalign -c -P 16 4`;
+this packaging check is not 16-KB-device runtime or native ELF alignment evidence.
+
+- `app/build/outputs/apk/release/app-release-unsigned.apk`: SHA-256 `d9c0640212fff02b145fdcdfdc7f39f45468be2e9a1257f6fbe5b0dc199c8626`.
+- `app/build/outputs/bundle/release/app-release.aab`: SHA-256 `1bea5d8de8735892d0a1293393022c70f60eeea1e55ab96c1b745753990707f3`; `jarsigner -verify` confirmed it is unsigned.
+
+These artifacts still use `com.justnoise.androiddev`, version `0.1-integrated-dev`.
+They are local packaging evidence, not upload-ready or physically accepted release
+artifacts. Permanent identity, external upload signing, release labels and the
+internal-beta safety decision remain open. Nothing was uploaded or installed from
+these unsigned release artifacts; the phone received only the separately verified
+debug cleanup-feedback follow-up described in the Gate 0 evidence.

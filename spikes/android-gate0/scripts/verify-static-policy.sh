@@ -159,18 +159,20 @@ require_literal 'AtomicLong' "$DIRECT_MUTATION_GATE_SOURCE"
 require_literal 'multiple Text candidates are rejected as ambiguous' "$DATA_INVENTORY"
 require_literal 'lifecycle cancellation invalidates a late result' "$DATA_INVENTORY"
 require_literal 'copied `EXTRA_NDEF_MESSAGES` are never read or trusted' "$DATA_INVENTORY"
-require_literal 'All 38 A16/A17 launch-family cells remain `BLOCKED`' "$DECISION_RECORD"
+require_literal 'All 19 required A16 cells remain `BLOCKED`' "$DECISION_RECORD"
 require_literal 'Galaxy A16 family' "$MATRIX"
-require_literal 'Galaxy A17 family' "$MATRIX"
 require_literal '`SM-A165F`' "$MATRIX"
-require_literal '`SM-A175F`' "$MATRIX"
+require_literal 'A16 is required; A17 is deferred/unverified and excluded from gate arithmetic' "$MATRIX"
+require_literal 'Required cells: 19.' "$MATRIX"
+require_literal 'Passing cells: 0.' "$MATRIX"
+require_literal 'Blocked/failing cells: 19.' "$MATRIX"
 
 if command -v rg >/dev/null 2>&1; then
-    matrix_rows="$(rg --count '^\| G0-[0-9]{2} .*\| BLOCKED \| BLOCKED \|' "$MATRIX" || true)"
+    matrix_rows="$(rg --count '^\| G0-[0-9]{2} \| [^|]*\| BLOCKED \| (PASS|FAIL|BLOCKED) \|' "$MATRIX" || true)"
 else
-    matrix_rows="$(grep -E -c '^\| G0-[0-9]{2} .*\| BLOCKED \| BLOCKED \|' "$MATRIX" || true)"
+    matrix_rows="$(grep -E -c '^\| G0-[0-9]{2} \| [^|]*\| BLOCKED \| (PASS|FAIL|BLOCKED) \|' "$MATRIX" || true)"
 fi
-[[ "$matrix_rows" == "19" ]] || fail "device matrix must contain 19 explicitly BLOCKED rows"
+[[ "$matrix_rows" == "19" ]] || fail "device matrix must contain 19 explicitly BLOCKED required A16 rows"
 
 bash "$REPOSITORY_ROOT/scripts/verify-product-contracts.sh"
 echo "Android Gate 0 static policy boundary verified; physical evidence remains BLOCKED."

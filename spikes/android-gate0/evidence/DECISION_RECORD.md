@@ -2,19 +2,27 @@
 
 Decision: **HOLD / NO-GO for the full Android port**
 
+Internal beta decision: **HOLD — smaller A16 safety checkpoint incomplete**
+
 Date opened: 2026-07-22
 
 Last updated: 2026-09-02
 
-The repository now contains a reviewable candidate and CI design, but the required consumer-device and policy evidence does not exist. All 38 A16/A17 launch-family cells remain `BLOCKED`, which is a gate failure. No production `android-app/` should be created from this spike yet.
+The repository now contains a reviewable candidate and CI design, but the complete required consumer-device and policy evidence does not exist. All 19 required A16 cells remain `BLOCKED`, which is a gate failure. No production `android-app/` should be created from this spike yet.
+
+Owner scope decision, 2026-09-02: use the existing A16 as the only required initial hardware target. A17 validation is deferred/unverified and does not block development or this scoped gate; no additional phone purchase or tester is required. All 19 A16 criteria and product/policy review remain intact. No device result or approval was granted by narrowing the scope.
+
+Subsequent lean-delivery instruction, 2026-09-02: first target a local-only, single-selected-app Play internal beta. The smaller safety checkpoint in `docs/ANDROID_GATE_0.md` may authorize that implementation separately, without waiting for the full endurance matrix or pretending it passed. The owner has confirmed normal Chrome access after stopping; that confirmation is complete and must not be requested again. The cleanup-feedback fix `dbe2469` is now installed while idle, with pairing record and selection retained. Remaining safety evidence still does not complete the smaller checkpoint. No internal-beta GO, upload approval, or public-release approval has been granted.
 
 The September 2 A16 follow-up records one foreground cycle and one warm direct
 Home start/stop cycle. A further direct-start/Chrome-blocking check exposed missing
 normal Android navigation controls on `d93ae01`. The window-bounds candidate
-`d09833d` passed the local verifier and is installed. One portrait retest confirms
-visible navigation controls and corrected window bounds; native Home/Back touch
-routing and remaining safety coverage are still unverified. The app's own Go Home
-button is not a substitute for system navigation.
+`d09833d` passed the local verifier and was tested on the phone. A portrait retest
+confirms visible navigation controls and corrected window bounds; a later synthetic
+native-Home/re-entry sequence confirms limited touch routing. Owner-operated
+Home/Back and remaining safety coverage are still unverified. The app's own Go Home
+button is not a substitute for system navigation. The latest installed follow-up
+is `dbe2469`, not a new full safety PASS.
 See [the build-scoped evidence](A16_PARTIAL_RUN_2026-09-02.md). No safety PASS is implied.
 
 ## Pre-device evidence now recorded
@@ -36,7 +44,7 @@ This evidence changes no device-matrix cell. It validates only the build, declar
 - Interception happens before target content is usable.
 - Navigation, split-screen, alternate entry, or OEM behavior cannot bypass it.
 - No persistent overlay or lockout can occur under real lifecycle stress.
-- Default-battery and overnight durability pass on the exact Galaxy A16 and A17 variants intended for launch.
+- Default-battery and overnight durability pass on the exact required A16 variant/build. A17 compatibility remains unverified and deferred.
 - Real authorized/unauthorized NFC behavior is reliable.
 - An unlocked direct Zap tap routes to Justnoise and toggles once without app-open, Scan-button, chooser, or confirmation friction.
 - Google Play accepts the declared Accessibility use.
@@ -44,4 +52,4 @@ This evidence changes no device-matrix cell. It validates only the build, declar
 
 ## Decision owner checklist
 
-Only change this record to `PASS` when every `G0-01` through `G0-19` cell is `PASS` on both required device families, all evidence is attached, and product plus policy reviewers sign off. Any `FAIL` or `BLOCKED` remains a broad-port `NO-GO`; policy uncertainty remains `HOLD`.
+Only change this record to `PASS` when every `G0-01` through `G0-19` cell is `PASS` on the required A16 variant/build, all evidence is attached, and product plus policy reviewers sign off. Any required A16 `FAIL` or `BLOCKED` remains `NO-GO`; policy uncertainty remains `HOLD`. Optional A17 results do not enter this gate's arithmetic, and an A16 PASS must not be presented as tested A17 or universal Android compatibility.

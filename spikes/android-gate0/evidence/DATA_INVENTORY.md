@@ -32,6 +32,6 @@ Re-enabling instructions require a newly accepted current disclosure. Android un
 ## Evidence still required
 
 - Confirm through redacted logs that no foreground package history or NDEF data appears.
-- Observe network traffic on both required devices; expected Gate 0 traffic from the app is zero.
+- Observe network traffic on the required A16; expected Gate 0 traffic from the app is zero. A17 validation is deferred and non-blocking.
 - Confirm OEM backups do not restore consent or pairing; `allowBackup=false` is a source claim until verified.
 - Review every dependency and merged manifest from the CI report before policy sign-off.

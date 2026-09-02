@@ -1,6 +1,6 @@
 # Galaxy A16 partial run — 2026-09-02
 
-Status: **ONE FOREGROUND CYCLE AND ONE POST-FIX WARM HOME START/STOP CYCLE OBSERVED — no complete Gate 0 cell passes**
+Status: **FOREGROUND AND WARM DIRECT CYCLES OBSERVED; LATER SYNTHETIC HOME AND OWNER-CONFIRMED UNBLOCK SAMPLES RECORDED — no complete Gate 0 cell passes**
 
 ## Device and tested build
 
@@ -234,10 +234,68 @@ uncovered. The old failing build's overlay extended to `2340`.
 
 The artifact contains the blocked UI and generic status icons only. It follows
 the synthetic warm Chrome relaunch, not a recorded manual-launch sequence.
-Visibility and portrait bounds are confirmed in this sample; actual normal
-Home/Back touch routing, sustained touch blocking, and rotation/immersive behavior
-remain unverified on `d09833d`. The owner was asked to use the small native Home
-button, not the app's large **Go Home** escape action, while keeping the session active.
+Visibility and portrait bounds are confirmed in this sample. The later synthetic
+Home-routing check below adds limited touch-routing evidence; owner-operated native
+Home/Back, sustained touch blocking, and rotation/immersive behavior remain unverified
+on `d09833d`.
+
+### Synthetic native Home and Chrome re-entry on the same candidate
+
+With the same `d09833d` APK still installed and the session active/revision `16`,
+Chrome's blocker was confirmed at `[0,100][1080,2205]`. An ADB-injected touch at
+`(546,2275)` targeted the native bottom-centre Android Home control, below the overlay.
+This was a coordinate touch, not a Home key event or the app's **Go Home** action.
+Samsung Home became foreground with no blocker. Chrome was then reopened through
+its normal Activity using ADB, and the blocker appeared again. A second touch at
+the same native Home coordinate returned to Home without the blocker. Scoped reads
+remained active/revision `16`, with the service connected and a fresh heartbeat.
+
+This is one synthetic Home/re-entry sequence on the physical A16, including two
+injected native-Home touches. It is not an owner-operated Home/Back test, a launch
+timing measurement, or repetition, rotation, split-screen, or durability coverage.
+Only neutral blocker screenshots are preserved; the Home screenshot containing the
+owner's launcher layout and location widget is not archived.
+
+| Artifact, source `d09833d` | SHA-256 |
+| --- | --- |
+| [Chrome blocker before native Home touch](a16-2026-09-02/native-home-before.png) | `8e5fea10be872f44d97cacee5cc900174372c73b5f1c6043375af796568fe0f4` |
+| [Chrome blocked again after native Home](a16-2026-09-02/chrome-after-native-home.png) | `2d9efdd21cf71804c7685ef48554ea1fc44f9d8253d550db821175c474237661` |
+
+### Owner-confirmed stop and normal Chrome access
+
+After being asked to tap the physical Zap once to stop and open Chrome, the owner
+confirmed **“yes i can!”** in response to whether browsing worked normally without
+the blocker. The scoped state read found `desired_active=false`, `session_revision=17`,
+`service_connected=true`, and `service_heartbeat_elapsed_millis=172659620`.
+The installed build at this checkpoint was still `d09833d`, APK SHA-256
+`6487e3f462328b9a78d8bc767c36b4c7ee1e0fdaf483e93235725e35a1fb3d77`.
+Together with the preceding active/revision `16` state, this records a stop to
+idle/revision `17` and owner-confirmed post-stop Chrome usability on that candidate.
+The stop's foreground/direct route and chooser behavior were not separately
+established, and this does not establish 10/10 stopping reliability.
+
+The owner explicitly asked not to repeat this already-completed confirmation.
+Retain this result rather than asking the same stop-and-browse question again;
+the reference to earlier confirmations is not counted as additional test runs.
+A later pre-install read found idle/revision `19`. The intervening transitions
+were not observed, so revisions `18` and `19` are not credited as another verified
+scan or cycle and do not replace the separately confirmed revision `17` outcome.
+
+### Cleanup-feedback update installed while idle
+
+After a fresh read confirmed idle/revision `19`, `adb install -r` successfully
+updated the existing development app to source `dbe2469`. The installed APK hash
+was verified as `c0d7d926630ed1c0cd40a76515ca7f09d9b7ea94d09c8725bb75050f6cacbc5d`.
+No uninstall, data clearing, re-pairing, or permission grant/toggle was performed.
+Quiet presence/value checks confirmed that the paired-credential record remained
+present and Chrome remained selected; no credential value was printed.
+
+Post-update reads retained idle/revision `19` and `service_connected=true`.
+The heartbeat advanced from `172751752` to `172822224`, with the latter read at
+device uptime `172824.07` seconds. This verifies update/data retention and a live
+service sample, not a new physical NFC cycle or fault-injected cleanup test.
+The earlier owner-confirmed stop/unblock result remains recorded on `d09833d`;
+do not ask the owner to repeat that same confirmation merely for bookkeeping.
 
 ## Preserved foreground-cycle artifacts
 
@@ -258,13 +316,19 @@ Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA
 
 - Repeated authorized physical starts/stops and unauthorized/malformed/canceled-tag
   cases; this run records one complete foreground cycle and one complete post-fix
-  warm direct cycle, not the required 10/10 repetitions.
+  warm direct cycle, plus the later `d09833d` stop/unblock sample above, not the
+  required 10/10 repetitions. The latest owner-confirmed normal Chrome access is
+  complete evidence for that sample, not a pending question.
 - Longer recorded touch, Back, Home, Recents, rotation, split-screen, and rapid-launch
-  checks; all required target/entry-path coverage.
+  checks; the synthetic native-Home/re-entry sample does not complete those scenarios
+  or all required target/entry-path coverage.
 - Repeated post-update direct unlocked-Home starts/stops and navigation,
   cold-process and remaining negative direct-entry cases; lifecycle/reboot/battery/Doze/overnight,
-  privacy/false-positive, escape, policy, and Galaxy A17 evidence.
+  privacy/false-positive, escape, and policy evidence. Galaxy A17 validation is
+  deferred/unverified and non-blocking under the owner's later 2026-09-02 scope decision.
 
-All 38 matrix cells remain `BLOCKED`. This run establishes meaningful progress on the
+All 19 currently required A16 matrix cells remain `BLOCKED`; the optional A17 column
+is excluded from gate arithmetic. No observed result changed with the scope decision.
+This run establishes meaningful progress on the
 reported flicker defect and direct NFC navigation without changing the Gate 0 or
 production-implementation hold.

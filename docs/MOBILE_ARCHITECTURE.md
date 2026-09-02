@@ -20,7 +20,7 @@ The exact audited `main` commit passed the GitHub **iOS verification** and **Pro
 
 The separate `spikes/android-ui/` project now proves the Release presentation sequence—startup hydration/account-cleanup gates, two onboarding pages, Zap activation, signed-out authentication and reset-link password update, Zap idle/active, the three-step first-run coach tour, Capture-disabled Session Complete, mode create/edit/delete states, History, schedule list/empty/create/edit states, Settings confirmations, and the conditional seven-page Noise Rewind—in Jetpack Compose. It also renders the shared blocked-surface contract and truthful restriction-capability recovery cards without declaring a service or permission. It maps all current copy and color contracts with drift tests, exposes Compose previews, reuses the existing onboarding videos/icon/Zap artwork through generated resources, and declares no user-facing permission or Android service. History density thresholds and English duration labels now have shared fixtures and pure Swift/Kotlin consumers; calendar bucketing remains deferred. `docs/ANDROID_UI_PARITY.md` is the screen/state coverage audit. All routing, authentication, activation, mode/app selection, schedule controls, settings/account actions, completion, Noise Rewind, blocked-surface, recovery, coach-tour, and Zap state changes are presentation-only; they are not backend, NFC, restriction, interception, background-work, analytics, eligibility, autoplay, persistence, account cleanup/deletion, credential mutation, or deep-link evidence and do not authorize `android-app/`.
 
-It does not authorize a production Android application. All 38 required Galaxy A16/A17 launch-family Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
+It does not authorize a production Android application yet. All 19 required A16 Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Per the owner's 2026-09-02 budget decision, A17 validation is deferred/unverified and non-blocking; no second phone is required. The subsequent lean-delivery decision permits a minimal local internal beta after the smaller A16 safety checkpoint in `docs/ANDROID_GATE_0.md` is recorded as GO. Do not create `android-app/` before that checkpoint or full Gate 0 PASS; an internal-beta GO does not authorize public launch or imply full parity.
 
 `docs/ANDROID_PREDEVICE_READINESS.md` is the operational handoff. `scripts/verify-android-predevice-readiness.sh` validates all three disposable Android projects, their shared/static boundaries, and the absence of `android-app/` in one command; the **Android Gate 0** workflow runs that same command for Gate 0, UI-prototype, integrated-shell, shared-mapping, architecture, and contract changes. A green run proves only the pre-device baseline described there.
 
@@ -36,7 +36,7 @@ owner-assisted Galaxy A16 run completed setup, local pairing, one foreground sta
 one immediate Chrome interception; it also exposed an overlay self-event loop that was
 fixed and covered by pure event-rule tests. The full-screen overlay now explicitly
 consumes unused touches. This is implementation progress and partial evidence, not a
-Gate 0 pass: all 38 matrix cells remain `BLOCKED`, sustained interaction and direct-Home
+Gate 0 pass: all 19 currently required A16 cells remain `BLOCKED`, sustained interaction and direct-Home
 testing are pending, and no production `android-app/` is authorized.
 
 Device follow-up, 2026-09-02: the owner-assisted A16 run completed one foreground
@@ -50,7 +50,8 @@ correct portrait bounds in one sample, with native Home/Back touch routing still
 unverified. The exact builds, recording limits,
 screenshots, and remaining checks are in
 `spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md`; repetitions,
-multi-target, lifecycle/safety, and A17 evidence still prevent a full Gate 0 pass.
+multi-target, and lifecycle/safety evidence still prevent an A16-scoped Gate 0 pass.
+A17 validation is deferred and does not block the initial gate.
 
 Complexity is governed by responsibility, not by the smallest file count. Do not collapse legitimate Xcode target folders or combine unrelated features to reduce a number. Conversely, do not add layers, modules, or component catalogs solely to make both platforms look symmetrical. Extract a boundary only when it removes duplicated product decisions, isolates a system capability, or reduces measured change risk.
 
@@ -166,12 +167,12 @@ Android NFC routing and restriction enforcement are separate adapters. Direct ta
 
 ## Launch-ready iOS to Android delivery matrix
 
-Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftUI screens, and extension targets on 2026-08-07. This matrix controls scope and sequencing; it is not a claim that an Android screen or capability already exists.
+Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftUI screens, and extension targets on 2026-08-07. This matrix controls the later full-product scope and sequencing; it is not a claim that an Android screen or capability already exists. The smaller local-only internal beta in `docs/ANDROID_PREDEVICE_READINESS.md` is an explicit sequencing exception: its safety checkpoint, not this entire parity roadmap, controls that first milestone.
 
 | Product surface | iOS 1.1.0 Release source | Portable contract coverage | Android delivery decision |
 | --- | --- | --- | --- |
 | Startup and account-cleanup gate | Root routing blocks product hydration until cleanup succeeds | Account isolation and fail-closed deletion rules are portable; ordinary sign-out namespacing remains partial | Implement in the first production slice with native persistence and the same truthful loading/blocked outcomes |
-| Onboarding and Zap activation | Two launch pages followed by physical Zap activation; Capture page is compiled out | Core brand/Zap copy and activation outcomes are only partially keyed; provisioning and multi-record selection remain unresolved | Implement natively after Gate 0; use Android NFC language and permission flow, keep foreground reader mode for pairing/recovery, and use direct dispatch only after its required device cells pass |
+| Onboarding and Zap activation | Two launch pages followed by physical Zap activation; Capture page is compiled out | Core brand/Zap copy and activation outcomes are only partially keyed; provisioning and multi-record selection remain unresolved | Use Android NFC language and permission flow, keeping foreground reader mode for pairing/recovery. The internal beta may use direct dispatch after its smaller real-device safety checkpoint passes; the full public reliability promise still requires the complete device criterion |
 | Sign-in, sign-up, reset, and session restoration | Supabase email/password, Google sign-in, reset deep link, authoritative auth-session store | Identity/account safety outcomes are portable; provider SDK and redirect handling are adapters | Include in the first production slice; configure Android OAuth/package-signing identity separately and do not treat StoreKit state as entitlement |
 | Zap home and focus-session lifecycle | Release opens directly on the single Zap surface; idle/active UI, mode selector, scan, stop guard, and completion sheet | Lifecycle reducer, stop guard, keyed core copy, semantic Zap colors, and last-explicit-mode intent are shared | Primary Android v1 surface after Gate 0, implemented in Compose against the shared reducer fixtures; direct NFC entry must call the same domain path rather than own a second session implementation |
 | Modes and target selection | List, create, edit, delete, and Family Controls picker for apps/categories/web domains | Stable mode identity and non-empty selection rule are shared; selection tokens remain platform-owned | Primary Android v1 surface after Gate 0; expose only target types the Android adapter proves and report unsupported types honestly |
@@ -187,7 +188,7 @@ Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftU
 ### Delivery slices
 
 1. **Current pre-device phase:** maintain shared contracts, the disposable Gate 0 and UI spikes, policy evidence, and this matrix. Do not create `android-app/`.
-2. **Production slice 1, only after Gate 0 PASS:** one Compose application module with startup/account boundaries, onboarding/activation, authentication, Modes, Zap lifecycle, restriction capability, and recovery.
+2. **Minimal internal beta after its separate A16 safety GO:** one Compose application module with local onboarding/pairing, one remembered target app, Zap lifecycle, restriction capability, and recovery. Defer authentication, multiple modes and cloud data. **Full production slice 1 after Gate 0 PASS:** add startup/account boundaries, authentication and Modes deliberately; the larger slice is not a prerequisite for the initial beta.
 3. **Production slice 2:** history, completion/weekly states, account/settings surfaces, and an ongoing-notification adapter.
 4. **Production slice 3:** schedules only after the unresolved temporal rules have explicit product decisions and portable fixtures.
 5. **Later products:** Capture, Signal UI, and an Android widget require separate launch decisions and are not allowed to delay the core Android focus experience.

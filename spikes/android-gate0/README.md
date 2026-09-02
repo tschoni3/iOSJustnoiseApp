@@ -2,7 +2,7 @@
 
 Status: **HOLD — prototype code exists; no physical-device or Play-policy gate has passed**
 
-This is a disposable, one-module Android Views/XML capability spike. It exists only to decide whether a normal consumer-installed Android app can offer a reliable and supportable Justnoise restriction experience. It is intentionally under `spikes/android-gate0/`, not `android-app/`. A production Android application must not be scaffolded until every Gate 0 cell passes on both required device families and the policy/product reviews accept the result.
+This is a disposable, one-module Android Views/XML capability spike. It exists only to decide whether a normal consumer-installed Android app can offer a reliable and supportable Justnoise restriction experience. It is intentionally under `spikes/android-gate0/`, not `android-app/`. A minimal internal-test release app may be scaffolded after the smaller A16 safety checkpoint in `docs/ANDROID_GATE_0.md` is recorded as GO; the complete 19-cell matrix and product/policy acceptance still gate the full product/public launch. Both decisions are currently HOLD. A17 validation is deferred/unverified and non-blocking; no second phone is required.
 
 The canonical decision criteria remain in [`../../docs/ANDROID_GATE_0.md`](../../docs/ANDROID_GATE_0.md). This directory contains prototype code and evidence templates; it does not change those criteria.
 
@@ -36,7 +36,7 @@ Recorded 2026-08-07 at repository commit `4bb4631148a1c5fdab0455c4e09b247c3ca744
 - The debug APK installed and cold-launched successfully on the same emulator.
 - GitHub **Android Gate 0** run [`31009963974`](https://github.com/tschoni3/iOSJustnoiseApp/actions/runs/31009963974) passed on the exact commit.
 
-This is supporting preflight evidence only. The Android Emulator has no NFC hardware and does not reproduce Galaxy A16/A17 lifecycle, battery, escape-path, interception timing, or direct tag-routing behavior. Therefore it changes zero cells in `evidence/DEVICE_MATRIX.md`; all 38 cells remain `BLOCKED`.
+This is supporting preflight evidence only. The Android Emulator has no NFC hardware and does not reproduce the physical A16's lifecycle, battery, escape-path, interception timing, or direct tag-routing behavior. Therefore it changes zero cells in `evidence/DEVICE_MATRIX.md`; all 19 required A16 cells remain `BLOCKED`. Optional A17 coverage is excluded from the initial gate.
 
 ## Toolchain and wrapper bootstrap
 
@@ -56,7 +56,7 @@ Review the generated `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.ja
 
 1. Run the **Android Gate 0** workflow and require the static policy check, JVM tests, lint, debug APK, and instrumentation-test APK build to pass.
 2. Download the `android-gate0-debug` artifact and verify each APK against `SHA256SUMS`.
-3. On an unmanaged Galaxy A16 or Galaxy A17 launch-target variant with the current public stable OS, install `app-debug.apk` normally. Record the full model code, region/CSC, RAM tier, OS build, and One UI version. `adb install app-debug.apk` is acceptable for installation only; do not grant a production permission through ADB.
+3. On the existing unmanaged Galaxy A16 `SM-A165F` with its current public stable OS, install `app-debug.apk` normally. Record the full model code, region/CSC, RAM tier, OS build, and One UI version. `adb install app-debug.apk` is acceptable for installation only; do not grant a production permission through ADB. Other-device runs may be added later but are not prerequisites.
 4. Open Justnoise Gate 0. Confirm the disclosure appears before an unchecked control and that declining leaves the service off.
 5. Select Chrome, YouTube, and one third-party launcher app in turn. Record any app omitted by scoped visibility.
 6. Accept the disclosure, use the button to open Accessibility settings, and manually enable the service. Confirm no draw-over-other-apps permission is requested.

@@ -30,7 +30,7 @@ These files describe the intended target architecture. Existing iOS literals are
 - Start a portable behavior, copy, or visual-token change in the product contract, then update both native implementations in the same change once Android exists.
 - Keep stable identifiers, state transitions, validation rules, copy keys, placeholders, semantic colors, and test fixtures portable. Add or update a framework-neutral fixture before duplicating a rule in Swift and Kotlin.
 - Put framework types and permissions behind platform adapters. Apple `FamilyActivitySelection`, `ManagedSettings`, `DeviceActivity`, `CoreNFC`, and `ActivityKit` types must not enter portable models.
-- Never promise Android parity by naming an Android API without testing it on consumer hardware. App restriction work is blocked by the Gate 0 decision in `docs/ANDROID_GATE_0.md`.
+- Never promise Android parity by naming an Android API without testing it on consumer hardware. Follow `docs/ANDROID_GATE_0.md`: the owner's lean-delivery scope permits a minimal local internal beta after its separate A16 safety checkpoint is recorded as GO; full-product/public-release claims still require the complete gate. Do not require another phone or full parity merely to reach that first beta.
 - If a behavior cannot be equivalent, document the platform difference and its user impact before implementation. Do not silently approximate it.
 - Keep Android as one application module initially. Add a Gradle module only when a measured build, ownership, reuse, or testing boundary justifies it.
 - Prefer small, cohesive files and explicit dependencies. Reducing file count or line count is not a goal by itself.

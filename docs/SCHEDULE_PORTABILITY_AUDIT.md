@@ -48,4 +48,4 @@ Swift and Kotlin pure rules consume the same cases. These rules do not calculate
 8. Define exactly who clears restrictions if the app never foregrounds and how stale active state is reconciled.
 9. Define whether notifications are derived from the same selected occurrence or are independent reminders.
 
-Each decision needs portable fixtures plus native domain tests. Background delivery, restriction ownership, reboot, time-zone change, daylight-saving behavior, and cleanup still require physical Galaxy A16/A17 launch-family evidence.
+Each decision needs portable fixtures plus native domain tests. Background delivery, restriction ownership, reboot, time-zone change, daylight-saving behavior, and cleanup still require physical evidence on the existing required A16. A17 validation is deferred and non-blocking; schedule behavior on untested variants must not be described as verified.

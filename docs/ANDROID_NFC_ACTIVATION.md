@@ -40,7 +40,7 @@ Android normally dispatches a recognized NDEF tag to a matching Activity while t
 
 An AAR, MIME type, external record type, package name, intent action, `EXTRA_NDEF_MESSAGES`, or the fact that Android launched Justnoise is never authorization. The entry Activity must run the same authorization and session reducer as an in-app scan.
 
-An exported Activity is an untrusted boundary on older target/platform combinations. Starting with Android 17/API 37, an NFC Activity targeting newer than Android 16 must use `android.permission.DISPATCH_NFC_MESSAGE`, which restricts dispatch to the NFC system service. The production manifest must adopt that protection when the target/API combination supports it, while the A16/A17 matrix must prove backward-compatible behavior on their installed Android versions. See the official [NFC manifest and dispatch requirements](https://developer.android.com/develop/connectivity/nfc/nfc#manifest).
+An exported Activity is an untrusted boundary on older target/platform combinations. Starting with Android 17/API 37, an NFC Activity targeting newer than Android 16 must use `android.permission.DISPATCH_NFC_MESSAGE`, which restricts dispatch to the NFC system service. The production manifest must adopt that protection when the target/API combination supports it, while the required A16 matrix must prove backward-compatible behavior on its installed Android version. A17 hardware validation is deferred, not a prerequisite. See the official [NFC manifest and dispatch requirements](https://developer.android.com/develop/connectivity/nfc/nfc#manifest).
 
 ## Two NFC entry paths
 
@@ -109,7 +109,7 @@ Until that decision is frozen, the disposable spike may use local pairing for sa
 
 ## Required evidence
 
-Direct dispatch becomes part of the A16/A17 launch promise only after both required launch families, for every named variant being listed, demonstrate:
+Direct dispatch becomes part of the initial verified A16 promise only after the required A16 variant/build demonstrates the following. A17 validation is deferred/unverified and non-blocking; do not extend this reliability claim to untested variants:
 
 - legacy Text routing from an unlocked home screen with Justnoise backgrounded and cold-started normally;
 - no app-open or Scan-button prerequisite;
@@ -118,7 +118,7 @@ Direct dispatch becomes part of the A16/A17 launch promise only after both requi
 - truthful behavior when Accessibility is disabled/revoked, mode data is invalid, or the app was Force Stopped;
 - no chooser or second confirmation for the direct-flow claim; if product accepts such friction, G0-19 remains failed and the advertised behavior must be explicitly rescoped to foreground scanning;
 - a forged explicit NFC intent containing copied NDEF messages but no usable live `EXTRA_TAG` never mutates state;
-- `DISPATCH_NFC_MESSAGE` protection on API/target combinations that support it, plus truthful fallback behavior on the tested A16/A17 Android versions;
+- `DISPATCH_NFC_MESSAGE` protection on API/target combinations that support it, plus truthful fallback behavior on the tested A16 Android version;
 - correct behavior with competing NFC handlers, screen lock, reboot, process death, default battery settings, and OEM NFC preferences;
 - the future external-type/AAR envelope on both Android and iOS before adopting it for hardware; and
 - no payload, tag identifier, foreground-package history, or accessibility-derived data in logs, analytics, or network traffic.

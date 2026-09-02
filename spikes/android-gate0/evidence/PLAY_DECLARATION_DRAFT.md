@@ -46,7 +46,7 @@ also inspected the integrated APK's permissions and packaged service XML.
 | Consent | Shared setup shows separate disclosure before an unchecked control; the enable button records consent before opening settings; the service refuses missing/current-version-mismatched consent | Record fresh install, refusal, re-entry, acceptance, revocation, and re-consent on the actual release flow |
 | User-defined behavior | Exact selected-package rule during a user-started session; no autonomous planning, content-based decisions, or simulated control of the target app | Product/policy acceptance of the observed interruption behavior and limits |
 | Data | Reviewed app source has no logging/network client; inventory now explicitly includes event-type guard, service-enable metadata, protected packages, and overlay geometry | Dependency/runtime review is still required; static absence is not a network trace |
-| Withdrawal | Review found that setup ignored the cleanup Boolean and always claimed deletion; local follow-up now maps success/failure to distinct feedback | Fault-injected deletion and recovery remain untested; follow-up is not installed over the navigation-test APK |
+| Withdrawal | Review found that setup ignored the cleanup Boolean and always claimed deletion; follow-up now maps success/failure to distinct feedback and was later installed while idle | Fault-injected deletion and recovery remain untested; installation is not proof of deletion behavior |
 | Release identity | This is a debuggable prototype with an exported Compose preview Activity, not a release artifact | Review production ID, signing, release-only dependencies, declarations, and final App Bundle after Gate 0 |
 
 The withdrawal UI wiring regression failed before the fix. Afterward, both pure
@@ -54,9 +54,12 @@ feedback tests and all nine static-policy tests passed, followed by the complete
 `scripts/verify-android-predevice-readiness.sh` run (contracts, JVM tests, lint,
 and all development APK builds). The follow-up integrated APK SHA-256 is
 `c0d7d926630ed1c0cd40a76515ca7f09d9b7ea94d09c8725bb75050f6cacbc5d`;
-packaged permission/metadata inspection remained unchanged. This APK is **not
-installed**: the phone remains on the earlier `d09833d` navigation-test build.
-No paired-device instrumentation, consent withdrawal, or iOS changes were made.
+packaged permission/metadata inspection remained unchanged. It was initially kept
+off the phone during navigation testing, then installed with `adb install -r` after
+idle/revision `19` was confirmed. The installed checksum matches; pairing record,
+Chrome selection, idle state and a connected/advancing service heartbeat were retained.
+See the build-scoped September 2 record. No paired-device instrumentation, consent
+withdrawal, or iOS changes were made.
 
 Google's [Accessibility guidance](https://support.google.com/googleplay/android-developer/answer/10964491)
 permits deterministic user-defined automation but requires a declaration and separate
@@ -73,11 +76,11 @@ establish approval of the complete product.
 
 ## Reviewer evidence to attach later
 
-- Completed Galaxy A16/A17 launch-family matrix with exact model, region, RAM, build, and device metadata.
+- For the first internal beta: the smaller A16 safety-checkpoint evidence and separate beta decision from `docs/ANDROID_GATE_0.md`, including the exact model/build, source and APK identity, and known limitations. The complete 19-cell A16 matrix is required for the later full-product/public-release decision, not this first learning milestone. A17 validation is deferred/unverified and non-blocking; a second phone is not required. Do not present A16 evidence as tested A17 compatibility.
 - A short video beginning at app launch and showing the entire disclosure (scroll slowly if needed), initial unchecked consent, refusal/back-out, re-entry, affirmative acceptance, manual settings enablement, and the core selected-app interruption. Add captions where the Accessibility use is not obvious. Include revocation/re-consent and separately demonstrate Force Stop, uninstall, and all overlay escape routes. See [Google's required video flow](https://support.google.com/googleplay/android-developer/answer/10964491).
 - Merged-manifest and static-policy reports.
 - Redacted logs plus network observation matching `DATA_INVENTORY.md`.
 - Exact store listing and privacy disclosures.
 - Product explanation of onboarding burden, bypass behavior, battery/OEM caveats, and why the outcome is valuable.
 
-Internal review cannot guarantee acceptance. A policy uncertainty is `HOLD`; a later closed-track Play submission remains mandatory even after an internal Gate 0 PASS.
+Internal review cannot guarantee acceptance. A policy uncertainty is `HOLD`; complete the requirements of the applicable Play test track and account before distribution. The initial milestone is internal testing. A separate closed test is required only where the account's production-access rules or the later release plan require it; internal testing does not itself grant public-release approval.
