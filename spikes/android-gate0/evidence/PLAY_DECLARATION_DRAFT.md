@@ -34,7 +34,8 @@ The service is manually enabled in system Accessibility settings and can be manu
 ## Static review checkpoint — 2026-09-02
 
 Scope: internal source/package review, not Google Play acceptance or a completed
-G0-13/G0-18 device cell. The installed integrated APK is source `d09833d`, SHA-256
+G0-13/G0-18 device cell. The integrated APK inspected at this checkpoint was source
+`d09833d`, SHA-256
 `6487e3f462328b9a78d8bc767c36b4c7ee1e0fdaf483e93235725e35a1fb3d77`.
 Both spike/integrated source and merged debug manifests were inspected; `aapt2`
 also inspected the integrated APK's permissions and packaged service XML.
@@ -47,7 +48,7 @@ also inspected the integrated APK's permissions and packaged service XML.
 | User-defined behavior | Exact selected-package rule during a user-started session; no autonomous planning, content-based decisions, or simulated control of the target app | Product/policy acceptance of the observed interruption behavior and limits |
 | Data | Reviewed app source has no logging/network client; inventory now explicitly includes event-type guard, service-enable metadata, protected packages, and overlay geometry | Dependency/runtime review is still required; static absence is not a network trace |
 | Withdrawal | Review found that setup ignored the cleanup Boolean and always claimed deletion; follow-up now maps success/failure to distinct feedback and was later installed while idle | Fault-injected deletion and recovery remain untested; installation is not proof of deletion behavior |
-| Release identity | This is a debuggable prototype with an exported Compose preview Activity, not a release artifact | Review production ID, signing, release-only dependencies, declarations, and final App Bundle after Gate 0 |
+| Release identity | This checkpoint inspected a debuggable prototype with an exported Compose preview Activity, not a release artifact | Review production ID, signing, release-only dependencies, declarations, and final App Bundle after the applicable beta checkpoint |
 
 The withdrawal UI wiring regression failed before the fix. Afterward, both pure
 feedback tests and all nine static-policy tests passed, followed by the complete
@@ -73,6 +74,110 @@ The [package-visibility policy](https://support.google.com/googleplay/android-de
 requires the narrowest justified inventory access. Scoped launchable-app discovery
 has a documented selection purpose; removing `QUERY_ALL_PACKAGES` alone does not
 establish approval of the complete product.
+
+## Minimal internal-beta reviewer walkthrough — draft
+
+Prepared from the current local-only code on 2026-09-02. These are review instructions
+and expected outcomes, not a claim that every step has passed. Build-specific results
+remain in [the September 2 evidence](A16_PARTIAL_RUN_2026-09-02.md).
+
+- **Current development app:** `com.justnoise.androiddev`, label **Justnoise Android Dev**.
+  The setup screen still uses Gate 0 wording. Do not upload its debug or unsigned
+  development artifacts as the release.
+- **Planned internal-test release:** `com.justnoise.app`, public name **Justnoise**.
+  Registration, signing and a Play-delivered release are not established by this draft.
+  Reconcile the labels below with the final release UI before supplying instructions.
+- **Access:** no app login, subscription or review account is needed. An unlocked
+  NFC-capable Android 12+ phone and a compatible physical tag containing one valid
+  UTF-8 NDEF Text record are needed. Pair it through the visible local pairing flow;
+  no private production payload, factory allow-list or hidden review bypass is used.
+
+1. Begin with a fresh review installation on the agreed test device, not by clearing
+   the owner's existing paired app. Open **Open setup** or **SETUP**. Select an app such as
+   Chrome, under **App to test**. This beta does not offer multiple target modes.
+2. Read the separate Accessibility disclosure. Initially leave the consent box
+   unchecked: **Continue to Accessibility settings** is disabled. Leave and return
+   to demonstrate refusal/re-entry. Then explicitly check the box, press that button,
+   and manually enable **Justnoise Android Dev app blocking** in Android settings.
+3. Return to setup, press **Pair or replace test Zap**, and scan the physical tag.
+   Pairing is device-local; it does not create an online account or verify a purchase.
+4. Use **Scan Zap to start** on the main surface and scan the paired tag. Open the
+   selected app: its Justnoise interruption should appear. **Keep going** returns to
+   Justnoise without ending the session; opening the selected app again should block.
+5. After at least three seconds, use **Scan Zap to stop** and scan the paired tag;
+   the selected app should become usable. Also demonstrate the advertised direct
+   route from unlocked Home: tap the paired tag to start or stop without first opening
+   Justnoise. Report any chooser or failure honestly; do not describe a foreground
+   scan as a successful direct tap.
+6. Show the ordinary Home/Back and escape routes. **Disable Accessibility** opens
+   Android settings; **App info / Force Stop** opens app controls. In a deliberate
+   cleanup test, **Withdraw consent and clear Gate 0 data** requests local cleanup and
+   service disablement. Show its result and fresh consent requirement. Do not place an
+   emergency call. Do not repeat an already-recorded owner stop/browse confirmation
+   merely to prepare these instructions.
+
+For the declaration video, capture launch, the entire disclosure, refusal/re-entry,
+affirmative consent, manual enablement and the core interruption. Add short captions
+where needed. These elements follow [Google's Accessibility video guidance](https://support.google.com/googleplay/android-developer/answer/10964491).
+Give reviewers workable physical-tag access instructions/material; a video must not
+be assumed to replace access to restricted functionality. See [app review access](https://support.google.com/googleplay/android-developer/answer/9859455).
+
+## Justnoise Android internal beta — Privacy Policy draft
+
+Draft date: 2026-09-02. This text is for the planned local-only `com.justnoise.app`
+beta, based on the current development app. It does not describe the iOS app, web
+shop, or Android/Google Play's own services. Validate it against the release package
+before publication.
+
+**Publisher and privacy contact:** [OWNER TO SUPPLY: publishing identity and public privacy-contact email or URL].
+
+Justnoise helps you interrupt one app you select during a focus session. This beta
+has no app accounts, purchases, cloud sync, advertising, analytics or crash-reporting
+service. It does not transmit the data below to us or third parties or sell them.
+
+While you have enabled its Accessibility service, Justnoise receives window-change
+event types and foreground app identifiers, including when no focus session is active.
+It processes those identifiers locally; the interruption is shown only for the selected
+app during an eligible active session. It does not read screen contents, typed text,
+passwords, notifications or accessibility nodes, or save a foreground-app history.
+
+The local app picker reads launchable app names and identifiers. Justnoise also reads
+system app identifiers, service-enablement metadata and screen/inset geometry for
+readiness and safe navigation. These observations are temporary. It saves only your
+selected target, consent version/time, session start/state/revision, recovery and
+service-liveness state, and the keyed digest used to recognize your paired tag.
+NFC Text data is processed temporarily, not saved or logged; the tag's hardware
+identifier is not read. Configuration uses private app storage, and the digest's
+non-exportable key is managed by Android Keystore. Configuration is not claimed to
+be wholly encrypted. The app excludes its data from Android backup and transfer;
+this is not a guarantee about every manufacturer's restore behavior.
+
+Stopping removes the active-session start time; other configuration remains until
+changed or cleared. **Withdraw consent and clear Gate 0 data** attempts to remove
+the saved configuration and key and disable the service. Success and incomplete
+cleanup have different feedback; if cleanup cannot be confirmed, retry or use
+Android App info to clear storage or uninstall. Disabling Accessibility alone stops
+service access but does not erase saved configuration. There is no server account
+to delete. Raw foreground events and NFC payloads are not retained as history.
+
+The detailed implementation inventory is [DATA_INVENTORY.md](DATA_INVENTORY.md).
+Before publishing, provide a working contact, review the final release's actual data
+handling, host this notice at a public non-geofenced HTML URL, and expose the policy
+in the app and Play Console. The current separate Accessibility disclosure is not a
+substitute for a full privacy policy. These publication requirements follow [Google's User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311).
+Apps exclusively on internal testing are exempt from the Data safety form, not the
+applicable privacy/disclosure duties; see [Google's Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469).
+
+## Facts needed before using these drafts externally
+
+- Owner-confirmed publisher/privacy contact for the single field above and a live
+  Android-specific policy URL. The repository's existing shop-policy link is not
+  evidence that this new notice is published or covers the Android beta.
+- Verified Play account/track eligibility, registration and signed release identity,
+  final UI labels, and the actual reviewer-access/video URLs and physical-tag provision.
+- The smaller A16 beta safety decision, any policy issues resolved for the actual
+  release, and explicit owner approval to upload. A17 and the full 19-cell public
+  reliability matrix are not additional prerequisites for this beta draft.
 
 ## Reviewer evidence to attach later
 

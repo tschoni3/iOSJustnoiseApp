@@ -4,16 +4,17 @@ Decision: **HOLD / NO-GO for the full Android port**
 
 Internal beta decision: **HOLD — smaller A16 safety checkpoint incomplete**
 
-Latest bounded safety run: native Back returned to Home while the session stayed
-active; Accessibility's toggle and App info's Force Stop/uninstall controls were
-reachable without a blocker. No permission was changed. **Keep going** unexpectedly
-ended the session when setup restored the already-selected app. The source cause
-is corrected; seven emulator regressions and a defect-specific A16 Keep going /
-Chrome re-entry check now pass. The corrected APK is installed with pairing intact;
-active/revision `22` survives Keep going and the empty Samsung phone dialer is
-reachable. Do not credit the earlier unintended end as a Zap stop. Dedicated
-emergency access, physical negative input and actual revocation/cleanup remain open;
-prior stop/unblock and native Home results stand. See the September 2 record.
+Latest bounded safety run: on installed `909b41b`, the owner-authorized system-UI
+Accessibility disable retained pairing, Chrome selection and session intent/revision
+`22`. Setup and main truthfully reported recovery; opening Chrome did not restore a
+stale overlay. After the owner's manual re-enable, service heartbeat resumed, main
+showed active protection and Chrome was blocked again. Native Home remained usable.
+This recovery smoke passed without clearing data or another Zap scan. It is not
+Force Stop, cleanup/reinstall or a complete Gate 0 PASS. The earlier Keep going reset
+is fixed and physically retested; do not credit that earlier unintended end as a
+Zap stop. Dedicated emergency access, physical negative input and cleanup remain
+open. Prior stop/unblock results stand. See the September 2 record. Play Console
+still shows account setup; no upload occurred.
 
 Date opened: 2026-07-22
 
@@ -23,17 +24,16 @@ The repository now contains a reviewable candidate and CI design, but the comple
 
 Owner scope decision, 2026-09-02: use the existing A16 as the only required initial hardware target. A17 validation is deferred/unverified and does not block development or this scoped gate; no additional phone purchase or tester is required. All 19 A16 criteria and product/policy review remain intact. No device result or approval was granted by narrowing the scope.
 
-Subsequent lean-delivery instruction, 2026-09-02: first target a local-only, single-selected-app Play internal beta. The smaller safety checkpoint in `docs/ANDROID_GATE_0.md` may authorize that implementation separately, without waiting for the full endurance matrix or pretending it passed. The owner has confirmed normal Chrome access after stopping; that confirmation is complete and must not be requested again. The cleanup-feedback fix `dbe2469` is now installed while idle, with pairing record and selection retained. Remaining safety evidence still does not complete the smaller checkpoint. No internal-beta GO, upload approval, or public-release approval has been granted.
+Subsequent lean-delivery instruction, 2026-09-02: first target a local-only, single-selected-app Play internal beta. The smaller safety checkpoint in `docs/ANDROID_GATE_0.md` may authorize that implementation separately, without waiting for the full endurance matrix or pretending it passed. The owner has confirmed normal Chrome access after stopping; that confirmation is complete and must not be requested again. The cleanup-feedback fix `dbe2469` and later `909b41b` restoration fix were installed while idle, with pairing record and selection retained. Remaining safety evidence still does not complete the smaller checkpoint. No internal-beta GO, upload approval, or public-release approval has been granted.
 
 The September 2 A16 follow-up records one foreground cycle and one warm direct
 Home start/stop cycle. A further direct-start/Chrome-blocking check exposed missing
 normal Android navigation controls on `d93ae01`. The window-bounds candidate
 `d09833d` passed the local verifier and was tested on the phone. A portrait retest
-confirms visible navigation controls and corrected window bounds; a later synthetic
-native-Home/re-entry sequence confirms limited touch routing. Owner-operated
-Home/Back and remaining safety coverage are still unverified. The app's own Go Home
-button is not a substitute for system navigation. The latest installed follow-up
-is `dbe2469`, not a new full safety PASS.
+confirms visible navigation controls and corrected window bounds; later coordinate
+touches of native Home/Back confirm limited touch routing. Remaining safety coverage
+is still incomplete. The app's own Go Home button is not a substitute for system
+navigation. The latest installed follow-up is `909b41b`, not a new full safety PASS.
 See [the build-scoped evidence](A16_PARTIAL_RUN_2026-09-02.md). No safety PASS is implied.
 
 ## Pre-device evidence now recorded

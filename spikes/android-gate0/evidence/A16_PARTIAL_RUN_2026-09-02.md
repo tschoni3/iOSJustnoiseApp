@@ -416,6 +416,74 @@ the owner can stop normally, without repeating the already-confirmed browsing ch
 | [Chrome remains blocked after Keep going](a16-2026-09-02/chrome-blocked-after-keep-going.png) | `96c779fcdf8dc000e246f988243f9947c2de540ef3218bbe12444c2a19588473` |
 | [Empty phone keypad reachable while active](a16-2026-09-02/phone-reachable-while-active.png) | `1f69ff25d4a32e28aae2b80c3d4cbb317f49250e00dc87ec61d83296d7dee3bc` |
 
+### Owner-approved Accessibility revocation and recovery
+
+At approximately 23:36–23:39 device-local time, the owner explicitly approved
+temporarily switching off Justnoise's Accessibility service, with pairing/data
+retained and one manual owner re-enable afterward. The installed candidate is
+source `909b41b`, APK SHA-256
+`9fe99b7232a135cd6e6e16d4ad105faa3200cd87e516a5101a08bda60c7c4739`.
+The baseline was active/revision `22`, service connected, and Chrome's blocker visible.
+
+Ordinary Samsung Settings navigation reached the app-specific service page.
+An ADB coordinate touch selected the top enabled-service switch, followed by the
+visible **Ausschalten** confirmation. This is an owner-authorized system-UI disable,
+not an ADB permission write. The separate Accessibility shortcut remained unchanged.
+
+- Samsung showed the service **Aus**. Scoped persisted reads retained
+  `desired_active=true`, revision `22`; connected/heartbeat entries were removed.
+- On next app foreground, shared setup showed **Recovery required. Justnoise is not
+  claiming active enforcement.** Chrome remained selected and accepted consent
+  remained checked. Returning normally from setup to the integrated main screen
+  showed **Reconnect Accessibility** and explained that enforcement could not be
+  proved alive. Neither surface falsely claimed active protection.
+- Chrome's normal launcher Activity became foreground without a Justnoise overlay;
+  the service remained disconnected. This is a revocation/stale-blocker check, not
+  another Zap-stop or owner browsing confirmation.
+- Quiet presence checks confirmed the pairing record and Chrome selection survived.
+  No raw tag payload, digest or hardware identifier was printed. No data clearing,
+  instrumentation, `uiautomator dump`, Force Stop, uninstall or consent withdrawal
+  was performed.
+
+The phone was returned to the top service switch. The owner manually re-enabled it
+and replied **“enabled.”** Samsung then showed **Ein**, the service was connected,
+and the heartbeat advanced from `175082534` to `175104621` and finally `175134811`.
+The original active intent/revision `22` survived unchanged. Main showed **Phone
+Zapped / Protection active**, and opening Chrome displayed the blocker again.
+A touch of native Home returned to Samsung Home without a blocker. Pairing/selection
+were still present. No new Zap scan or repeated stop/unblock confirmation was needed.
+
+**Bounded recovery smoke result: PASS** on this installed A16 build. Normal
+permission revocation/unbind and manual re-enable worked; this is not an induced
+`onInterrupt()` callback, process crash, OEM reclaim, Force Stop, cleanup/reinstall,
+or full-matrix PASS. Full device metadata and the other safety cases remain open.
+The phone was left on Home with Accessibility enabled and session/revision `22`
+active, matching the pre-check session intent.
+
+The complete `scripts/verify-android-predevice-readiness.sh` run passed again after
+this recovery check, including all three Android projects, release APK/AAB, lint,
+and ten release-boundary verifier regressions. No app source changed in this
+evidence/draft update, and no additional APK installation or phone instrumentation
+was performed.
+
+| Artifact, source `909b41b` | SHA-256 |
+| --- | --- |
+| [Service disabled; shortcut unchanged](a16-2026-09-02/accessibility-disabled.png) | `a3e3985592ea035317640892fa05d46eeb989854b36ec4b8841f38fc666bd9e2` |
+| [Setup truthfully reports recovery](a16-2026-09-02/setup-after-accessibility-disable.png) | `a51e7c06c38b58e4f2e04cec6f34b33cb31c01b70f70bdf20ec822e88e2a0eb2` |
+| [Main screen requests Accessibility recovery](a16-2026-09-02/main-after-accessibility-disable.png) | `934d8b95b097f2624e5d8636bc0751810026e506cd0bda261e3539fa768d8956` |
+| [Main screen after manual re-enable](a16-2026-09-02/main-after-accessibility-reenable.png) | `3117190dd079c6f018574442870370f4b823b0ca12fc19664dfc2c6291744985` |
+| [Chrome blocker after manual re-enable](a16-2026-09-02/blocker-after-accessibility-reenable.png) | `dd35aa5aa62f41882f0a443503c11ded4ace524a8aae92c1e5a0450a56106b9a` |
+
+### Play Console status — read-only
+
+The signed-in Play Console page still showed **Creating a Play Console developer
+account / To get started, choose an account type** on September 2. It did not show
+a completed developer-account dashboard or an app record. No signup field, account
+type, payment, agreement or upload was submitted in this check. This does not
+establish the current D-U-N-S application status. The local reviewer walkthrough
+and Android privacy notice in `PLAY_DECLARATION_DRAFT.md` are drafts, not published
+policy or evidence of Play acceptance.
+
 ## Preserved foreground-cycle artifacts
 
 Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA-256.
