@@ -16,8 +16,11 @@ dispatch, exact-alarm/system-change adapters, startup recovery and a bounded
 in-memory foreground observation. The earlier runtime checkpoint had no schedule UI
 caller. Current source connects a native schedule list/editor, revision-checked
 create/edit/enable/delete, latest outcomes and an
-explicit exact-alarm Settings entry. The initial editor build compiled; final checks
-and emulator UI acceptance are still pending. This is not A16/release acceptance.
+explicit exact-alarm Settings entry. The [connected editor evidence](emulator-schedule-ui-2026-09-03/README.md)
+records passing local checks and a bounded emulator UI smoke. The later
+[draft-guard candidate](A16_MVP_CANDIDATE_2026-09-03.md) passed 161 JVM tests and
+the full local verifier; its phone update remains pending. These are not full UI,
+A16 privacy/delivery or release acceptance.
 See the [schedule plan](../../../docs/ANDROID_SCHEDULE_PLAN.md).
 
 | Source | Field or derived value | Purpose | Processing | Persistence and retention | Network destination |
