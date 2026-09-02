@@ -25,6 +25,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,6 +113,7 @@ fun IntegratedZapSurface(
     onZap: () -> Unit,
     onOpenSetup: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenSchedules: () -> Unit,
 ) {
     val background by animateColorAsState(
         targetValue = JustnoiseContract.color(
@@ -146,6 +148,7 @@ fun IntegratedZapSurface(
                 foreground = foreground,
                 onOpenSetup = onOpenSetup,
                 onOpenHistory = onOpenHistory,
+                onOpenSchedules = onOpenSchedules,
             )
 
             BoxWithConstraints(
@@ -213,8 +216,10 @@ private fun DevelopmentToolbar(
     foreground: Color,
     onOpenSetup: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenSchedules: () -> Unit,
 ) {
-    Row(
+    Column {
+      Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
@@ -269,6 +274,15 @@ private fun DevelopmentToolbar(
                 )
             }
         }
+    }
+      Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+          horizontalArrangement = Arrangement.Center,
+      ) {
+          TextButton(onClick = onOpenSchedules) {
+              Text(JustnoiseContract.text("schedule.list.title"), color = foreground, fontSize = 14.sp)
+          }
+      }
     }
 }
 
@@ -467,6 +481,6 @@ private fun IntegratedZapRecoveryPreview() {
 @Composable
 private fun IntegratedZapPreview(state: IntegratedZapState) {
     JustnoiseIntegratedTheme {
-        IntegratedZapSurface(state = state, onZap = {}, onOpenSetup = {}, onOpenHistory = {})
+        IntegratedZapSurface(state = state, onZap = {}, onOpenSetup = {}, onOpenHistory = {}, onOpenSchedules = {})
     }
 }

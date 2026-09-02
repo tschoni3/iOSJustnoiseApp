@@ -101,7 +101,7 @@ local-first on the existing A16; no account system or framework rewrite is requi
 | --- | --- | --- |
 | Select apps to block | Development source persists a set with explicit Save/Cancel and an immutable active-session snapshot; all 24 API-36 emulator instrumentation tests pass, including migration/picker and the exact Google Personal Safety exclusion; refreshed full local verification after that fix also passed | Sample multiple eligible targets on the A16 while preserving protected-system exclusions; A16 still has the earlier single-target build |
 | Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16; development source now implements stable identity/outbox with passing local History tests | Physically verify the History-capable candidate while preserving NFC authorization, stop guards and safe recovery |
-| Schedules | Versioned configuration, shared temporal rules, atomic occurrence/start receipts and native alarm runtime now implemented; the preview editor remains disconnected | Connect the real editor/enable/exact-access/outcome states, then verify actual background starts and recovery on A16 |
+| Schedules | Versioned configuration, shared temporal rules, atomic occurrence/start receipts and native alarm runtime now have a real integrated list/editor, explicit exact-access entry and stored outcomes | Verify the combined editor/background-start/History and recovery flow on A16; local tests and UI smoke do not establish OEM reliability |
 | History | Real local UUID/outbox/SQLite records and native list/summary; scheduled starts reuse the same completion engine and the new v4 consent boundary | A16 real-Zap and scheduled completion/History plus physical visual acceptance |
 
 Minimum implementation order:
@@ -221,7 +221,8 @@ targets, pairing and completed History are not rewritten by successful CRUD.
 That first slice was **rules and configuration only**, without a UI caller, alarm
 receiver, new permission, scheduled execution or persisted occurrence receipt.
 The runtime follow-up below adds the next source boundary; the real schedule UI
-and A16 flow remain unfinished. Earlier v3 consent is not silently treated as
+and A16 flow were unfinished at that checkpoint. The connected-editor follow-up
+below now covers the UI source. Earlier v3 consent is not silently treated as
 approval for automatic scheduled starts. This progress does not promote a physical gate.
 
 Final local verification passed: **116 JVM tests**, the full Android lint/build/
@@ -251,10 +252,39 @@ without a bound service, not live A16 enforcement. [Scoped evidence and hashes](
 record the final source results. The disposable emulator was closed; the phone was
 not installed or changed.
 
-**Next is the usable schedule screen:** real CRUD/enable, exact-access setup, next
-occurrence and latest outcome. Then verify the combined four-feature flow and new
-background/recovery boundaries on the existing A16. No A17 purchase is required,
-and no physical gate or Play readiness claim follows from these tests.
+At that runtime milestone the usable editor was next; the source integration below
+now connects it. No A17 purchase is required, and no physical gate or Play readiness
+claim follows from these tests.
+
+### Connected schedule editor — 2026-09-03
+
+The integrated Compose app now routes from Zap to real Schedules. The editor uses
+strict shared one-time/repeating rules; the list shows persisted enabled intent,
+next planned occurrence and latest outcome. Date/time dialogs, repeat weekdays,
+Save/Cancel, explicit conflict reload and delete confirmation have native controls.
+Permission/refusal/re-entry states remain truthful: only an explicit action opens
+alarm access, and unavailable setup is never labeled confirmed blocking.
+
+`ScheduleManagement` serializes coherent reads and consent-epoch/revision-checked
+writes on the existing store, releases the lock before runtime rearm, and reports
+saved-but-not-ready separately. A retained ViewModel owns in-flight writes across
+rotation. Restored uncertain mutations are not automatically retried, and a queued
+create from an older consent epoch cannot survive withdrawal/re-consent.
+
+The editor integration is Android-only; iOS UI/runtime, NFC authorization, session
+ownership and completed History fields are unchanged. The four-feature source is
+now connected, but A16 acceptance, release identity/signing and Play steps remain.
+
+Final local verification passed **157 JVM tests** (124 Gate 0, 15 UI, 18 integrated,
+including 14 editor tests), **83 emulator instrumentation tests** (including 14 new
+management tests), all lint/build tasks, **13 Python release-checker tests** and the
+packaged unsigned-release boundary. The XML reports have zero failures/errors/skips;
+up-to-date JVM suites were reused where applicable. [Exact commands, reports and
+artifact hashes](../spikes/android-gate0/evidence/emulator-schedule-ui-2026-09-03/README.md)
+record the result. A bounded integrated emulator UI smoke also passed empty/setup
+states, draft rotation, explicit alarm Settings denial/return, create/edit-cancel,
+disable and delete confirmation. Its screenshots and limits are recorded there;
+this does not establish full visual acceptance, A16 alarm delivery or Play readiness.
 
 ### Rejected-Zap notification safety fix — 2026-09-03
 

@@ -14,7 +14,7 @@ This audit compares the launch-ready iOS surface (`CAPTURE_ENABLED` absent) with
 | First-run three-step Zap/mode/schedule coach tour | `CoachMarksPrototype.kt` | **Covered.** The order, copy, skip, next, and finish behavior match the Release iOS tour. |
 | Mode selection, create, edit, delete confirmation, target counts, and app-picker entry | `ManagementFlowPrototype.kt` | **Covered.** The Android picker remains an explicit Gate 0 boundary. Nothing is stored. |
 | History 90-day/year choice, summary cards, dot grid, and Settings entry | `ManagementFlowPrototype.kt`, `HistoryPresentationRules.kt` | **Covered.** Representative local durations flow through the shared Zap-count, duration-label, density-threshold, and semantic dot-color contracts; no session history is read or calendar-bucketed. |
-| Schedule list, empty state, enable switch, create form, edit entry, and repeat-day controls | `ManagementFlowPrototype.kt` | **Covered.** No background schedule is registered and portable timing semantics remain deferred. |
+| Schedule list, empty state, enable switch, create form, edit entry, and repeat-day controls | `ManagementFlowPrototype.kt` | **Covered in the permission-free prototype.** These preview controls do not register schedules. Real integrated-app source wiring is recorded below; it uses the now-defined temporal rules. |
 | Settings account rows, onboarding, support/about links, emergency flow, account deletion confirmation, and sign out | `ManagementFlowPrototype.kt` | **Covered.** Destructive/external actions terminate in truthful preview notices. |
 | Capture-disabled Session Complete | `SessionFeedbackPrototype.kt` | **Covered.** No reflection route is offered in the Release surface. |
 | Conditional Noise Rewind ready card and seven-page flow | `NoiseRewindPrototype.kt` | **Covered.** Representative values; no analytics or persistence. |
@@ -33,6 +33,22 @@ continuous blocking. No real 90-day/year grid or weekly insight is claimed. Loca
 History instrumentation and the full repository verifier now pass; these are not
 physical visual acceptance. A16 History/visual results remain pending.
 See `ANDROID_SESSION_HISTORY.md` for persistence, consent and recovery boundaries.
+
+## Integrated schedule source — 2026-09-03
+
+The integrated app now also has `IntegratedScheduleSurface`: real list/empty/error
+states, one-time and repeating editor, enable/delete actions, next planned occurrence
+and latest persisted outcome. It uses the existing native schedule/session engine,
+not the preview list. Native date/time pickers, localized weekday labels, wrapped
+controls, safe insets and scrolling handle the platform presentation. Exact-alarm
+access and existing Accessibility setup are explicit user actions; missing setup
+remains visible. A historical STARTED outcome is not a claim of current blocking.
+The retained ViewModel keeps drafts/in-flight mutations across rotation, with
+explicit conflict/reload and process-death uncertainty states. Three Compose
+previews cover empty, saved and editing surfaces. A [bounded emulator UI smoke](../spikes/android-gate0/evidence/emulator-schedule-ui-2026-09-03/README.md)
+passed setup states, draft rotation, Settings denial/return, create/edit-cancel,
+disable and delete confirmation; A16 visual and functional acceptance remains
+pending. See `ANDROID_SCHEDULE_PLAN.md` for the native boundaries.
 
 ## What the percentage means
 

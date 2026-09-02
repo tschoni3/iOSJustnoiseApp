@@ -15,6 +15,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModelProvider
 import com.justnoise.gate0.R
 import com.justnoise.gate0.app.MainActivity as Gate0SetupActivity
 import com.justnoise.gate0.data.Gate0Preferences
@@ -29,6 +30,7 @@ import com.justnoise.gate0.platform.nfc.NdefReadResult
 import com.justnoise.gate0.platform.nfc.NdefTagReader
 import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
 import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
+import com.justnoise.gate0.platform.schedule.ScheduleAlarmScheduler
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -40,6 +42,9 @@ class MainActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var screenState by mutableStateOf(IntegratedZapState())
     private var showingHistory by mutableStateOf(false)
+    private var showingSchedules by mutableStateOf(false)
+    private lateinit var schedules: IntegratedScheduleViewModel
+    private var scheduleRefreshAt = 0L
     private var historyState by mutableStateOf(IntegratedHistoryState())
     private val historyExecutor = Executors.newSingleThreadExecutor()
     private var historyRequestGeneration = 0
@@ -52,6 +57,12 @@ class MainActivity : ComponentActivity() {
     private val refresh = object : Runnable {
         override fun run() {
             refreshTruth()
+            if (showingSchedules && schedules.state.editor == null &&
+                SystemClock.elapsedRealtime() - scheduleRefreshAt >= 5_000L
+            ) {
+                scheduleRefreshAt = SystemClock.elapsedRealtime()
+                schedules.load()
+            }
             handler.postDelayed(this, REFRESH_INTERVAL_MILLISECONDS)
         }
     }
@@ -61,6 +72,10 @@ class MainActivity : ComponentActivity() {
         controller = Gate0Controller(this)
         preferences = Gate0Preferences(this)
         showingHistory = savedInstanceState?.getBoolean(HISTORY_ROUTE_KEY) ?: false
+        showingSchedules = savedInstanceState?.getBoolean(SCHEDULE_ROUTE_KEY) ?: false
+        if (showingSchedules) showingHistory = false
+        schedules = ViewModelProvider(this)[IntegratedScheduleViewModel::class.java]
+        schedules.initialize(savedInstanceState?.getBundle(SCHEDULE_STATE_KEY))
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -74,8 +89,26 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             JustnoiseIntegratedTheme {
-                BackHandler(enabled = showingHistory, onBack = ::closeHistory)
-                if (showingHistory) {
+                BackHandler(enabled = showingHistory || showingSchedules) {
+                    if (showingSchedules) backFromSchedules() else closeHistory()
+                }
+                if (showingSchedules) {
+                    IntegratedScheduleSurface(
+                        state = schedules.state,
+                        onBack = ::backFromSchedules,
+                        onRefresh = schedules::refresh,
+                        onNew = schedules::newSchedule,
+                        onEdit = schedules::edit,
+                        onEditorChange = schedules::changeEditor,
+                        onSave = schedules::save,
+                        onCancelEditor = schedules::cancelEditor,
+                        onReloadEditor = schedules::reloadEditor,
+                        onDelete = schedules::delete,
+                        onToggle = schedules::setEnabled,
+                        onOpenSetup = ::openSetup,
+                        onAlarmAccess = ::openScheduleAlarmAccess,
+                    )
+                } else if (showingHistory) {
                     IntegratedHistorySurface(
                         state = historyState,
                         onBack = ::closeHistory,
@@ -93,6 +126,7 @@ class MainActivity : ComponentActivity() {
                         onZap = ::handleZapPress,
                         onOpenSetup = ::openSetup,
                         onOpenHistory = ::openHistory,
+                        onOpenSchedules = ::openSchedules,
                     )
                 }
             }
@@ -105,6 +139,7 @@ class MainActivity : ComponentActivity() {
         handler.removeCallbacks(refresh)
         refresh.run()
         if (showingHistory) loadHistory(historyLimit)
+        if (showingSchedules) schedules.load()
     }
 
     override fun onPause() {
@@ -119,6 +154,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(HISTORY_ROUTE_KEY, showingHistory)
+        outState.putBoolean(SCHEDULE_ROUTE_KEY, showingSchedules)
+        outState.putBundle(SCHEDULE_STATE_KEY, schedules.saveInstanceState())
         super.onSaveInstanceState(outState)
     }
 
@@ -130,6 +167,7 @@ class MainActivity : ComponentActivity() {
 
     private fun openHistory() {
         cancelReaderMode()
+        showingSchedules = false
         showingHistory = true
         loadHistory(HISTORY_PAGE_SIZE)
     }
@@ -139,6 +177,38 @@ class MainActivity : ComponentActivity() {
         showingHistory = false
         historyState = IntegratedHistoryState()
         refreshTruth()
+    }
+
+    private fun openSchedules() {
+        cancelReaderMode()
+        historyRequestGeneration += 1
+        showingHistory = false
+        showingSchedules = true
+        schedules.load()
+    }
+
+    private fun backFromSchedules() {
+        if (schedules.state.saving) {
+            // Leaving the route does not cancel a write already in progress. The retained
+            // ViewModel settles it once, even if the user returns before it completes.
+            showingSchedules = false
+            refreshTruth()
+        } else if (schedules.state.editor != null) {
+            schedules.cancelEditor()
+        } else {
+            showingSchedules = false
+            refreshTruth()
+        }
+    }
+
+    /** Only this explicit user action opens alarm Settings; onResume merely refreshes access. */
+    private fun openScheduleAlarmAccess() {
+        cancelReaderMode()
+        try {
+            startActivity(ScheduleAlarmScheduler(this).permissionIntent())
+        } catch (_: RuntimeException) {
+            schedules.showMessage("Android couldn’t open alarm access. Open Settings → Apps → Special access → Alarms & reminders.")
+        }
     }
 
     private fun loadHistory(limit: Int) {
@@ -365,5 +435,7 @@ class MainActivity : ComponentActivity() {
         const val TRANSIENT_STATUS_MILLISECONDS = 5_000L
         const val HISTORY_PAGE_SIZE = 100
         const val HISTORY_ROUTE_KEY = "showing_history"
+        const val SCHEDULE_ROUTE_KEY = "showing_schedules"
+        const val SCHEDULE_STATE_KEY = "schedule_screen_state"
     }
 }

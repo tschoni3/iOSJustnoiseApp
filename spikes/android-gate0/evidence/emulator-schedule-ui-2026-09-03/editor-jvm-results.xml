@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.justnoise.integrated.IntegratedScheduleEditorTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-09-02T23:38:09.128Z" hostname="TJs-MacBook-Pro.local" time="0.033">
+  <properties/>
+  <testcase name="defaultDoesNotOfferTheSecondOverlapAsAFutureOneTime" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.02"/>
+  <testcase name="newDefaultMayCrossMidnightButUserPastDateIsNeverRolledForward" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.001"/>
+  <testcase name="supportedEpochEndDoesNotOverflowOrCreateAnUnavailableOccurrence" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.001"/>
+  <testcase name="storedOneTimePreservesRevisionZoneAndExactInstantAfterTravel" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <testcase name="newEditorDefaultsAboutOneHourAheadInNamedZone" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <testcase name="storedRepeatingRetainsIdentityAndClockButFollowsDeviceZone" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <testcase name="oneTimeGapIsRejectedAndOverlapUsesOnlyFirstOccurrence" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.001"/>
+  <testcase name="repeatingRequiresWeekdaysAndSavesTheCurrentDeviceZone" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.006"/>
+  <testcase name="namesAreTrimmedAndLimitedToEightyCharacters" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <testcase name="pastStoredOneTimeMayRemainDisabledButCannotBeReenabledOrChangedToAnotherPastTime" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <testcase name="repeatingSkipsAGapDayUsingSharedRules" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.001"/>
+  <testcase name="invalidDatesTimesAndUnsupportedZonesAreRejected" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <testcase name="changingAStoredOneTimeOrItsChosenZoneResolvesTheNewInput" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.001"/>
+  <testcase name="newOneTimeMustBeStrictlyFutureEvenWhenDisabled" classname="com.justnoise.integrated.IntegratedScheduleEditorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

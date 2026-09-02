@@ -121,8 +121,9 @@ No node/window-content retrieval or event history is introduced. This behavior a
 unknown-foreground/screen-off limits require A16 evidence before a reliability claim.
 
 The native disclosure moves to v4 before activation; existing pairing/selection and
-eligible History remain, but earlier consent is not silently upgraded. Schedule UI,
-physical acceptance and Play/signing remain separate work. This section describes the
+eligible History remain, but earlier consent is not silently upgraded. At this runtime
+checkpoint the editor remained separate; the connected UI follow-up is recorded below.
+Physical acceptance and Play/signing remain separate work. This section describes the
 implementation boundary, not a passed device test or released feature.
 
 Recovery uses one fixed explicit-entry cutoff for planning, discarding due work and
@@ -134,6 +135,45 @@ an earlier grace-window timestamp. The active scheduled session also retains its
 schedule ID for conservative unknown-foreground recovery, not in completed History.
 
 ## Three focused implementation slices
+
+### Editor integration boundary — 2026-09-03
+
+The integrated development app now exposes Schedules alongside History and Setup.
+Its list and editor use real configuration/execution state: create/edit/delete,
+one-time Gregorian date/time or selected repeating weekdays, requested enabled state,
+next occurrence and only the latest stored outcome. The editor states that schedules
+use the currently saved apps at fire time, start automatically and end by Zap tap.
+Disabling/deleting a schedule affects future starts, never stops an active session.
+
+Missing exact-alarm access retains the saved requested-enabled schedule and shows
+setup required, not a ready/armed claim. The system access page opens only from an
+explicit user action, never from loading, scanning or an alarm callback. The user
+can return without granting access; configuration remains visible and unavailable.
+Current Accessibility disclosure/consent and recovery still use existing Setup.
+No schedule editor action grants consent or pairs a Zap. A save queued before
+withdrawal must fail the frozen consent-epoch recheck even after re-consent, instead
+of recreating revoked configuration.
+
+Editing preserves stable IDs/revisions and fixed one-time instants across travel;
+repeating times follow the current device zone. Invalid/past new one-time input is
+rejected without silently moving it. Conflict or write failure retains the user's
+draft and offers retry/reload. Navigation cancels an active NFC reader, and editor
+drafts survive ordinary recreation/permission-page return through a retained ViewModel
+and Android-managed saved-instance-state Bundle. Restored uncertain mutations warn
+and are not automatically retried; reload/discard is explicit. Actual alarm readiness is
+rechecked natively; displayed future time is a plan, not a delivery guarantee.
+
+These Android-local controls reuse shared timing/copy keys where already defined;
+permission and failure wording stays native. The published iOS UI/runtime is unchanged.
+
+Final local verification passed **157 JVM tests**, including **14 editor tests**,
+**83 emulator instrumentation tests**, including **14 management tests**, lint/builds,
+**13 Python release-checker tests** and packaged-release checks. [Editor evidence,
+exact commands and artifact hashes](../spikes/android-gate0/evidence/emulator-schedule-ui-2026-09-03/README.md)
+record scope and report counts. The bounded integrated emulator UI smoke passed
+empty/setup states, draft rotation, alarm Settings denial/return, create/edit-cancel,
+disable and delete confirmation. Neither this limited UI check nor source
+integration establishes A16/OEM delivery or Play acceptance.
 
 1. **Rules and configuration storage — locally verified.** Add portable fixtures/native domain tests for the approved
    defaults; version local schedule storage, edits and occurrence identity. Cover
@@ -153,8 +193,9 @@ schedule ID for conservative unknown-foreground recovery, not in completed Histo
    records 143 JVM tests, 69 emulator tests, lint/build/release checks and their exact
    boundaries. The real alarm test proves refusal without a bound service, not A16
    blocking reliability or a complete user-facing scheduling feature.
-3. **Usable schedule screen and A16 acceptance.** Connect create/edit/enable/delete,
-   next occurrence and outcome states to real data. Test a due schedule while a
+3. **Schedule screen connected and bounded UI smoke passed; A16 acceptance pending.** Real
+   create/edit/enable/delete, next occurrence and outcome states now connect to
+   persisted data, with the local checks above. Test a due schedule while a
    selected app is already open: today's event-triggered blocker alone does not
    prove this. Any minimal in-memory foreground-package cache must be documented,
    reset on uncertain lifecycle state, and avoid node/window-content retrieval.

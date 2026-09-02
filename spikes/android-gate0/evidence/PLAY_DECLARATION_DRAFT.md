@@ -11,16 +11,21 @@ History instrumentation and full verification recorded in
 These are not A16, policy or release acceptance. The dated single-target A16 checkpoint
 remains unchanged and build-specific. Current source adds v4 disclosure, atomic
 scheduled dispatch/execution records, bounded exact-alarm delivery, startup recovery
-and one temporary foreground-package observation. The schedule editor/enable flow
-still has no UI caller. This runtime slice is not A16, policy or release acceptance,
-nor proof that schedules are already usable from the app.
+and one temporary foreground-package observation. The integrated app now connects
+the native schedule list/editor, create/edit/enable/delete, latest outcome display
+and explicit exact-alarm Settings entry. Final local checks passed (157 JVM tests,
+83 emulator instrumentation tests, lint/build/release-boundary checks), with a
+[bounded integrated UI smoke](emulator-schedule-ui-2026-09-03/README.md) of draft
+rotation, Settings denial/return and sample schedule management. Successful alarm
+permission/enforcement and complete visual acceptance were not established. This
+source integration is not A16, policy or release acceptance.
 Do not submit this draft unchanged: reconcile it with the implemented release,
 including schedule-triggered behavior, retention, labels and reviewer steps. Preview
 screens are not implemented features.
 
 ## Core functionality
 
-Justnoise is a focus product. At the user's explicit request, the candidate compares the foreground package identifier from Android window-state changes with the locally selected apps copied into the active session's target snapshot. During an eligible manual or configured scheduled session, an exact match displays a Justnoise-owned interruption overlay naming that foreground app. The runtime supports automatic scheduled start and paired-Zap stop; its schedule editor is not yet connected. The service does not suspend the target package and is not a tool whose primary purpose is assisting people with disabilities.
+Justnoise is a focus product. At the user's explicit request, the candidate compares the foreground package identifier from Android window-state changes with the locally selected apps copied into the active session's target snapshot. During an eligible manual or configured scheduled session, an exact match displays a Justnoise-owned interruption overlay naming that foreground app. The connected schedule editor configures automatic starts using the current saved app selection; the paired Zap stops a session. The service does not suspend the target package and is not a tool whose primary purpose is assisting people with disabilities.
 
 ## Why the Accessibility API is proposed
 
@@ -38,7 +43,8 @@ A normal consumer-installed application does not receive device-owner package-su
 - Configuration retained locally: selected packages, active-session UUID/target snapshot/clocks/process identity and interruption/eligibility flags, last-finished session ID, disclosure version/timestamp, enforcement state/revision/heartbeat, and a Keystore-backed Zap HMAC digest. Successful stop removes active state; saved selection and pairing remain.
 - Active scheduled-session ownership: `active_schedule_id` stores the originating schedule UUID only during that active scheduled session. Successful stop, manual start, withdrawal, app-data clear or uninstall removes it; completed History does not gain a schedule-ID field.
 - Local History retention in source: only session UUID, start/end times, non-negative duration, selected-target count and interruption flag. A pending completion in private preferences drains idempotently to `session_history.db` before later starts/History reads, not during stop; no package names, foreground-event stream or raw tag data enter History. Records remain until withdrawal, app-data clear or uninstall.
-- Schedule configuration: private `schedules_v1` stores up to 100 records containing UUID, revision, name, enabled flag, one-time instant or repeating weekdays/hour/minute, named creation-zone ID and mode reference (new records use `local-default`). Records remain until deletion, withdrawal, app-data clear or uninstall; editor/enable UI callers remain unfinished.
+- Schedule configuration: private `schedules_v1` stores up to 100 records containing UUID, revision, name, enabled flag, one-time instant or repeating weekdays/hour/minute, named creation-zone ID and mode reference (new records use `local-default`). The native list/editor reads and changes these real records with current-consent and revision checks. Records remain until deletion, withdrawal, app-data clear or uninstall; no new schema was added for the UI.
+- Schedule UI state: a retained AndroidViewModel and Android-managed saved-instance-state Bundle keep the route, raw editor fields, original schedule revision and original one-time instant/zone across recreation. A possible interrupted mutation shows an uncertainty warning and is not automatically repeated. Explicit reload discards unsaved edits. Observed current-consent revocation clears the ViewModel draft; a transient consent epoch frozen at the user action is checked at commit to reject stale queued work even after re-consent. It is not a new stored field or telemetry.
 - Schedule execution: `schedule_executions_v1` stores at most one pending occurrence, independent replay-prevention local-date/one-time-instant markers and only the latest outcome per schedule. Occurrences identify schedule/revision/key/fire epoch/local date/zone; outcomes add code/handled epoch and a session UUID only for a committed start. Markers survive edits; deleting the schedule or withdrawing clears its execution entry, while completed session History has its separate retention above. No unbounded outcome log.
 - Recovery and delivery metadata: private suspension/foreground-acknowledgment state; temporary own-process start PID/name/Force Stop evidence on API 35+, or conservative own-process exit reason/time evidence on API 31–34. Raw startup records are not retained or logged. A non-exported receiver uses exact-alarm, boot and wake-lock permissions, one running/one queued delivery, a 9-second wake-lock lease and an 8-second processing budget including queue wait. It revalidates persisted state; extras alone never start a session.
 - Separate local platform metadata: enabled-service components for Justnoise readiness, protected-package resolution, window bounds/insets and interactive/locked Booleans for safe overlay placement. None is used as app-usage history or sent off-device; see `DATA_INVENTORY.md`.
@@ -49,9 +55,12 @@ A normal consumer-installed application does not receive device-owner package-su
 
 The disclosure is followed by an initially unchecked control reading: “I understand this disclosure and choose to test the Accessibility capability.” Only the user's subsequent button press records consent and opens Accessibility settings. Installation, launch, onboarding, app selection, or NFC scan does not open settings. Current-version consent stays visibly checked until withdrawal. Current wording is `gate0-accessibility-v4`: v1/v2/v3 acceptance is not silently upgraded, and new starts/service use require affirmative v4 consent. Saved selection and Zap pairing remain. Existing v3 sessions retain their prior History eligibility when stopped; v1/v2 sessions are not backfilled. New History-eligible starts use v4.
 
-The quoted text matches source, including the intended separate exact-alarm request.
-The schedule editor/enable entry is not connected yet; complete that visible flow
-and verify refusal/recovery before using this text as release evidence. Declaring
+The quoted v4 text remains unchanged and matches source. The connected editor/list
+offers **Allow alarms & reminders** only when a draft or saved schedule requests
+enabled starts and access is missing. Only pressing that button opens Android's
+Settings; saving or toggling a schedule alone does not grant access or open Settings.
+Enabled intent can remain saved with **setup required**. Verify refusal/recovery
+and the final UI before using this text as release evidence. Declaring
 `SCHEDULE_EXACT_ALARM` is not a claim that access was granted or delivery succeeded.
 
 ## User control and escape
@@ -64,6 +73,12 @@ Force Stop/uncertain startup suspends background scheduling until explicit curre
 consented foreground recovery discards due starts and acknowledges future work.
 API 31–34 exit evidence is conservative and can also require recovery after Recents
 removal; this is not claimed to be exact Force Stop attribution on those versions.
+The schedule editor supports explicit Cancel and confirmed **Reload saved version**;
+stale revisions are not silently overwritten. Rotation retains the one in-flight
+mutation; process-death restoration warns when its outcome may be uncertain and
+does not automatically retry. Disabling or deleting a schedule removes future
+starts, not an already-active session; that session still requires the paired Zap
+or the documented user-controlled escape routes.
 
 ## Static review checkpoint — 2026-09-02
 
@@ -111,14 +126,13 @@ establish approval of the complete product.
 
 ## Minimal internal-beta reviewer walkthrough — draft
 
-Updated for the source-integrated local-only History extension on 2026-09-03. These are review
+Updated for local History and the source-connected schedule editor on 2026-09-03. These are review
 instructions and expected outcomes, not a claim that every step
 has passed or that this source is installed on the A16. Build-specific single-target results remain in
 [the September 2 evidence](A16_PARTIAL_RUN_2026-09-02.md).
-The schedule runtime exists, but editor/enable UI callers are unfinished. This
-walkthrough therefore does not claim a usable schedule flow. Add real editor,
-separate exact-alarm access, scheduled start/Zap stop, missed-delivery and explicit
-recovery steps before submitting the release instructions.
+The native schedule flow below is connected in source. The instructions describe
+checks to perform, not completed emulator UI or A16 acceptance; reconcile every
+label and observed result with the final release before submitting them.
 
 - **Current development app:** `com.justnoise.androiddev`, label **Justnoise Android Dev**.
   The setup screen still uses Gate 0 wording. Do not upload its debug or unsigned
@@ -166,7 +180,25 @@ recovery steps before submitting the release instructions.
    deliberate recovery interruption on disposable test data and verify its
    **Blocking interrupted** label. No app names, foreground-event log, 90-day calendar or
    weekly insight should be implied by this list.
-7. Show the ordinary Home/Back and escape routes. **Disable Accessibility** opens
+7. Open **Schedules**, press **+ Add**, name a future schedule and choose **One time**
+   with the native date/time controls, or **Repeat weekly** with explicit weekdays.
+   Confirm the saved-selection count and **Schedule enabled** choice, then **Save
+   schedule**. The list must show the persisted record and distinguish enabled intent
+   from setup readiness. Refuse alarm access first: no grant or automatic Settings
+   launch should occur. When an enabled start is requested, explicitly press
+   **Allow alarms & reminders** and make the choice in Android Settings. Reopen/edit,
+   Cancel, and confirmed **Reload saved version** should retain or discard only the
+   intended changes; stale revisions must not overwrite a newer saved record.
+8. With setup ready, observe a due configured start without a manual start scan,
+   then stop with the paired Zap and check one corresponding History completion.
+   The schedule's **Last result** is a historical outcome, not current protection
+   status. Record delayed/missed delivery and explicit stopped-state recovery
+   honestly; recovery must not catch up old starts. Disable/delete removes future
+   occurrences without stopping an active session. On disposable state, verify
+   rotation and process-recreation: an uncertain save requires review/reload and is
+   never automatically repeated. Withdrawal clears an observed draft, and queued
+   actions under the old consent must remain rejected after re-consent.
+9. Show the ordinary Home/Back and escape routes. **Disable Accessibility** opens
    Android settings; **App info / Force Stop** opens app controls. In a deliberate
    cleanup test, **Withdraw consent and clear Gate 0 data** requests local cleanup and
    service disablement, including pending/completed History and schedule/execution
@@ -184,7 +216,7 @@ be assumed to replace access to restricted functionality. See [app review access
 ## Justnoise Android internal beta — Privacy Policy draft
 
 Draft updated: 2026-09-03. This text is for the planned local-only `com.justnoise.app`
-beta with local History and the source-level schedule runtime, not a claim that device or release
+beta with local History and the connected native schedule flow, not a claim that device or release
 acceptance has finished. It does not describe the iOS app, web shop, or Android/Google Play's
 own services. Validate it against the release package before publication.
 
@@ -250,8 +282,16 @@ only if a start committed. Markers survive edits to prevent replay. Configuratio
 and execution records remain until that schedule is deleted, consent withdrawal,
 app-data clear or uninstall. Completed scheduled sessions use the same History
 path and retention as manual sessions; deleting a schedule does not delete History.
-The editor/enable UI is not yet connected, so this source boundary is not a claim
-that scheduling is already available to users.
+The native editor offers one-time date/time or repeating weekdays and uses the
+current saved app selection at each start. A retained ViewModel and Android-managed
+saved-instance-state Bundle may keep the route and unsaved editor fields, original
+revision and original one-time instant/zone for Activity/process recreation. This
+adds no separate app preference/database schema. Unsaved state is discarded on successful save,
+Cancel/explicit discard or observed consent revocation. If the process ends while a
+save may be in progress, restoration warns that its result is uncertain; the app
+does not automatically repeat the change. Explicit reload discards unsaved edits.
+A transient consent timestamp frozen for each mutation rejects queued changes after
+withdrawal, even if current consent is later accepted again.
 
 The app temporarily checks its own process startup evidence: PID/name and Force Stop
 status on Android API 35+, or its own exit reason/time on API 31–34. It does not save
@@ -268,6 +308,9 @@ an 8-second processing budget including queue wait. The alarm is replaced/cancel
 through Android; worker state is transient. A callback alone is not proof of a
 session start. Delivery can be delayed or missed, and stopped-state recovery does
 not catch up old starts. No new network destination or analytics is introduced.
+The separate alarm Settings button is offered only for requested-enabled schedules
+with missing access and opens Settings only when pressed. Saving alone does not
+grant access; enabled configuration can be retained while setup is still required.
 
 **Withdraw consent and clear Gate 0 data** attempts to remove saved configuration,
 pending/completed History, schedule/execution/recovery state and the pairing key,
@@ -280,8 +323,9 @@ service access but does not erase saved configuration or History. There is no se
 account to delete. Raw foreground events and NFC payloads are not retained as History.
 Affirmative v4 disclosure consent is required for new starts/service use; earlier
 consent is not silently upgraded. Existing v3 active sessions keep their prior
-History eligibility; v1/v2 sessions are not backfilled. Complete and verify the
-schedule editor/enable and separate exact-alarm permission flow before release.
+History eligibility; v1/v2 sessions are not backfilled. Verify the connected
+schedule editor/enable and separate exact-alarm permission flow before release;
+local checks and the bounded emulator UI smoke are not full UI, A16 or policy acceptance.
 
 The detailed implementation inventory is [DATA_INVENTORY.md](DATA_INVENTORY.md).
 Before publishing, provide a working contact, review the final release's actual data

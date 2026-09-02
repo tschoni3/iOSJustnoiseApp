@@ -21,6 +21,9 @@ class ScheduleRuntime(context: Context) {
         runPass(deadlineElapsedMilliseconds)
     }
 
+    /** Configuration already committed; reuse current-plan validation without a synthetic session toggle. */
+    fun onConfigurationChanged() = onAlarm()
+
     fun onSystemChange(
         @Suppress("UNUSED_PARAMETER") action: String,
         deadlineElapsedMilliseconds: Long = deadline(),

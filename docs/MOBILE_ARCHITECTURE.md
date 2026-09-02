@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.19
+Status: target architecture, version 1.0.20
 
 ## Decision
 
@@ -49,9 +49,20 @@ History. One explicit non-exported alarm receiver delivers through a bounded
 worker and CPU lease; exact-alarm access is checked without an inexact fallback.
 Duplicate/stale callbacks cannot toggle sessions. Current bound-service preflight,
 transient package-only foreground state, stopped-state recovery and v4 consent
-remain native adapter concerns, documented in the data inventory. The real editor,
-permission setup flow and A16 acceptance are not connected/verified yet. This is
+remain native adapter concerns, documented in the data inventory. At that slice,
+the real editor and permission setup flow were not connected. This is
 Android-only execution of the already approved rules, not an iOS runtime change.
+
+Schedule UI integration, 2026-09-03: the integrated development app now exposes a
+real list/editor backed by `ScheduleManagement`, not the separate preview data.
+`IntegratedScheduleEditor` uses shared time rules; one retained native ViewModel
+owns asynchronous reads/mutations and preserves in-flight saves across rotation.
+Instance-state restoration preserves a draft but never repeats an uncertain save.
+Revision and frozen consent-epoch checks protect stale edits and queued writes
+across withdrawal/re-consent. Exact-access Settings opens only from an explicit
+user action; saved enabled intent is not displayed as a blocking guarantee. No
+framework, module, backend or iOS change is added. A16 feature acceptance and Play
+distribution remain separate gates recorded in `ANDROID_PREDEVICE_READINESS.md`.
 
 ## Readiness checkpoint
 
@@ -224,7 +235,7 @@ Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftU
 | Blocked surface | Managed Settings shield configured with app/site name, fallback copy, and white action | Shield template, fallbacks, action copy, and semantic colors are shared | Gate 0 blocker; Android owns a Compose/View overlay and must pass accessibility, layout, bypass, and escape-path checks |
 | Emergency Unzap and recovery | Token-gated recovery plus relaunch/platform-state reconciliation | Recovery intent is portable; token replenishment is intentionally undefined | Include recovery in primary Android v1, but do not invent replenishment or stronger enforcement semantics |
 | History and weekly Noise Rewind | Session totals, day grid, 90-day/year views, completion summary, and weekly insight | History Zap count, aggregate-before-minute-truncation, compact labels, density thresholds, and four density colors are shared; calendar bucketing, window/time-zone semantics, weekly insight, and most remaining copy are not frozen | Add after the core focus slice; reuse the History fixtures, then define calendar and weekly-insight fixtures before persistence-backed implementation |
-| Schedules and notifications | Create/edit/enable/delete schedule, Device Activity extension, and notification nudges | Schedule identity/eligibility and 38 temporal cases are shared; approved Android start-only/Zap-stop defaults and iOS differences are explicit in `docs/ANDROID_SCHEDULE_PLAN.md` and `docs/SCHEDULE_PORTABILITY_AUDIT.md` | Configuration and native delivery now reuse the session/History engine; connect the real editor and verify A16 background behavior. Do not copy the iOS monitoring window as a session duration |
+| Schedules and notifications | Create/edit/enable/delete schedule, Device Activity extension, and notification nudges | Schedule identity/eligibility and 38 temporal cases are shared; approved Android start-only/Zap-stop defaults and iOS differences are explicit in `docs/ANDROID_SCHEDULE_PLAN.md` and `docs/SCHEDULE_PORTABILITY_AUDIT.md` | Configuration, native delivery and the real editor now reuse the session/History engine; verify the combined flow and background behavior on A16. Do not copy the iOS monitoring window as a session duration |
 | Settings, deletion, and support | Account details, language, onboarding reset, support/legal links, Emergency Unzap, deletion, and sign-out | Account deletion/isolation rules are shared; store links, language UI, and provider details remain native | Add account/deletion settings with the first authenticated slice; add secondary support/settings rows incrementally |
 | Active-session system surface | WidgetKit extension supplies a Live Activity, Lock Screen, StandBy, and Dynamic Island presentation | Active/idle truth is portable; system presentation is not | Use an Android ongoing notification after the core restriction flow is stable; behavioral truth matters, not pixel identity |
 | Capture and Signal | Capture entry points are compiled out of Release; development source remains available | Signal API contract is pinned, but Capture is not in the launch surface | Excluded from Android v1 until the iOS feature is launch-ready and separately scoped |
