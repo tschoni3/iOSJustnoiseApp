@@ -99,7 +99,7 @@ class PortableFixtureContractTest {
 
     @Test
     fun `consumes every session lifecycle fixture through production reducer`() {
-        assertEquals("1.4.0", fixture.getString("fixtureSetVersion"))
+        assertEquals("1.5.0", fixture.getString("fixtureSetVersion"))
         val cases = fixture.getJSONArray("sessionLifecycle")
         assertEquals(7, cases.length())
 

@@ -11,7 +11,9 @@ This inventory also covers the source-level local History integration designed i
 36-test emulator suite includes 12 passing History tests, and the full local verifier
 passed; see the [readiness record](../../../docs/ANDROID_PREDEVICE_READINESS.md).
 A16 acceptance, device privacy observation and OEM recovery remain unverified.
-Schedule data/delivery remain unimplemented and require a later inventory update.
+The schedule foundation now implements pure timing rules and private configuration
+storage; no UI caller, alarm, occurrence receipt/outcome or scheduled session
+execution is connected. See the [schedule plan](../../../docs/ANDROID_SCHEDULE_PLAN.md).
 
 | Source | Field or derived value | Purpose | Processing | Persistence and retention | Network destination |
 | --- | --- | --- | --- | --- | --- |
@@ -21,6 +23,7 @@ Schedule data/delivery remain unimplemented and require a later inventory update
 | Platform safety resolution | Home activity package identifiers, resolved Settings/uninstaller package identifiers, and default dialer package; fixed protected-package list and own package | Exclude system/escape apps from selection and enforcement | Transient local PackageManager/TelecomManager queries and set comparison | Not persisted, logged, or collected as history | None |
 | Accessibility enablement setting | Flattened enabled-service component list from `ENABLED_ACCESSIBILITY_SERVICES`; derived Boolean for this app's service | Report whether the user enabled Justnoise, separately from service heartbeat | Transient parsing and exact comparison with Justnoise's expected component | Component list is not retained; the Boolean is recomputed for readiness | None |
 | User configuration | Selected package identifier set (`selected_packages`); legacy single-package fallback (`selected_package`) | Saved restriction targets for the next session | Private `gate0_local_state` SharedPreferences; explicit Save while idle; Cancel makes no change | Until changed, withdrawal, uninstall, or app-data clear; changed selections are rejected while a session is requested | None |
+| Schedule configuration foundation | Schedule UUID, positive revision, name, enabled flag, one-time instant or repeating weekdays/hour/minute, named creation-zone ID, and mode reference (new records use `local-default`) | Store validated schedule configuration; pure rules calculate timing without registering or executing work | Schema-v1 JSON under `schedules_v1` in the same private `gate0_local_state` SharedPreferences; revision-checked create/update/enable/delete APIs, with no UI callers yet; maximum 100 records | Until explicit deletion, withdrawal, app-data clear or uninstall; edits replace the prior configuration, not an edit-history log | None |
 | Active target snapshot | Package identifier set copied from saved selection at start (`active_packages`) | Keep the session's exact targets stable and identify the matching foreground target | Private `gate0_local_state` SharedPreferences; written with the start state | Removed on successful stop, withdrawal, uninstall, or app-data clear; not appended to a history log | None |
 | Consent | Disclosure version and acceptance epoch milliseconds | Prove which prominent disclosure was affirmatively accepted | Local SharedPreferences | Until withdrawal, uninstall, app-data clear, or a new version requires fresh consent | None |
 | Session state, including History identity | Desired-active Boolean, stable random session UUID, wall/monotonic start timestamps and random process UUID, sticky interruption and v3-history-eligibility flags, monotonic session revision, fail-closed recovery marker | Start/stop guard and reconciliation; identify one completion; distinguish uncertain duration from verified protection | Private `gate0_local_state` SharedPreferences; same-process duration uses monotonic time, cross-process non-negative wall-time fallback is interrupted | Active identity/clocks/flags cleared at stop; eligible completed fields move to the pending record; revision/recovery follow existing transition/cleanup rules | None |
@@ -67,6 +70,12 @@ new service/start use requires fresh affirmative consent without clearing select
 or pairing. Existing v1/v2 active intent remains stoppable but does not create a
 backfilled History record; only new v3 starts are history-eligible.
 
+The schedule foundation does not change the current v3 disclosure or authorize
+background activation. Its enabled flag is configuration only, not an armed alarm.
+There are no persisted occurrence receipts, delivery outcomes or schedule-generated
+sessions yet. Before connecting schedule activation, update the disclosure/consent
+version and this inventory for the actual execution and retention boundary.
+
 ## Withdrawal and deletion behavior
 
 September 2 baseline: withdrawal first attempts to clear desired enforcement and publishes a state revision so any visible overlay is removed. It attempts to delete the Keystore alias and clear the dedicated Gate 0 SharedPreferences contents, sends an app-scoped non-exported withdrawal signal to the bound service, and asks the service to disable itself. The controller reports success only when both Zap cleanup and preference cleanup return success. Setup uses that result: it displays complete-deletion feedback only on success; a failure message asks the user to retry or use App info to clear storage/uninstall. That diagnostic is shown for 15 seconds instead of the normal 3.5-second success message. The feedback fix was installed as `dbe2469` while idle/revision `19`; see the September 2 record. Installation does not prove deletion under injected storage/Keystore failure.
@@ -78,6 +87,9 @@ cleanup before proceeding. Complete-deletion feedback must also require successf
 History cleanup; disabling Accessibility alone does not erase saved History. This
 new cleanup path and its injected-failure cases passed emulator tests; this does not
 prove every OEM/storage-failure outcome or the paired A16 result.
+
+The schedule foundation uses the same preference file, so withdrawal also clears
+`schedules_v1`; it adds no separate database or external deletion destination.
 
 Re-enabling instructions require a newly accepted current disclosure. Android uninstall or Clear storage is intended to start with consent unchecked because cloud backup and device transfer are explicitly excluded. Failed durable writes and OEM restore behavior remain device-validation cases, not guaranteed deletion outcomes.
 

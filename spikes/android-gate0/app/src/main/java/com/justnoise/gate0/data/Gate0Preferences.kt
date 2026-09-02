@@ -3,6 +3,7 @@ package com.justnoise.gate0.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
+import com.justnoise.gate0.domain.PortableScheduleTimingRules
 import com.justnoise.gate0.domain.SessionHistoryTiming
 import com.justnoise.gate0.domain.SessionStateWriter
 import java.util.UUID
@@ -215,6 +216,96 @@ class Gate0Preferences(
         }
     }
 
+    fun loadSchedules(): ScheduleSnapshot = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) {
+                return ScheduleSnapshot(error = true)
+            }
+            ScheduleSnapshot(schedules = readSchedules())
+        } catch (_: Exception) {
+            // Corrupt or newer storage is not an empty list and must not be overwritten.
+            ScheduleSnapshot(error = true)
+        }
+    }
+
+    fun isScheduleSelectionResolvable(modeReference: String): Boolean = synchronized(STATE_LOCK) {
+        modeReference == DEFAULT_SCHEDULE_MODE_REFERENCE &&
+            (preferences.contains(KEY_SELECTED_PACKAGES) || preferences.contains(KEY_SELECTED_PACKAGE))
+    }
+
+    /** Configuration only: no alarm registration or session mutation occurs here. */
+    fun saveSchedule(
+        draft: ScheduleDraft,
+        id: String? = null,
+        expectedRevision: Long? = null,
+        nowEpochMilliseconds: Long = System.currentTimeMillis(),
+    ): Boolean = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) return false
+            val schedules = readSchedules()
+            val previous = schedules.find { it.id == id }
+            if (id == null) {
+                if (expectedRevision != null) return false
+            } else if (previous == null || previous.revision != expectedRevision) {
+                return false
+            }
+            if (previous?.revision == Long.MAX_VALUE) return false
+            val updated = StoredSchedule(
+                id = previous?.id ?: UUID.randomUUID().toString(),
+                revision = (previous?.revision ?: 0L) + 1L,
+                name = draft.name.trim(),
+                enabled = draft.enabled,
+                timing = draft.timing.copy(repeatWeekdays = draft.timing.repeatWeekdays.toSet()),
+                creationZoneId = draft.creationZoneId,
+                modeReference = previous?.modeReference ?: DEFAULT_SCHEDULE_MODE_REFERENCE,
+            )
+            // Past one-time drafts may remain disabled, but cannot be armed silently.
+            if (updated.enabled && PortableScheduleTimingRules.nextOccurrence(
+                    updated.timing, nowEpochMilliseconds, updated.creationZoneId,
+                ) == null
+            ) return false
+            val replacement = if (previous == null) schedules + updated else
+                schedules.map { if (it.id == previous.id) updated else it }
+            commitState(preferences.edit().putString(KEY_SCHEDULES, ScheduleStoreCodec.encode(replacement)))
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun setScheduleEnabled(
+        id: String,
+        expectedRevision: Long,
+        enabled: Boolean,
+        nowEpochMilliseconds: Long = System.currentTimeMillis(),
+    ): Boolean = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) return false
+            val current = readSchedules().find { it.id == id } ?: return false
+            if (current.revision != expectedRevision) return false
+            if (current.enabled == enabled) return true
+            saveSchedule(
+                ScheduleDraft(current.name, enabled, current.timing, current.creationZoneId),
+                id, expectedRevision, nowEpochMilliseconds,
+            )
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun deleteSchedule(id: String, expectedRevision: Long): Boolean = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) return false
+            val schedules = readSchedules()
+            val current = schedules.find { it.id == id } ?: return false
+            if (current.revision != expectedRevision) return false
+            commitState(preferences.edit().putString(
+                KEY_SCHEDULES, ScheduleStoreCodec.encode(schedules.filterNot { it.id == id }),
+            ))
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun clearForWithdrawal(): Boolean = synchronized(STATE_LOCK) {
         // Revoke and discard outbox first. A crash cannot replay a record being deleted.
         val revoked = preferences.edit().clear().putBoolean(KEY_HISTORY_DELETION_PENDING, true).commit()
@@ -250,6 +341,9 @@ class Gate0Preferences(
             false
         }
     }
+
+    private fun readSchedules(): List<StoredSchedule> =
+        preferences.getString(KEY_SCHEDULES, null)?.let(ScheduleStoreCodec::decode).orEmpty()
 
     private fun confirmFailedWrite(): Boolean {
         if (!unconfirmedWrite) return true
@@ -313,6 +407,7 @@ class Gate0Preferences(
         private const val KEY_HISTORY_ELIGIBLE = "history_eligible"
         private const val KEY_HISTORY_INTERRUPTED = "history_interrupted"
         private const val KEY_PENDING_HISTORY = "pending_session_history"
+        private const val KEY_SCHEDULES = "schedules_v1"
         private const val KEY_LAST_FINISHED_ID = "last_finished_session_id"
         private const val KEY_HISTORY_DELETION_PENDING = "history_deletion_pending"
         private const val KEY_ZAP_DIGEST = "zap_hmac_digest"

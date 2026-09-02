@@ -202,15 +202,34 @@ These checks cover local migration, outbox/duplicate/failure recovery and cleanu
 not actual NFC hardware, A16 interruption durability or physical History visuals.
 No device-matrix cell is promoted and no Play/signing approval follows from them.
 
-One material schedule choice remains: scheduled **start only, ending on Zap**, or a
-scheduled **start/end window**. The observed iOS 20-minute monitor is not an approved
-duration. Time-zone/DST, active-session collision and missed-fire rules also need
-explicit fixtures from `SCHEDULE_PORTABILITY_AUDIT.md`; propose cohesive defaults
-rather than nine separate setup questions. This need not block apps/History work.
+The owner approved **automatic scheduled start, ending on a paired-Zap tap** on
+2026-09-03. Do not ask for this decision again. There is no automatic end in the
+Android MVP; the observed iOS 20-minute monitor is not a product duration. The
+[schedule plan](ANDROID_SCHEDULE_PLAN.md) records the implementation defaults for
+travel/DST, collisions and missed delivery, now represented by 38 temporal fixtures
+in portable fixture set 1.5.0. Shipped iOS scheduling is not migrated by this change.
 
-The [proposed schedule plan](ANDROID_SCHEDULE_PLAN.md) now sets out those defaults,
-the native alarm candidate and three focused delivery slices. It is pending owner
-approval, not implemented scheduling or a change to the shipped iOS behavior.
+### Schedule foundation — 2026-09-03
+
+Pure Kotlin and Swift rules now resolve one-time input, compute repeating occurrences
+and classify delivery without starting sessions. Versioned Android configuration
+storage supports create/edit/enable/delete with stable UUIDs, compare-and-set
+revisions, malformed-store protection and failed-write rollback. It shares the
+existing private preference transaction boundary; active session identity, immutable
+targets, pairing and completed History are not rewritten by successful CRUD.
+
+This is **rules and configuration only**: no UI caller, alarm receiver, new permission,
+scheduled session execution or persisted occurrence outcome/receipt exists yet.
+Before enabling schedules, implement atomic receipt/start and the native delivery
+adapter, update disclosure/retention, then connect the schedule UI and verify the
+new flow on the existing A16. Current v3 consent is not silently treated as approval
+for automatic scheduled starts. This progress does not promote a physical gate.
+
+Final local verification passed: **116 JVM tests**, the full Android lint/build/
+release-boundary verifier, **48 emulator instrumentation tests** (8 new storage
+tests), and the iOS Release build plus **66 XCTest methods**. The 38 temporal
+fixtures pass both native consumers. [Scoped evidence and artifact hashes](../spikes/android-gate0/evidence/emulator-schedule-foundation-2026-09-03/README.md)
+record the runs. This source is not installed on the paired A16.
 
 ### Rejected-Zap notification safety fix — 2026-09-03
 

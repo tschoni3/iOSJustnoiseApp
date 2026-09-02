@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.justnoise.gate0.data.ScheduleStoreCodecTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-09-02T22:57:42.581Z" hostname="TJs-MacBook-Pro.local" time="0.097">
+  <properties/>
+  <testcase name="encoded UTF-16 character cap is checked before parsing including whitespace" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.049"/>
+  <testcase name="null and absent nullable timing fields encode to the same representation" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.008"/>
+  <testcase name="zone must be a named IANA identifier or UTC not a raw offset" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.002"/>
+  <testcase name="text escapes unicode and exact integer boundary values round trip" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.002"/>
+  <testcase name="identifiers must use canonical lowercase UUID shape" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.002"/>
+  <testcase name="duplicate schedule identifiers fail encoding and decoding" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.001"/>
+  <testcase name="unknown missing and wrong-type record fields fail the whole set" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.004"/>
+  <testcase name="empty set and default models are explicit and do not imply an error" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.001"/>
+  <testcase name="missing extra duplicate unknown and wrong-type weekdays fail" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.003"/>
+  <testcase name="one hundred schedules is the inclusive record cap" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.009"/>
+  <testcase name="blank and oversized mode references are rejected without replacing unknown ones" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.001"/>
+  <testcase name="invalid and mixed timing shapes are not normalized into valid schedules" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.002"/>
+  <testcase name="revision and time numbers are never coerced from strings fractions or overflow" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.009"/>
+  <testcase name="malformed roots unsupported schema and trailing documents fail" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.001"/>
+  <testcase name="weekday set order is canonical and unknown mode references remain unchanged" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.0"/>
+  <testcase name="one-time and repeating enabled states round trip without adding occurrences" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.0"/>
+  <testcase name="names must be trimmed nonempty and within eighty UTF-16 characters" classname="com.justnoise.gate0.data.ScheduleStoreCodecTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

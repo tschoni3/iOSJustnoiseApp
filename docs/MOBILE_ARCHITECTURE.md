@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.17
+Status: target architecture, version 1.0.18
 
 ## Decision
 
@@ -34,6 +34,15 @@ adapter work with unchanged shared formatting/iOS behavior. The final 36-test
 emulator suite (including 12 History tests), 92 JVM tests and full local verifier
 passed; A16 History/visual acceptance remains pending and schedules unimplemented.
 See `docs/ANDROID_PREDEVICE_READINESS.md` for the scoped results and fixed failures.
+
+Schedule foundation, 2026-09-03: the owner approved automatic scheduled starts with
+paired-Zap stops. Shared fixture set 1.5.0 adds 38 temporal cases consumed by pure
+Swift/Kotlin rules. Android now has bounded, versioned private schedule configuration
+and revision-checked CRUD on the existing preference transaction boundary. This
+does not start sessions, register alarms, add permissions or expose schedule controls;
+atomic occurrence receipts, native delivery, disclosure and UI wiring remain the
+next slices. The published iOS scheduler and UI remain unchanged. See
+`docs/ANDROID_SCHEDULE_PLAN.md` for the exact defaults and migration boundary.
 
 ## Readiness checkpoint
 

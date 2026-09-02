@@ -9,7 +9,10 @@ storage, v3 consent, list/summary and cleanup are implemented, with passing loca
 History instrumentation and full verification recorded in
 [`ANDROID_PREDEVICE_READINESS.md`](../../../docs/ANDROID_PREDEVICE_READINESS.md).
 These are not A16, policy or release acceptance. The dated single-target A16 checkpoint
-remains unchanged and build-specific. Working schedules remain required MVP work.
+remains unchanged and build-specific. Schedule timing rules and private configuration
+CRUD are now implemented; the UI, native delivery and scheduled session execution
+remain required MVP work. No alarm, occurrence receipt or delivery outcome is stored
+by this foundation.
 Do not submit this draft unchanged: reconcile it with the implemented release,
 including schedule-triggered behavior, retention, labels and reviewer steps. Preview
 screens are not implemented features.
@@ -31,7 +34,8 @@ A normal consumer-installed application does not receive device-owner package-su
 - Retention of event data or foreground history: none.
 - Sharing or network destination: none. The app has no Internet permission.
 - Configuration retained locally: selected packages, active-session UUID/target snapshot/clocks/process identity and interruption/eligibility flags, last-finished session ID, disclosure version/timestamp, enforcement state/revision/heartbeat, and a Keystore-backed Zap HMAC digest. Successful stop removes active state; saved selection and pairing remain.
-- Local History retention in source: only session UUID, start/end times, non-negative duration, selected-target count and interruption flag. A pending completion in private preferences drains idempotently to `session_history.db` before later starts/History reads, not during stop; no package names, foreground-event stream or raw tag data enter History. Records remain until withdrawal, app-data clear or uninstall. No schedule data is stored by this extension.
+- Local History retention in source: only session UUID, start/end times, non-negative duration, selected-target count and interruption flag. A pending completion in private preferences drains idempotently to `session_history.db` before later starts/History reads, not during stop; no package names, foreground-event stream or raw tag data enter History. Records remain until withdrawal, app-data clear or uninstall.
+- Schedule configuration foundation: private `schedules_v1` stores up to 100 records containing UUID, revision, name, enabled flag, one-time instant or repeating weekdays/hour/minute, named creation-zone ID and mode reference (new records use `local-default`). Revision-checked configuration APIs retain records until deletion, withdrawal, app-data clear or uninstall. No UI caller, alarm, occurrence receipt/outcome or scheduled session execution is connected; timing calculations are pure and add no event collection or network destination.
 - Separate local platform metadata: enabled-service components for Justnoise readiness, protected-package resolution, and window bounds/insets for safe overlay placement. None is used as app-usage history or sent off-device; see `DATA_INVENTORY.md`.
 
 ## Prominent in-app disclosure shown before consent
@@ -39,6 +43,11 @@ A normal consumer-installed application does not receive device-owner package-su
 > Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It observes window-change events and reads the foreground package identifier so it can compare that identifier with the apps you selected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes. Foreground event contents are not retained or sent anywhere. The selected apps, consent version, enforcement state, and a keyed Zap digest stay only on this device. For History, it saves a random session ID, start and end times, duration, number of selected apps, and whether the session was interrupted. History contains no app names or foreground event log. Session time does not prove continuous app blocking. History stays only on this device until you withdraw, clear app storage, or uninstall. You can withdraw below, disable the service in Accessibility settings, Force Stop, or uninstall at any time.
 
 The disclosure is followed by an initially unchecked control reading: “I understand this disclosure and choose to test the Accessibility capability.” Only the user's subsequent button press records consent and opens Accessibility settings. Installation, launch, onboarding, app selection, or NFC scan does not open settings. Current-version consent stays visibly checked until withdrawal. The History wording is `gate0-accessibility-v3`: v1/v2 acceptance is not silently upgraded. Saved selection and Zap pairing remain; legacy active sessions can still stop, but are not backfilled into History. Only new starts under v3 are History-eligible.
+
+The schedule foundation leaves this v3 text unchanged. An enabled configuration is
+not an armed schedule. Update the disclosure/consent version before connecting
+scheduled activation; the current text must not be presented as consent to that
+future background behavior.
 
 ## User control and escape
 
@@ -94,6 +103,9 @@ Updated for the source-integrated local-only History extension on 2026-09-03. Th
 instructions and expected outcomes, not a claim that every step
 has passed or that this source is installed on the A16. Build-specific single-target results remain in
 [the September 2 evidence](A16_PARTIAL_RUN_2026-09-02.md).
+Schedule configuration has no UI callers or execution adapter yet, so this
+walkthrough does not claim a usable schedule flow. Add the real schedule and updated
+consent steps before using it for a release that activates schedules.
 
 - **Current development app:** `com.justnoise.androiddev`, label **Justnoise Android Dev**.
   The setup screen still uses Gate 0 wording. Do not upload its debug or unsigned
@@ -175,7 +187,7 @@ passwords, notifications or accessibility nodes, or save a foreground-app histor
 
 The local app picker reads launchable app names and identifiers. Justnoise also reads
 system app identifiers, service-enablement metadata and screen/inset geometry for
-readiness and safe navigation. These observations are temporary. It saves only your
+readiness and safe navigation. These observations are temporary. Session and pairing configuration includes your
 selected targets, active-session identity/target snapshot/clocks/process identity,
 last-finished session ID, consent version/time, session state/revision,
 interruption/recovery and service-liveness state, and the
@@ -196,6 +208,15 @@ or History read. Stopping itself does not wait for database delivery. Repeated i
 the same session ID must not add another record. History stays on this device until
 withdrawal, app-data clear or uninstall; there is no automatic expiry in this slice.
 
+The schedule foundation can store up to 100 configurations in private app
+preferences: a random schedule ID, revision, name, enabled flag, one-time instant
+or repeating weekdays/local time, named creation time zone and saved-selection
+reference. New records refer to the single saved selection as `local-default`.
+Configurations remain until deleted, consent withdrawal, app-data clear or
+uninstall. There is no schedule UI caller or background activation yet, and no
+occurrence receipts, delivery outcomes or schedule-generated sessions are stored.
+This source boundary is not a claim that scheduling is available to users.
+
 **Withdraw consent and clear Gate 0 data** attempts to remove saved configuration,
 pending/completed History and the pairing key and disable the service. A durable
 cleanup marker retries an interrupted database deletion before new consent, session
@@ -205,8 +226,10 @@ Android App info to clear storage or uninstall. Disabling Accessibility alone st
 service access but does not erase saved configuration or History. There is no server
 account to delete. Raw foreground events and NFC payloads are not retained as History.
 New v3 disclosure consent is required for History-eligible starts; earlier active
-sessions are not backfilled. Schedules remain required MVP work outside this extension
-and need reviewed behavior/retention disclosures before that release.
+sessions are not backfilled. Working schedule activation remains required MVP work;
+its disclosure/consent version and behavior/retention description must be updated
+before activation is connected. The current v3 disclosure is unchanged by the
+configuration foundation.
 
 The detailed implementation inventory is [DATA_INVENTORY.md](DATA_INVENTORY.md).
 Before publishing, provide a working contact, review the final release's actual data

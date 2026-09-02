@@ -1,6 +1,6 @@
 # Mobile behavior contract v1
 
-Contract version: 1.3.0
+Contract version: 1.4.0
 
 This document describes observable Justnoise behavior that should remain consistent across iOS and Android. It separates portable product rules from platform adapters. It characterizes the published iOS direction without turning framework quirks or unverified schedule behavior into permanent requirements.
 
@@ -79,7 +79,7 @@ The `historyPresentation` fixtures freeze the release History screen’s small, 
 
 Both native rule implementations consume the same fixtures. The shipped iOS summary, selected-day label, and density mapping call the portable rules; the permission-free Compose History prototype uses the same Kotlin rules. Calendar-day bucketing remains platform-owned: the current iOS implementation uses `Calendar.current`, splits sessions at local midnight, discards each split slice shorter than 60 seconds, shows the current calendar year, and builds its “90 Days” window from 60 past through 29 future days. Those calendar, time-zone, DST, corrupt-duration, and cross-midnight slice semantics are observed implementation details, not frozen portable behavior yet.
 
-### Schedules: portable identity and safety only
+### Schedules: identity, safety and explicit timing
 
 Current iOS storage has a stable identifier, name, mode identifier, Foundation `Date`, integer weekdays using `Calendar.current` values (`1` for Sunday through `7` for Saturday), enabled state, and an optional last-fired `Date`. Scheduling code later extracts local components from those absolute dates. That mixed representation is an implementation fact, not a cross-platform date/time contract.
 
@@ -94,19 +94,43 @@ The following rules are safe to share now and are exercised by the `scheduleElig
 
 Eligibility diagnostics use this portable precedence when several gates fail: `disabled`, then `modeUnavailable`, then `targetSelectionEmpty`. Empty named weekdays classify the schedule as `oneTime`; one or more named weekdays classify it as `repeating`. These decisions do not select a fire instant or scheduler.
 
-The following are **not frozen as v1 product behavior** because current iOS behavior is not yet sufficiently characterized:
+#### Android MVP temporal rules — 2026-09-03
 
-- Whether multiple enabled schedules are armed simultaneously or only the next candidate.
-- The intended scheduled-session duration and who owns the stop action.
-- Collision rules between manual and scheduled sessions.
-- Missed-fire/catch-up behavior after reboot, force-quit, time-zone changes, or revoked permission.
-- Exact lead-time adjustment and the current implementation’s narrow monitoring window.
-- Whether a one-time value is an absolute instant or a local wall date/time plus a named time zone.
-- Whether a repeating value retains its creation time zone or follows the device’s current time zone.
-- How nonexistent and repeated local times at daylight-saving transitions behave.
-- Which calendar is used for date input and persistence, and whether week display order follows locale.
+The owner confirmed **automatic start at the chosen time, paired Zap to stop**.
+The implementation defaults from `ANDROID_SCHEDULE_PLAN.md` now have explicit
+`scheduleTemporal` fixtures; they do not characterize the shipped iOS runtime.
 
-Do not reproduce those implementation details on Android as guesses. Resolve each item with tests and a product decision first. This contract intentionally makes no daylight-saving or time-zone choice yet.
+1. One-time input is a strict Gregorian local date/hour/minute and named IANA zone
+   (or UTC), resolved to a fixed instant. Reject invalid, nonexistent and non-future
+   input; do not move it to tomorrow. A repeated local time uses its first occurrence.
+2. Repeating schedules use named weekdays and hour/minute in the device's current
+   zone. Skip a DST gap day; use the first repeated time only, even if calculation
+   happens after that first occurrence. A zone change recalculates future instants.
+3. Next-occurrence calculation is strictly after the supplied instant. A persisted
+   last-resolved local-date high-water mark prevents replay after clock rollback or
+   travel. It is not a claim that a callback was delivered or blocking was applied.
+4. Delivery first rejects stale/disabled revisions and duplicate occurrences,
+   then invalid or early times. More than 300,000 ms late is missed; the boundary
+   is inclusive. An already-requested session, including recovery, wins without
+   mutation or blocker dismissal. Only the remaining case is a start **candidate**:
+   current consent, pairing, resolvable/non-empty selection and real capability
+   still need validation before the atomic session start.
+5. Consider all enabled schedules, ordering due candidates by instant then stable
+   schedule ID. Commit a receipt with each outcome and atomically with a successful
+   session start. Do not implement schedule callbacks as NFC toggles. One-time
+   schedules become resolved after their single start, skip or missed outcome.
+6. Scheduled sessions have no automatic end or midnight cutoff. The same UUID,
+   accidental-stop guard, stop/outbox/History and safe recovery paths apply.
+7. Reboot, permission changes and user recovery revalidate future alarms. Force
+   Stop remains an escape, never bypassed or followed by surprise catch-up. Optional
+   notification state must derive from the same committed occurrence/session.
+
+Supported instants are integer Unix milliseconds from 0 through 253402300799999.
+The Android MVP references one stable local default selection; absence is
+`modeUnavailable`, while a resolved empty selection is `targetSelectionEmpty`.
+This adds no requirement for a mode-management UI. Pure Swift/Kotlin rules consume
+the same fixtures, but **the shipped iOS scheduler is not migrated**. Its current
+time/ownership behavior below remains a conformance gap, not implied parity.
 
 `docs/SCHEDULE_PORTABILITY_AUDIT.md` records the current iOS source behavior and an interval-end ownership risk separately from portable product intent.
 
@@ -150,8 +174,8 @@ Baseline: this repository state, including the mobile-contract foundation, porta
 | AUDIO-01: one owned file after save; no unowned file after cancellation/failure | **Conforms in code; device evidence required** | Capture audio ownership is crash-safe in code after PR #8 (merge `a81c8aa3a6f3903d348e5a5a877f4f64e43f8ddd`): drafts are moved into `CaptureClips`, cancellation removes owned drafts, and durable pending markers recover interrupted commits. The merged verifier passed 22 simulator tests; record/cancel/save/relaunch still requires physical-device and TestFlight evidence. |
 | SCHEDULE-01: a schedule requires a resolvable mode with non-empty targets | **Portable rule frozen; iOS partial** | Both native tests consume all shared `scheduleEligibility` fixtures, and iOS bridge candidate selection now calls the portable rule without changing its linear-time filtering behavior. New schedule Save rejects a missing or empty mode. Mode deletion can still leave a persisted orphan and does not synchronously prove that a previously copied arm payload was cleared, so the iOS row is not closed. |
 | SCHEDULE-02: disabled schedules do not start | **Partial; device evidence required** | The coordinator filters enabled schedules and rebalances after mutations, but background/extension behavior has not passed the physical matrix. |
-| SCHEDULE-03: one-time versus repeating stays distinguishable | **Conforms in persisted shape only** | An empty integer weekday array represents one-time and a non-empty array represents repeating. The temporal meaning is still unresolved and the integer encoding is iOS-only. |
-| SCHEDULE-04: date, weekday, duration, collision, missed-fire, and recovery semantics | **Unresolved** | iOS currently arms only the earliest enabled candidate and uses a narrow interval. Those behaviors are not accepted portable product decisions and must not be copied to Android yet. |
+| SCHEDULE-03: one-time versus repeating stays distinguishable | **Conforms in persisted shape only** | An empty integer weekday array represents one-time and a non-empty array represents repeating in iOS. The MVP temporal rules are now explicit, but this iOS-only encoding and runtime have not been migrated to them. |
+| SCHEDULE-04: date, weekday, duration, collision, missed-fire, and recovery semantics | **MVP rules defined; iOS runtime not migrated** | The owner-approved start/Zap-stop direction and documented timing defaults have shared `scheduleTemporal` fixtures and pure-rule consumers. iOS still uses its existing interval/ownership implementation; Android background delivery and receipt persistence still need implementation and device evidence. No runtime parity is claimed. |
 | SCHEDULE-05: unattended interval-end ownership and cleanup | **Unverified risk** | The extension writes a session-start marker at scheduled start and later treats any such marker as a manual-session signal before clearing shields. Source inspection alone cannot prove unattended cleanup; characterize and close this on physical iOS hardware before using it as Android product intent. |
 
 Closing a row requires a native behavior test where feasible and the listed physical-device evidence where the rule crosses NFC, Screen Time, background execution, storage, or system UI.

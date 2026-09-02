@@ -1,8 +1,8 @@
 # Schedule portability audit
 
-Status: **SAFE ELIGIBILITY RULES FROZEN — TEMPORAL SEMANTICS DEFERRED**
+Status: **SAFE ELIGIBILITY RULES FROZEN — MVP TEMPORAL RULES DEFINED — NATIVE DELIVERY AND IOS MIGRATION PENDING**
 
-This document characterizes the shipped iOS implementation without treating framework behavior or accidental quirks as Android requirements. It authorizes only the framework-neutral rules in `product/behavior/portable-fixtures.v1.json`; it does not authorize production Android scheduling.
+This document characterizes the shipped iOS implementation without treating framework behavior or accidental quirks as Android requirements. The owner confirmed scheduled start/Zap stop on 2026-09-03. The accompanying MVP timing defaults are now explicit in `ANDROID_SCHEDULE_PLAN.md` and `scheduleTemporal` fixtures. This authorizes development of those rules, not a production schedule/parity claim or an unreviewed iOS runtime change.
 
 ## Shipped iOS observations
 
@@ -36,7 +36,7 @@ The `scheduleEligibility` fixtures freeze only these decisions:
 
 Swift and Kotlin pure rules consume the same cases. These rules do not calculate a fire instant, choose among multiple eligible schedules, apply restrictions, or recover a session.
 
-## Product decisions required before Android schedule implementation
+## Previously open decisions, now recorded for the MVP
 
 1. Choose the persisted time model: absolute instant, floating local wall time, or wall time plus named IANA time zone.
 2. Decide travel behavior for repeating schedules: follow the device or retain the creation zone.
@@ -50,7 +50,9 @@ Swift and Kotlin pure rules consume the same cases. These rules do not calculate
 
 Each decision needs portable fixtures plus native domain tests. Background delivery, restriction ownership, reboot, time-zone change, daylight-saving behavior, and cleanup still require physical evidence on the existing required A16. A17 validation is deferred and non-blocking; schedule behavior on untested variants must not be described as verified.
 
-The [Android MVP schedule plan](ANDROID_SCHEDULE_PLAN.md) proposes one cohesive set
-of defaults and three implementation slices. It is **awaiting owner approval**,
-particularly scheduled start/Zap stop versus a start/end window. It does not freeze
-these decisions or authorize a guessed scheduling runtime.
+The [Android MVP schedule plan](ANDROID_SCHEDULE_PLAN.md) records the confirmed
+start/Zap-stop behavior and implementation defaults for these nine questions.
+Portable fixtures cover date resolution, next occurrences and delivery eligibility;
+the first slice is rules/configuration storage, not working background scheduling.
+Do not relabel the observations above as resolved iOS behavior. Add native callback,
+receipt/ownership and physical tests as each adapter is implemented.

@@ -1,24 +1,24 @@
 # Android MVP schedule plan
 
-Status: **PROPOSED — owner approval pending, not implemented** (2026-09-03).
+Status: **START/ZAP-STOP APPROVED — implementation in progress** (2026-09-03).
 
 Scope: the existing local Android MVP: select apps, real Zap sessions, schedules
 and History. No accounts, widget, new phone, UI framework or extra Gradle module.
-This proposal resolves the open questions in `SCHEDULE_PORTABILITY_AUDIT.md`; it
-does not replace the frozen contract or change the shipped iOS scheduler.
+The owner confirmed automatic scheduled start and paired-Zap stop on 2026-09-03.
+The accompanying defaults below are the documented MVP implementation choices,
+now represented by `scheduleTemporal` fixtures in portable fixture set 1.5.0.
+They do not change the shipped iOS scheduler; its runtime migration is separate.
 
-## One product choice to confirm
+## Confirmed product behavior
 
-Recommend **automatic start at the chosen time; tap the paired Zap to stop**.
+Use **automatic start at the chosen time; tap the paired Zap to stop**.
 There is no automatic end, configurable duration or midnight cutoff in this MVP.
-The alternative is a start/end window, which needs a separate end alarm and safe
-ownership of exactly the session it started. The observed iOS 20-minute monitoring
-interval is not an approved duration. The owner's answer about freeing Mac storage
-is not approval of either schedule behavior.
+An automatic end-time window is out of this MVP. The observed iOS 20-minute
+monitoring interval is not copied as a product duration.
 
-## Recommended defaults as one proposal
+## MVP implementation defaults
 
-| Open decision | Proposed MVP rule |
+| Decision | MVP rule |
 | --- | --- |
 | Time model and input | A one-time local date/time is resolved with its named IANA zone to a fixed instant; display the resolved time and reject past input. Do not silently move it to tomorrow. Repeating schedules store named weekdays and local hour/minute. Use Gregorian dates for persistence, locale for display. |
 | Travel | Repeating schedules follow the current device time zone. One-time schedules keep their fixed instant. Recompute future alarms after a time-zone change and show the next occurrence. |
@@ -26,14 +26,22 @@ is not approval of either schedule behavior.
 | Duration and midnight | Start only, Zap stop. Crossing midnight does not end or restart an active session. Existing non-destructive permission/Force Stop escape routes remain available. |
 | Multiple schedules | Consider every enabled schedule, dispatch due occurrences in fire-instant then stable schedule-ID order. An implementation may arm the next required alarm, but must not ignore other schedules. Disable a one-time schedule when its occurrence is resolved, including missed/skipped outcomes. |
 | Collision and apps | An existing session, including active recovery, wins. A due schedule skips without stopping/replacing it, changing its targets or dismissing its blocker. Use the single currently saved app selection at fire time; clearly show this in the editor. A successful start takes the same immutable target snapshot as Zap start. Multiple named modes are not a prerequisite. |
-| Missed delivery | Proposed grace: from the scheduled instant through **5 minutes late**, inclusive. Later delivery is missed, never a surprise catch-up hours later. No early start. Missing consent, pairing, eligible apps or live restriction capability means no start and a visible outcome. Reboot/update/time changes revalidate; they never manufacture service readiness. After Force Stop, require explicit recovery before future scheduling resumes; do not catch up the stopped interval. |
+| Missed delivery | Grace: from the scheduled instant through **5 minutes late**, inclusive. Later delivery is missed, never a surprise catch-up hours later. No early start. Missing consent, pairing, eligible apps or live restriction capability means no start and a visible outcome. Reboot/update/time changes revalidate; they never manufacture service readiness. After Force Stop, require explicit recovery before future scheduling resumes; do not catch up the stopped interval. |
 | Stop and recovery ownership | Use the existing session UUID, stop guard, atomic completion/outbox and History path. Schedule callbacks are start-only and never toggle. Service loss keeps the existing truthful recovery behavior; no stale overlay or claim of uninterrupted protection. |
 | Notifications | No separate reminder system in this MVP. The app shows the stored occurrence outcome. If a status notification becomes necessary, derive it from the same committed occurrence/session and respect notification permission; never report a start from an alarm delivery alone. |
 
-The five-minute grace is a proposed product tolerance, **not** an Android delivery
-guarantee. Every row remains proposed until approved and represented in portable
-fixtures. iOS conformance/differences must be explicit; accepting this plan does not
-authorize silently replacing its shipped scheduling behavior.
+The five-minute grace is a product tolerance, **not** an Android delivery guarantee.
+The owner explicitly approved start/stop ownership; the remaining defaults are the
+previously proposed, now recorded implementation choices, not additional claims of
+individual owner sign-off. iOS conformance/differences remain explicit. Runtime
+activation still requires native delivery, consent and A16 verification.
+
+Occurrence identity uses `oneTime:{epochMilliseconds}` or
+`repeating:{Gregorian-local-date}:{HH:mm}`, scoped to a persisted schedule. A
+repeating schedule's last resolved local date is a high-water mark: rollback/travel
+cannot replay that date or an earlier one. Supported instants are non-negative
+Unix milliseconds through `253402300799999` (end of year 9999 UTC). Invalid shapes,
+dates, times and zones are rejected, not normalized into another schedule.
 
 Represent the one saved selection with a stable default mode/selection reference;
 this needs no mode-management screen. Keep frozen eligibility precedence:
@@ -67,7 +75,8 @@ cancels pending intents in stopped state; recovery must re-register future work
 only after appropriate user action.
 [Android stopped-state changes](https://developer.android.com/about/versions/15/behavior-changes-all#stopped-state).
 
-No scheduler, permission, receiver or persisted schedule is added by this plan.
+The first implementation slice adds pure rules and versioned configuration storage;
+it does not yet register alarms, execute scheduled sessions or change consent.
 Any new native permission, wake-lock need or background work must be justified in
 the data inventory, disclosure and packaged-release checks before delivery.
 Use an explicit non-exported alarm receiver and validate the persisted schedule ID,
@@ -75,12 +84,16 @@ revision and due occurrence; intent extras alone never authorize a start. Withdr
 must cancel alarms and clear schedules, outcomes and receipts through retryable
 cleanup, without allowing a late callback to recreate revoked state.
 
-## Three focused implementation slices after approval
+## Three focused implementation slices
 
-1. **Rules and storage.** Add portable fixtures/native domain tests for the approved
+1. **Rules and configuration storage — locally verified.** Add portable fixtures/native domain tests for the approved
    defaults; version local schedule storage, edits and occurrence identity. Cover
    DST gap/overlap, travel, past times, grace boundaries, collisions, disabled or
    deleted revisions, duplicate delivery and failed atomic writes.
+   [The first-slice evidence](../spikes/android-gate0/evidence/emulator-schedule-foundation-2026-09-03/README.md)
+   records 38 temporal fixtures, configuration CRUD and passing local checks.
+   Persisted occurrence receipts/outcomes belong to the atomic start slice below;
+   this completed foundation does not execute a schedule.
 2. **Real background start.** Add an explicit scheduled-start command using shared
    start validation, not a synthetic NFC read. Atomically commit the occurrence
    receipt with the active UUID/target snapshot so failed or repeated delivery

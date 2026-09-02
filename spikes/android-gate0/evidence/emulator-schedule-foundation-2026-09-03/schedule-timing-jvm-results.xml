@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.justnoise.gate0.domain.PortableScheduleTimingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-09-02T22:57:42.702Z" hostname="TJs-MacBook-Pro.local" time="0.021">
+  <properties/>
+  <testcase name="one-time and repeating shapes are distinct and reject invalid fields" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.006"/>
+  <testcase name="consumes every occurrence identity and high-water fixture" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.011"/>
+  <testcase name="one-time overlap is not silently moved to its second occurrence after first passes" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.0"/>
+  <testcase name="dates zones and high-water marks must be explicit and strict" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.0"/>
+  <testcase name="unsupported epochs fail before date conversion or subtraction" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.001"/>
+  <testcase name="consumes every one-time local resolution fixture" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.001"/>
+  <testcase name="consumes every delivery fixture without treating candidate as a session start" classname="com.justnoise.gate0.domain.PortableScheduleTimingTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

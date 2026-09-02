@@ -15,6 +15,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 root = Path(sys.argv[1]).resolve()
@@ -652,6 +653,53 @@ for index, case_value in enumerate(schedule_cases):
 if seen_schedule_ids != set(expected_schedule_cases):
     fail("schedule-eligibility fixtures are missing a required eligible or ineligible case")
 
+temporal = require_mapping(fixtures.get("scheduleTemporal"), "fixtures.scheduleTemporal")
+temporal_groups = {
+    "oneTimeResolutionCases": (9, {"id", "localDate", "hour", "minute", "zoneId", "now", "expectedInstant"}),
+    "nextOccurrenceCases": (16, {"id", "timing", "after", "zoneId", "lastResolvedLocalDate", "expectedInstant", "expectedKey"}),
+    "deliveryCases": (13, {"id", "currentRevisionEnabled", "alreadyHandled", "sessionRequested", "scheduledAtEpochMilliseconds", "nowEpochMilliseconds", "expected"}),
+}
+if set(temporal) != {"graceMilliseconds", "maximumEpochMilliseconds", *temporal_groups}:
+    fail("scheduleTemporal must use its versioned fields")
+if temporal["graceMilliseconds"] != 300000 or temporal["maximumEpochMilliseconds"] != 253402300799999:
+    fail("schedule temporal grace/range differs from the documented MVP rules")
+temporal_case_count = 0
+for group, (expected_count, fields) in temporal_groups.items():
+    cases = require_list(temporal.get(group), f"scheduleTemporal.{group}")
+    if len(cases) != expected_count:
+        fail(f"scheduleTemporal.{group} must retain its {expected_count} reviewed cases")
+    seen_ids = set()
+    for case in cases:
+        case = require_mapping(case, group)
+        if set(case) != fields or not isinstance(case.get("id"), str) or not case["id"] or case["id"] in seen_ids:
+            fail(f"{group} has unexpected fields or missing/duplicate fixture identity")
+        seen_ids.add(case["id"])
+        for field in ("now", "after", "expectedInstant"):
+            value = case.get(field)
+            if value is not None:
+                if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value):
+                    fail(f"{group}.{case['id']}.{field} must be an explicit UTC instant")
+                try:
+                    datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    fail(f"invalid fixture instant: {value}")
+        if group == "deliveryCases":
+            if any(type(case[key]) is not bool for key in ("currentRevisionEnabled", "alreadyHandled", "sessionRequested")):
+                fail("schedule delivery gates must be booleans")
+            if any(type(case[key]) is not int for key in ("scheduledAtEpochMilliseconds", "nowEpochMilliseconds")):
+                fail("schedule delivery clocks must be integer milliseconds")
+            if case["expected"] not in {"ignoreStale", "ignoreDuplicate", "invalid", "tooEarly", "missed", "skipActive", "startCandidate"}:
+                fail("schedule delivery has an unknown expected result")
+        elif group == "nextOccurrenceCases":
+            timing = require_mapping(case["timing"], "schedule timing")
+            if set(timing) != {"oneTimeInstant", "repeatWeekdays", "hour", "minute"}:
+                fail("schedule timing must use the canonical fields")
+            if not isinstance(timing["repeatWeekdays"], list) or any(day not in reserved_weekdays for day in timing["repeatWeekdays"]):
+                fail("schedule timing must use named weekdays")
+            if (case["expectedInstant"] is None) != (case["expectedKey"] is None):
+                fail("next occurrence instant and identity must be present or absent together")
+        temporal_case_count += 1
+
 history = require_mapping(fixtures.get("historyPresentation"), "fixtures.historyPresentation")
 if set(history) != {
     "densityThresholdSeconds",
@@ -792,6 +840,7 @@ for fragment in (
     "zapReadHandling",
     "zapEntryModeResolution",
     "scheduleEligibility",
+    "scheduleTemporal",
     "historyPresentation",
 ):
     if fragment not in portable_rules_test_text:
@@ -827,7 +876,7 @@ required_document_fragments = {
         "Raw Zap payloads must not be sent to analytics.",
         "zapReadHandling",
         "Capture audio ownership is crash-safe in code",
-        "This contract intentionally makes no daylight-saving or time-zone choice yet.",
+        "the shipped iOS scheduler is not migrated",
         "scheduleEligibility",
         "SCHEDULE-05: unattended interval-end ownership and cleanup",
         "### History presentation contract",
@@ -876,10 +925,10 @@ required_document_fragments = {
     ),
     "docs/SCHEDULE_PORTABILITY_AUDIT.md": (
         "SAFE ELIGIBILITY RULES FROZEN",
-        "TEMPORAL SEMANTICS DEFERRED",
+        "MVP TEMPORAL RULES DEFINED",
         "disabled` → `modeUnavailable` → `targetSelectionEmpty",
         "device-test risk",
-        "Product decisions required before Android schedule implementation",
+        "Previously open decisions, now recorded for the MVP",
     ),
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/CoachMarksPrototype.kt": (
         "CoachTarget.Zap",
@@ -974,7 +1023,7 @@ required_document_fragments = {
         "schedule eligibility fixture",
         'getJSONArray("scheduleEligibility")',
         'getJSONArray("zapEntryModeResolution")',
-        'assertEquals("1.4.0"',
+        'assertEquals("1.5.0"',
     ),
     "justnoiseradio/Core/ContentView.swift": (
         'title: "Tap to Start/Stop"',
@@ -1116,7 +1165,7 @@ for path in contract_files:
 
 print(
     f"Verified {len(colors)} semantic colors, {len(strings)} English copy entries, "
-    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(entry_mode_cases) + len(session_cases) + len(schedule_cases) + len(history_density_cases) + len(history_duration_cases) + len(history_summary_cases)} portable behavior cases."
+    f"and {len(selection_cases) + len(guard_cases) + len(shield_cases) + len(zap_cases) + len(entry_mode_cases) + len(session_cases) + len(schedule_cases) + temporal_case_count + len(history_density_cases) + len(history_duration_cases) + len(history_summary_cases)} portable behavior cases."
 )
 print("Product contracts passed.")
 PY

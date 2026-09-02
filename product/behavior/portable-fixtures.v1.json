@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixtureSetVersion": "1.4.0",
+  "fixtureSetVersion": "1.5.0",
   "description": "Framework-neutral examples that both native clients must exercise in domain tests.",
   "targetSelectionValidity": [
     {
@@ -282,6 +282,460 @@
       "expectedReason": "targetSelectionEmpty"
     }
   ],
+  "scheduleTemporal": {
+    "graceMilliseconds": 300000,
+    "maximumEpochMilliseconds": 253402300799999,
+    "oneTimeResolutionCases": [
+      {
+        "id": "future-berlin",
+        "localDate": "2026-09-03",
+        "hour": 9,
+        "minute": 0,
+        "zoneId": "Europe/Berlin",
+        "now": "2026-09-02T00:00:00Z",
+        "expectedInstant": "2026-09-03T07:00:00Z"
+      },
+      {
+        "id": "one-time-past-rejected",
+        "localDate": "2026-09-03",
+        "hour": 9,
+        "minute": 0,
+        "zoneId": "Europe/Berlin",
+        "now": "2026-09-03T07:00:01Z",
+        "expectedInstant": null
+      },
+      {
+        "id": "one-time-now-rejected",
+        "localDate": "2026-09-03",
+        "hour": 9,
+        "minute": 0,
+        "zoneId": "Europe/Berlin",
+        "now": "2026-09-03T07:00:00Z",
+        "expectedInstant": null
+      },
+      {
+        "id": "one-time-dst-gap-rejected",
+        "localDate": "2026-03-29",
+        "hour": 2,
+        "minute": 30,
+        "zoneId": "Europe/Berlin",
+        "now": "2026-03-28T00:00:00Z",
+        "expectedInstant": null
+      },
+      {
+        "id": "one-time-dst-overlap-first",
+        "localDate": "2026-10-25",
+        "hour": 2,
+        "minute": 30,
+        "zoneId": "Europe/Berlin",
+        "now": "2026-10-24T00:00:00Z",
+        "expectedInstant": "2026-10-25T00:30:00Z"
+      },
+      {
+        "id": "invalid-date-rejected",
+        "localDate": "2026-02-30",
+        "hour": 9,
+        "minute": 0,
+        "zoneId": "UTC",
+        "now": "2026-01-01T00:00:00Z",
+        "expectedInstant": null
+      },
+      {
+        "id": "invalid-hour-rejected",
+        "localDate": "2026-09-03",
+        "hour": 24,
+        "minute": 0,
+        "zoneId": "UTC",
+        "now": "2026-01-01T00:00:00Z",
+        "expectedInstant": null
+      },
+      {
+        "id": "invalid-zone-rejected",
+        "localDate": "2026-09-03",
+        "hour": 9,
+        "minute": 0,
+        "zoneId": "Not/AZone",
+        "now": "2026-01-01T00:00:00Z",
+        "expectedInstant": null
+      },
+      {
+        "id": "leap-day-valid",
+        "localDate": "2028-02-29",
+        "hour": 9,
+        "minute": 15,
+        "zoneId": "UTC",
+        "now": "2028-02-28T00:00:00Z",
+        "expectedInstant": "2028-02-29T09:15:00Z"
+      }
+    ],
+    "nextOccurrenceCases": [
+      {
+        "id": "one-time-fixed-instant-berlin",
+        "timing": {
+          "oneTimeInstant": "2026-09-03T07:00:00Z",
+          "repeatWeekdays": [],
+          "hour": null,
+          "minute": null
+        },
+        "after": "2026-09-02T00:00:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-03T07:00:00Z",
+        "expectedKey": "oneTime:1788418800000"
+      },
+      {
+        "id": "one-time-fixed-instant-new-york",
+        "timing": {
+          "oneTimeInstant": "2026-09-03T07:00:00Z",
+          "repeatWeekdays": [],
+          "hour": null,
+          "minute": null
+        },
+        "after": "2026-09-02T00:00:00Z",
+        "zoneId": "America/New_York",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-03T07:00:00Z",
+        "expectedKey": "oneTime:1788418800000"
+      },
+      {
+        "id": "one-time-not-replayed-at-now",
+        "timing": {
+          "oneTimeInstant": "2026-09-03T07:00:00Z",
+          "repeatWeekdays": [],
+          "hour": null,
+          "minute": null
+        },
+        "after": "2026-09-03T07:00:00Z",
+        "zoneId": "UTC",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": null,
+        "expectedKey": null
+      },
+      {
+        "id": "repeating-follows-berlin",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "thursday"
+          ],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T00:00:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-03T07:00:00Z",
+        "expectedKey": "repeating:2026-09-03:09:00"
+      },
+      {
+        "id": "repeating-follows-new-york",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "thursday"
+          ],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T00:00:00Z",
+        "zoneId": "America/New_York",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-03T13:00:00Z",
+        "expectedKey": "repeating:2026-09-03:09:00"
+      },
+      {
+        "id": "repeat-after-current-occurrence",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "thursday"
+          ],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T07:00:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-10T07:00:00Z",
+        "expectedKey": "repeating:2026-09-10:09:00"
+      },
+      {
+        "id": "repeat-dst-gap-skips-day",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "sunday"
+          ],
+          "hour": 2,
+          "minute": 30
+        },
+        "after": "2026-03-28T00:00:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-04-05T00:30:00Z",
+        "expectedKey": "repeating:2026-04-05:02:30"
+      },
+      {
+        "id": "repeat-overlap-first-only",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "sunday"
+          ],
+          "hour": 2,
+          "minute": 30
+        },
+        "after": "2026-10-24T00:00:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-10-25T00:30:00Z",
+        "expectedKey": "repeating:2026-10-25:02:30"
+      },
+      {
+        "id": "repeat-overlap-second-not-used",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "sunday"
+          ],
+          "hour": 2,
+          "minute": 30
+        },
+        "after": "2026-10-25T00:45:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-11-01T01:30:00Z",
+        "expectedKey": "repeating:2026-11-01:02:30"
+      },
+      {
+        "id": "midnight-next-day",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "friday"
+          ],
+          "hour": 0,
+          "minute": 5
+        },
+        "after": "2026-09-03T21:59:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-03T22:05:00Z",
+        "expectedKey": "repeating:2026-09-04:00:05"
+      },
+      {
+        "id": "clock-rollback-does-not-replay",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "thursday"
+          ],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-02T00:00:00Z",
+        "zoneId": "Europe/Berlin",
+        "lastResolvedLocalDate": "2026-09-03",
+        "expectedInstant": "2026-09-10T07:00:00Z",
+        "expectedKey": "repeating:2026-09-10:09:00"
+      },
+      {
+        "id": "travel-does-not-replay-local-day",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "thursday"
+          ],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T08:00:00Z",
+        "zoneId": "America/New_York",
+        "lastResolvedLocalDate": "2026-09-03",
+        "expectedInstant": "2026-09-10T13:00:00Z",
+        "expectedKey": "repeating:2026-09-10:09:00"
+      },
+      {
+        "id": "invalid-time-shape",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "monday"
+          ],
+          "hour": 24,
+          "minute": 0
+        },
+        "after": "2026-09-03T00:00:00Z",
+        "zoneId": "UTC",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": null,
+        "expectedKey": null
+      },
+      {
+        "id": "invalid-zone",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": [
+            "monday"
+          ],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T00:00:00Z",
+        "zoneId": "Not/AZone",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": null,
+        "expectedKey": null
+      },
+      {
+        "id": "invalid-gregorian-high-water-date",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": ["thursday"],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T00:00:00Z",
+        "zoneId": "UTC",
+        "lastResolvedLocalDate": "1500-02-29",
+        "expectedInstant": null,
+        "expectedKey": null
+      },
+      {
+        "id": "repeating-iana-alias",
+        "timing": {
+          "oneTimeInstant": null,
+          "repeatWeekdays": ["thursday"],
+          "hour": 9,
+          "minute": 0
+        },
+        "after": "2026-09-03T00:00:00Z",
+        "zoneId": "US/Pacific",
+        "lastResolvedLocalDate": null,
+        "expectedInstant": "2026-09-03T16:00:00Z",
+        "expectedKey": "repeating:2026-09-03:09:00"
+      }
+    ],
+    "deliveryCases": [
+      {
+        "id": "stale-revision-or-disabled",
+        "currentRevisionEnabled": false,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1000000,
+        "expected": "ignoreStale"
+      },
+      {
+        "id": "duplicate-delivery",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": true,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1000000,
+        "expected": "ignoreDuplicate"
+      },
+      {
+        "id": "early-does-not-consume",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 999999,
+        "expected": "tooEarly"
+      },
+      {
+        "id": "on-time-start-candidate",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1000000,
+        "expected": "startCandidate"
+      },
+      {
+        "id": "grace-inclusive",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1300000,
+        "expected": "startCandidate"
+      },
+      {
+        "id": "after-grace-missed",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1300001,
+        "expected": "missed"
+      },
+      {
+        "id": "active-session-wins",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": true,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1000000,
+        "expected": "skipActive"
+      },
+      {
+        "id": "active-recovery-also-wins",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": true,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1001000,
+        "expected": "skipActive"
+      },
+      {
+        "id": "early-collision-not-consumed",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": true,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 999999,
+        "expected": "tooEarly"
+      },
+      {
+        "id": "missed-before-collision",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": true,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1300001,
+        "expected": "missed"
+      },
+      {
+        "id": "stale-precedes-duplicate",
+        "currentRevisionEnabled": false,
+        "alreadyHandled": true,
+        "sessionRequested": true,
+        "scheduledAtEpochMilliseconds": 1000000,
+        "nowEpochMilliseconds": 1000000,
+        "expected": "ignoreStale"
+      },
+      {
+        "id": "invalid-negative-time",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": -1,
+        "nowEpochMilliseconds": 1000,
+        "expected": "invalid"
+      },
+      {
+        "id": "no-overflow-late",
+        "currentRevisionEnabled": true,
+        "alreadyHandled": false,
+        "sessionRequested": false,
+        "scheduledAtEpochMilliseconds": 0,
+        "nowEpochMilliseconds": 253402300799999,
+        "expected": "missed"
+      }
+    ]
+  },
   "historyPresentation": {
     "densityThresholdSeconds": {
       "light": 900,
