@@ -5,8 +5,8 @@ capability sources with a small native Compose Zap surface. It deliberately rema
 under `spikes/`; it is not the production Android application and does not change the
 Gate 0 or permission-free UI evidence projects.
 
-The launcher shows only real local Gate 0 truth. It does not expose the prototype's
-fake authentication, modes, history, schedules, or navigation. **Setup** opens the
+The launcher shows real local Gate 0 truth and now routes to real local **History**.
+It does not expose the prototype's fake authentication, modes or schedules. **Setup** opens the
 existing Gate 0 screen for disclosure, saved multi-app selection, Accessibility
 enablement, local Zap pairing, and foreground scanning. After setup, the same APK
 also exposes the narrow live-tag direct NDEF entry candidate so an unlocked home-screen
@@ -14,11 +14,25 @@ Zap tap can start or stop without navigating through the setup screen.
 
 The app picker saves only on **Save** and keeps unavailable saved entries visible.
 An active session uses a fixed target snapshot; changing apps requires stopping it
-with the Zap first. The legacy single target and pairing survive the upgrade, but
-the updated plural Accessibility disclosure (`gate0-accessibility-v2`) needs fresh
-consent. Source support is not physical multi-app acceptance: the A16 evidence below
-still identifies the earlier single-target candidates. History and schedules remain
-required MVP work, not real features of this shell yet.
+with the Zap first. The legacy single target and pairing survive the upgrade. The
+History disclosure (`gate0-accessibility-v3`) requires fresh affirmative consent;
+earlier active sessions remain stoppable without backfilled History. Only new v3
+starts are History-eligible. Source support is not physical acceptance: the dated
+A16 evidence still identifies the earlier single-target candidates. Schedules remain
+required MVP work and are not implemented by this shell.
+
+History source integration, 2026-09-03: `IntegratedHistorySurface` reads real local
+records asynchronously and shows a paged list, **Sessions**/**Session time** summary,
+app counts, **Blocking interrupted** labels and truthful loading/empty/error states.
+It does not use the prototype grid or claim continuously protected time. A stop
+atomically queues a UUID-keyed completion with active-state removal; SQLite delivery
+is retried before later starts/History reads, not on the stop path. Consent, rollback
+after failed preference commits and withdrawal deletion follow
+[`ANDROID_SESSION_HISTORY.md`](../../docs/ANDROID_SESSION_HISTORY.md). The final
+36-test emulator suite (including 12 History tests), 92 JVM tests and full local
+verifier passed; see the [readiness record](../../docs/ANDROID_PREDEVICE_READINESS.md)
+for fixed failures and the persisted test report. A16 History/visual acceptance is
+still pending; the older build evidence below does not cover this integration.
 
 When the real local truth is ready or active, the polished Zap surface itself owns a
 lifecycle-scoped one-shot foreground reader. The large Zap and bottom action therefore

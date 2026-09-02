@@ -60,14 +60,29 @@ class SessionDecisionPersistenceTest {
         assertEquals(stop, SessionDecisionPersistence.apply(stop, 123L, writer))
     }
 
+    @Test
+    fun `completion forwards the stop instant and expected identity`() {
+        val writer = FakeWriter(startSucceeds = true, stopSucceeds = true)
+        val stop = SessionDecision(SessionTransition.STOP, SessionState.IDLE, RestrictionAction.CLEAR)
+        SessionDecisionPersistence.apply(stop, 321L, writer, expectedSessionId = "synthetic-session")
+        assertEquals(321L, writer.stoppedAt)
+        assertEquals("synthetic-session", writer.stoppedId)
+    }
+
     private class FakeWriter(
         private val startSucceeds: Boolean,
         private val stopSucceeds: Boolean,
     ) : SessionStateWriter {
         var recoveryRequired = false
+        var stoppedAt: Long? = null
+        var stoppedId: String? = null
 
         override fun startSession(epochMilliseconds: Long): Boolean = startSucceeds
-        override fun stopSession(): Boolean = stopSucceeds
+        override fun stopSession(epochMilliseconds: Long, expectedSessionId: String?): Boolean {
+            stoppedAt = epochMilliseconds
+            stoppedId = expectedSessionId
+            return stopSucceeds
+        }
         override fun markRecoveryRequired() {
             recoveryRequired = true
         }

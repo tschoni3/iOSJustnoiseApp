@@ -9,6 +9,7 @@ import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
@@ -17,6 +18,7 @@ import androidx.compose.runtime.setValue
 import com.justnoise.gate0.R
 import com.justnoise.gate0.app.MainActivity as Gate0SetupActivity
 import com.justnoise.gate0.data.Gate0Preferences
+import com.justnoise.gate0.data.SessionHistorySnapshot
 import com.justnoise.gate0.domain.SessionTransition
 import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
@@ -27,6 +29,7 @@ import com.justnoise.gate0.platform.nfc.NdefTagReader
 import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
 import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
 import java.util.Locale
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     private lateinit var controller: Gate0Controller
@@ -35,6 +38,11 @@ class MainActivity : ComponentActivity() {
     private val scanCoordinator = OneShotScanCoordinator<Unit>()
     private val handler = Handler(Looper.getMainLooper())
     private var screenState by mutableStateOf(IntegratedZapState())
+    private var showingHistory by mutableStateOf(false)
+    private var historyState by mutableStateOf(IntegratedHistoryState())
+    private val historyExecutor = Executors.newSingleThreadExecutor()
+    private var historyRequestGeneration = 0
+    private var historyLimit = HISTORY_PAGE_SIZE
 
     private val clearTransientStatus = Runnable {
         screenState = screenState.copy(transientStatus = null)
@@ -51,6 +59,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         controller = Gate0Controller(this)
         preferences = Gate0Preferences(this)
+        showingHistory = savedInstanceState?.getBoolean(HISTORY_ROUTE_KEY) ?: false
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -64,11 +73,27 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             JustnoiseIntegratedTheme {
-                IntegratedZapSurface(
-                    state = screenState,
-                    onZap = ::handleZapPress,
-                    onOpenSetup = ::openSetup,
-                )
+                BackHandler(enabled = showingHistory, onBack = ::closeHistory)
+                if (showingHistory) {
+                    IntegratedHistorySurface(
+                        state = historyState,
+                        onBack = ::closeHistory,
+                        onRetry = { loadHistory(historyLimit) },
+                        onLoadMore = {
+                            loadHistory(
+                                (historyLimit.toLong() + HISTORY_PAGE_SIZE)
+                                    .coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                            )
+                        },
+                    )
+                } else {
+                    IntegratedZapSurface(
+                        state = screenState,
+                        onZap = ::handleZapPress,
+                        onOpenSetup = ::openSetup,
+                        onOpenHistory = ::openHistory,
+                    )
+                }
             }
         }
     }
@@ -77,6 +102,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         handler.removeCallbacks(refresh)
         refresh.run()
+        if (showingHistory) loadHistory(historyLimit)
     }
 
     override fun onPause() {
@@ -84,7 +110,51 @@ class MainActivity : ComponentActivity() {
         handler.removeCallbacks(clearTransientStatus)
         screenState = screenState.copy(transientStatus = null)
         handler.removeCallbacks(refresh)
+        historyRequestGeneration += 1
+        historyState = IntegratedHistoryState()
         super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(HISTORY_ROUTE_KEY, showingHistory)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        historyRequestGeneration += 1
+        historyExecutor.shutdown()
+        super.onDestroy()
+    }
+
+    private fun openHistory() {
+        cancelReaderMode()
+        showingHistory = true
+        loadHistory(HISTORY_PAGE_SIZE)
+    }
+
+    private fun closeHistory() {
+        historyRequestGeneration += 1
+        showingHistory = false
+        historyState = IntegratedHistoryState()
+        refreshTruth()
+    }
+
+    private fun loadHistory(limit: Int) {
+        val generation = ++historyRequestGeneration
+        historyLimit = limit
+        historyState = historyState.copy(loading = true)
+        historyExecutor.execute {
+            val snapshot = try {
+                preferences.loadHistory(limit)
+            } catch (_: Exception) {
+                SessionHistorySnapshot(error = true)
+            }
+            handler.post {
+                if (generation == historyRequestGeneration && showingHistory && !isDestroyed) {
+                    historyState = IntegratedHistoryState(snapshot = snapshot)
+                }
+            }
+        }
     }
 
     private fun handleZapPress() {
@@ -192,6 +262,7 @@ class MainActivity : ComponentActivity() {
                             R.string.status_direct_duplicate_ignored
 
                         interaction == null -> R.string.status_start_failed
+                        interaction.persistenceFailed -> R.string.status_session_storage_failed
                         interaction.readDecision.outcome == ZapReadOutcome.UNAUTHORIZED ->
                             R.string.status_scan_unauthorized
 
@@ -290,5 +361,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val REFRESH_INTERVAL_MILLISECONDS = 1_000L
         const val TRANSIENT_STATUS_MILLISECONDS = 5_000L
+        const val HISTORY_PAGE_SIZE = 100
+        const val HISTORY_ROUTE_KEY = "showing_history"
     }
 }

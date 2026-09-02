@@ -22,6 +22,18 @@ This audit compares the launch-ready iOS surface (`CAPTURE_ENABLED` absent) with
 | Permission-required, denied, temporarily unavailable, and unsupported recovery | `PlatformBoundaryPrototype.kt` | **Covered.** Recovery never reports unavailable capability as successful. |
 | Capture tab and Capture/Signal feature family | iOS compile-time `AppFeatures.captureEnabled` | **Correctly excluded.** The currently published Release configuration hides Capture. |
 
+## Integrated History source — 2026-09-03
+
+Separately from the permission-free prototype above, `spikes/android-integrated/`
+now routes to `IntegratedHistorySurface`, backed by `Gate0Preferences` and local
+SQLite completion records. It provides loading/error/empty states, a paged session
+list, app counts, **Sessions** and **Session time** totals, and **Blocking interrupted**
+labels. Shared duration formatting is reused; elapsed session time does not establish
+continuous blocking. No real 90-day/year grid or weekly insight is claimed. Local
+History instrumentation and the full repository verifier now pass; these are not
+physical visual acceptance. A16 History/visual results remain pending.
+See `ANDROID_SESSION_HISTORY.md` for persistence, consent and recovery boundaries.
+
 ## What the percentage means
 
 - **100% route/state coverage** means every launch-ready iOS destination and major user-visible branch above has a native Compose representation or an explicit truthful platform boundary.

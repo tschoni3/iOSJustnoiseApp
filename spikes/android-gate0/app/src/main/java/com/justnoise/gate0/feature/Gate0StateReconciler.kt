@@ -14,7 +14,7 @@ enum class Gate0Truth {
 }
 
 object Gate0StateReconciler {
-    const val HEARTBEAT_STALE_AFTER_MILLISECONDS: Long = 8_000L
+    const val HEARTBEAT_STALE_AFTER_MILLISECONDS: Long = Gate0Preferences.HEARTBEAT_STALE_AFTER_MILLISECONDS
 
     fun reconcile(
         stored: StoredGate0State,

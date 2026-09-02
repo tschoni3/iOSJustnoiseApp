@@ -100,9 +100,9 @@ local-first on the existing A16; no account system or framework rewrite is requi
 | Required feature | Current evidence | Completion needed |
 | --- | --- | --- |
 | Select apps to block | Development source persists a set with explicit Save/Cancel and an immutable active-session snapshot; all 24 API-36 emulator instrumentation tests pass, including migration/picker and the exact Google Personal Safety exclusion; refreshed full local verification after that fix also passed | Sample multiple eligible targets on the A16 while preserving protected-system exclusions; A16 still has the earlier single-target build |
-| Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16; development source now uses the multi-app snapshot | Add a stable session identity for durable History; physically verify the new multi-app candidate and preserve safe stop/recovery |
+| Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16; development source now implements stable identity/outbox with passing local History tests | Physically verify the History-capable candidate while preserving NFC authorization, stop guards and safe recovery |
 | Schedules | Separate preview list/editor and pure eligibility rules only | Persist/edit/enable/delete schedules, calculate occurrences, deliver real background starts and reconcile missed/duplicate delivery |
-| History | Shared summary/duration rules; UI displays fixed preview data | Save real session records and show their dates/durations/totals, including manual and scheduled sessions exactly once |
+| History | Real local UUID/outbox/SQLite records, native list/summary and v3 disclosure implemented; 36 emulator instrumentation tests including 12 History tests and full local verification pass | A16 real-Zap completion/History and physical visual acceptance; scheduled sessions must later use the same engine |
 
 Minimum implementation order:
 
@@ -132,14 +132,15 @@ the overlay. Unavailable saved targets stay visible until explicitly removed.
 
 The legacy single-package preference is read as a singleton when the new set is
 absent, including a legacy active session. Explicit empty new sets never fall back.
-Pairing and session start/revision are preserved. The disclosure is now
-`gate0-accessibility-v2` for selected **apps**; old consent is not silently upgraded.
+Pairing and session start/revision are preserved. This multi-app baseline introduced
+`gate0-accessibility-v2` for selected **apps**; old consent was not silently upgraded.
 This is Android adapter implementation of existing portable multi-target selection,
 not a change to iOS behavior. It adds no event history, schedules, network access,
-new runtime dependency or production module. Device acceptance and stable session
-identity/real History remain separate work.
+new runtime dependency or production module. At this baseline, device acceptance and
+stable session identity/real History were separate work; the History update follows.
 
-Local verification for this slice is recorded in `spikes/android-gate0/README.md`.
+Local verification for this multi-app baseline, not the later History extension,
+is recorded in `spikes/android-gate0/README.md`.
 The Mac disk-space block is cleared and all 24 instrumentation tests passed on the
 API-36 `medium_phone` emulator (`emulator-5554`), with no failures or skips. Two
 initial picker-test failures were corrected by waiting for queued button work and
@@ -154,6 +155,52 @@ The final combined debug APK checksum is recorded in the README; it was installe
 only on the emulator, with no visual acceptance claim from that installation alone.
 The paired A16 was not changed, and emulator results do not establish physical
 multi-app acceptance or promote any Gate 0 cell.
+
+### History implemented locally — 2026-09-03
+
+[`ANDROID_SESSION_HISTORY.md`](ANDROID_SESSION_HISTORY.md) records the Android-local
+contract written before integration and now implemented: stable active UUID/target snapshot,
+atomic stop plus one pending completion in SharedPreferences, and retryable,
+UUID-idempotent insertion into `session_history.db`. Completed records retain only
+session ID, start/end, duration, target count and interruption flag—not package names,
+foreground events or raw Zap data. A database retry cannot re-block a completed stop;
+new starts wait for pending History to drain. Withdrawal clears History with a durable
+deletion marker so an interrupted cleanup cannot restore old records.
+
+The native list/summary uses real data and **Session time**, with **Blocking interrupted**
+records labeled; it does not assert verified protected time. Same-process duration
+uses monotonic time, while a cross-process wall-clock fallback is non-negative and
+marked interrupted. Shared summary/formatting rules and iOS behavior stay unchanged;
+calendar/90-day/weekly views are outside this slice.
+
+The disclosure is `gate0-accessibility-v3`, with fresh affirmative consent.
+Pairing and selected apps remain. Legacy active sessions can still stop without
+backfilling History; only new v3 starts are eligible for completed records. History
+stays local until withdrawal, app-data clear or uninstall, with no new network or
+backup path. This is development implementation, not A16 or release acceptance.
+
+Local verification passed after the fixes below:
+
+- **36 emulator instrumentation tests**, including 12 new History tests, with zero
+  failures/errors/skips on API-36 `medium_phone`. The persisted
+  [instrumentation report](../spikes/android-gate0/evidence/emulator-history-2026-09-03/instrumentation-results.xml)
+  records 33.974 seconds of tests; Gradle completed in 45 seconds. Log:
+  `/private/tmp/justnoise-history-instrumentation-final.log`.
+- **92 JVM tests** (73 Gate 0, 15 UI, 4 integrated), all lint/build steps, 10 release-
+  checker tests and the packaged release boundary passed in the final full verifier.
+  Log: `/private/tmp/justnoise-history-readiness-final.log`.
+- The first full run found non-observable `Locale.getDefault()` use in Compose;
+  the screen now uses `LocalLocale`. The first instrumentation run exposed database
+  initialization/cleanup failure because `PRAGMA secure_delete` returns rows;
+  replacing `execSQL` with `rawQuery` corrected that API use.
+- The next instrumentation run passed 35 of 36 tests. The remaining legacy forged-
+  intent test had seeded an empty target selection; its fixture now supplies a
+  non-empty selection while retaining the same no-live-tag rejection assertions.
+  The final 36-test run above passed without weakening those assertions.
+
+These checks cover local migration, outbox/duplicate/failure recovery and cleanup,
+not actual NFC hardware, A16 interruption durability or physical History visuals.
+No device-matrix cell is promoted and no Play/signing approval follows from them.
 
 One material schedule choice remains: scheduled **start only, ending on Zap**, or a
 scheduled **start/end window**. The observed iOS 20-minute monitor is not an approved

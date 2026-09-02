@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -112,6 +111,7 @@ fun IntegratedZapSurface(
     state: IntegratedZapState,
     onZap: () -> Unit,
     onOpenSetup: () -> Unit,
+    onOpenHistory: () -> Unit,
 ) {
     val background by animateColorAsState(
         targetValue = JustnoiseContract.color(
@@ -145,6 +145,7 @@ fun IntegratedZapSurface(
             DevelopmentToolbar(
                 foreground = foreground,
                 onOpenSetup = onOpenSetup,
+                onOpenHistory = onOpenHistory,
             )
 
             BoxWithConstraints(
@@ -211,6 +212,7 @@ fun IntegratedZapSurface(
 private fun DevelopmentToolbar(
     foreground: Color,
     onOpenSetup: () -> Unit,
+    onOpenHistory: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -220,7 +222,21 @@ private fun DevelopmentToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Spacer(modifier = Modifier.size(56.dp))
+        Surface(
+            onClick = onOpenHistory,
+            modifier = Modifier.size(width = 56.dp, height = 36.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = foreground.copy(alpha = 0.10f),
+            contentColor = foreground,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "HISTORY",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = JustnoiseContract.text("brand.displayName").uppercase(),
@@ -391,7 +407,7 @@ private fun statusTitle(truth: Gate0Truth): String = when (truth) {
     Gate0Truth.PERMISSION_REQUIRED -> "Enable Accessibility"
     Gate0Truth.IDLE -> "Ready to Zap"
     Gate0Truth.ACTIVE -> "Protection active"
-    Gate0Truth.RECOVERY_REQUIRED -> "Reconnect Accessibility"
+    Gate0Truth.RECOVERY_REQUIRED -> "Recovery required"
 }
 
 private fun statusDetail(truth: Gate0Truth): String = when (truth) {
@@ -414,7 +430,7 @@ private fun statusDetail(truth: Gate0Truth): String = when (truth) {
         "The selected apps should be intercepted while this session is active."
 
     Gate0Truth.RECOVERY_REQUIRED ->
-        "The app cannot prove enforcement is alive. Open setup to recover safely."
+        "The app cannot confirm session state. Check setup, or retry History if a save failed."
 }
 
 @Preview(name = "A16 Zap idle", widthDp = 384, heightDp = 832)
@@ -451,6 +467,6 @@ private fun IntegratedZapRecoveryPreview() {
 @Composable
 private fun IntegratedZapPreview(state: IntegratedZapState) {
     JustnoiseIntegratedTheme {
-        IntegratedZapSurface(state = state, onZap = {}, onOpenSetup = {})
+        IntegratedZapSurface(state = state, onZap = {}, onOpenSetup = {}, onOpenHistory = {})
     }
 }

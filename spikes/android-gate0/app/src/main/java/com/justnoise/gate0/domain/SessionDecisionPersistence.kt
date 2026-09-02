@@ -2,7 +2,10 @@ package com.justnoise.gate0.domain
 
 interface SessionStateWriter {
     fun startSession(epochMilliseconds: Long): Boolean
-    fun stopSession(): Boolean
+    fun stopSession(
+        epochMilliseconds: Long = System.currentTimeMillis(),
+        expectedSessionId: String? = null,
+    ): Boolean
     fun markRecoveryRequired()
 }
 
@@ -11,6 +14,7 @@ object SessionDecisionPersistence {
         decision: SessionDecision,
         epochMilliseconds: Long,
         writer: SessionStateWriter,
+        expectedSessionId: String? = null,
     ): SessionDecision = when (decision.restrictionAction) {
         RestrictionAction.APPLY -> if (writer.startSession(epochMilliseconds)) {
             decision
@@ -23,7 +27,7 @@ object SessionDecisionPersistence {
             )
         }
 
-        RestrictionAction.CLEAR -> if (writer.stopSession()) {
+        RestrictionAction.CLEAR -> if (writer.stopSession(epochMilliseconds, expectedSessionId)) {
             decision
         } else {
             writer.markRecoveryRequired()

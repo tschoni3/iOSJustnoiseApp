@@ -185,6 +185,7 @@ class MainActivity : Activity() {
                             R.string.status_direct_duplicate_ignored
 
                         interaction == null -> R.string.status_start_failed
+                        interaction.persistenceFailed -> R.string.status_session_storage_failed
                         interaction.readDecision.outcome == ZapReadOutcome.UNAUTHORIZED ->
                             R.string.status_scan_unauthorized
 

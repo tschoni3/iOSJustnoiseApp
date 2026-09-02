@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.16
+Status: target architecture, version 1.0.17
 
 ## Decision
 
@@ -22,6 +22,18 @@ target and Zap pairing are retained. Updated plural Accessibility disclosure req
 fresh consent. This is an Android adapter extension of the existing shared selection
 rule, not a new cross-platform framework or iOS change. It is not yet A16 multi-app
 acceptance; stable session identity, persisted History and schedules remain unfinished.
+
+History source integration, 2026-09-03: the development engine now assigns stable
+session UUIDs and queues a completion atomically with stop. `Gate0Preferences`
+drains this local outbox idempotently into SQLite before starts/History reads, never
+as a prerequisite for releasing a committed stop. The integrated Compose app reads
+real records through `IntegratedHistorySurface`: a list, **Session time** summary
+and interruption labels, not the preview calendar grid. The v3 disclosure, rollback
+and cleanup boundaries are in `docs/ANDROID_SESSION_HISTORY.md`. This is native
+adapter work with unchanged shared formatting/iOS behavior. The final 36-test
+emulator suite (including 12 History tests), 92 JVM tests and full local verifier
+passed; A16 History/visual acceptance remains pending and schedules unimplemented.
+See `docs/ANDROID_PREDEVICE_READINESS.md` for the scoped results and fixed failures.
 
 ## Readiness checkpoint
 

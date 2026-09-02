@@ -16,7 +16,7 @@
     </plurals>
     <string name="refresh_apps">Refresh app list</string>
     <string name="disclosure_title">Accessibility disclosure</string>
-    <string name="accessibility_disclosure">Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It observes window-change events and reads the foreground package identifier so it can compare that identifier with the apps you selected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes. Foreground event contents are not retained or sent anywhere. The selected apps, consent version, enforcement state, and a keyed Zap digest stay only on this device. You can withdraw below, disable the service in Accessibility settings, Force Stop, or uninstall at any time.</string>
+    <string name="accessibility_disclosure">Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It observes window-change events and reads the foreground package identifier so it can compare that identifier with the apps you selected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes. Foreground event contents are not retained or sent anywhere. The selected apps, consent version, enforcement state, and a keyed Zap digest stay only on this device. For History, it saves a random session ID, start and end times, duration, number of selected apps, and whether the session was interrupted. History contains no app names or foreground event log. Session time does not prove continuous app blocking. History stays only on this device until you withdraw, clear app storage, or uninstall. You can withdraw below, disable the service in Accessibility settings, Force Stop, or uninstall at any time.</string>
     <string name="consent_checkbox">I understand this disclosure and choose to test the Accessibility capability.</string>
     <string name="open_accessibility_settings">Continue to Accessibility settings</string>
     <string name="zap_title">Local Zap pairing</string>
@@ -51,6 +51,7 @@
     <string name="status_scan_invalid_text">The single NDEF Text record is not valid bounded UTF-8. State did not change.</string>
     <string name="status_scan_ambiguous_text">The tag contains multiple NDEF Text records. Exactly one is required, so state did not change.</string>
     <string name="status_start_failed">Start failed. Check target, consent, and service recovery.</string>
+    <string name="status_session_storage_failed">Session could not be saved. Check free storage and retry. Open History to retry saving completed sessions.</string>
     <string name="status_started">Session started.</string>
     <string name="status_stopped">Session stopped and the overlay was cleared.</string>
     <string name="status_stop_guard">Wait at least three seconds before stopping.</string>

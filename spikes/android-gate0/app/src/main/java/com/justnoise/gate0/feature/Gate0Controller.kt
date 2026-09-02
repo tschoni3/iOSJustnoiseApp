@@ -22,6 +22,7 @@ import com.justnoise.gate0.platform.restriction.Gate0AccessibilityService
 data class ZapInteraction(
     val readDecision: ZapReadDecision,
     val sessionDecision: SessionDecision?,
+    val persistenceFailed: Boolean = false,
 )
 
 class Gate0Controller(
@@ -77,6 +78,7 @@ class Gate0Controller(
             accessibilityEnabled = AccessibilityServiceStatus.isEnabled(applicationContext),
             nowElapsedMilliseconds = nowElapsedMilliseconds,
         )
+        if (stored.desiredActive && !serviceReady) preferences.markHistoryInterrupted()
         val capability = if (serviceReady) {
             RestrictionCapability.AVAILABLE
         } else {
@@ -95,17 +97,24 @@ class Gate0Controller(
             decision = sessionDecision,
             epochMilliseconds = nowEpochMilliseconds,
             writer = preferences,
+            expectedSessionId = stored.activeSessionId,
         )
         publishStateChange()
-        return ZapInteraction(readDecision, persistedDecision)
+        return ZapInteraction(readDecision, persistedDecision, persistedDecision != sessionDecision)
     }
 
-    fun truth(nowElapsedMilliseconds: Long = SystemClock.elapsedRealtime()): Gate0Truth =
-        Gate0StateReconciler.reconcile(
-            stored = preferences.snapshot(),
-            accessibilityEnabled = AccessibilityServiceStatus.isEnabled(applicationContext),
+    fun truth(nowElapsedMilliseconds: Long = SystemClock.elapsedRealtime()): Gate0Truth {
+        val stored = preferences.snapshot()
+        val enabled = AccessibilityServiceStatus.isEnabled(applicationContext)
+        if (stored.desiredActive && !Gate0StateReconciler.isServiceReady(stored, enabled, nowElapsedMilliseconds)) {
+            preferences.markHistoryInterrupted()
+        }
+        return Gate0StateReconciler.reconcile(
+            stored = stored,
+            accessibilityEnabled = enabled,
             nowElapsedMilliseconds = nowElapsedMilliseconds,
         )
+    }
 
     fun selectedPackages(): Set<String> = preferences.snapshot().selectedPackages
 
@@ -122,14 +131,13 @@ class Gate0Controller(
         }
 
     fun withdrawAndClear(): Boolean {
-        preferences.stopSession()
+        val preferencesCleared = preferences.clearForWithdrawal()
         publishStateChange()
         val keyCleared = try {
             zapStore.clear()
         } catch (_: Exception) {
             false
         }
-        val preferencesCleared = preferences.clearForWithdrawal()
         applicationContext.sendBroadcast(
             Intent(Gate0AccessibilityService.ACTION_WITHDRAW)
                 .setPackage(applicationContext.packageName),

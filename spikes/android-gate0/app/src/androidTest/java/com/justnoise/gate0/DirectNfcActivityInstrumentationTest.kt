@@ -35,6 +35,7 @@ class DirectNfcActivityInstrumentationTest {
 
         try {
             assertTrue(zapStore.pair(canonicalRecord))
+            assertTrue(preferences.setSelectedPackages(setOf("synthetic.blocked.app")))
             assertTrue(preferences.startSession(System.currentTimeMillis() - 10_000L))
             val before = preferences.snapshot()
 

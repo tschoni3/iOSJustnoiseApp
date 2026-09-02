@@ -65,7 +65,7 @@ required_contract_paths = (
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/CoachMarksPrototype.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
-    "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt",
+    "spikes/android-shared/src/main/kotlin/com/justnoise/uiprototype/HistoryPresentationRules.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
     "spikes/android-shared/src/main/kotlin/com/justnoise/androidcontract/JustnoiseContract.kt",
     "spikes/android-integrated/app/src/test/java/com/justnoise/integrated/IntegratedZapStateTest.kt",
@@ -910,7 +910,7 @@ required_document_fragments = {
         "PortableHistoryRules.summarize",
         "PortableHistoryRules.density",
     ),
-    "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt": (
+    "spikes/android-shared/src/main/kotlin/com/justnoise/uiprototype/HistoryPresentationRules.kt": (
         "object PortableHistoryRules",
         "LIGHT_MINIMUM_SECONDS",
         "formatDuration",
@@ -1080,7 +1080,7 @@ contract_scopes = [
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/CoachMarksPrototype.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/MainActivity.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
-    "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt",
+    "spikes/android-shared/src/main/kotlin/com/justnoise/uiprototype/HistoryPresentationRules.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
     "spikes/android-shared/src/main/kotlin/com/justnoise/androidcontract/JustnoiseContract.kt",
     "spikes/android-integrated/app/src/test/java/com/justnoise/integrated/IntegratedZapStateTest.kt",
