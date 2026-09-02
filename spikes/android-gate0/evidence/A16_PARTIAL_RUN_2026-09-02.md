@@ -1,6 +1,6 @@
 # Galaxy A16 partial run — 2026-09-02
 
-Status: **ONE FOREGROUND CYCLE AND A POST-FIX WARM HOME START OBSERVED — no complete Gate 0 cell passes**
+Status: **ONE FOREGROUND CYCLE AND ONE POST-FIX WARM HOME START/STOP CYCLE OBSERVED — no complete Gate 0 cell passes**
 
 ## Device and tested build
 
@@ -94,7 +94,7 @@ seconds and 176 video frames**; do not label it a 30-second stability recording.
   no-tag sample. An earlier diagnostic lacked an immediate baseline and is not used
   to attribute any state transition.
 
-### Task-isolation build: navigation and physical-start follow-up
+### Task-isolation build: navigation and physical start/stop follow-up
 
 - Source: `d93ae010024101fdd93c9246a94dc146ca0593f2`.
 - APK SHA-256, matched against the installed `base.apk`:
@@ -131,7 +131,13 @@ seconds and 176 video frames**; do not label it a 30-second stability recording.
   remained foreground. Together with the idle sample above, this verifies no-tag
   rejection in both sampled states. It does not cover copied-authorized-message
   forgery or unauthorized physical tags.
-- A physical direct stop has been requested; its result is not yet confirmed.
+- Asked to tap once from Home to stop, the owner confirmed **“Session stopped” while
+  staying on Home, without a chooser**. Sanitized state changed from active/revision
+  `12` to idle/revision `13`; a second read remained idle/revision `13` with a connected,
+  advancing service heartbeat. Samsung Home remained foreground and unlocked.
+  This completes one owner-confirmed warm direct start/stop cycle on the updated APK.
+  No further APK installation, foreground scanner, pairing change, or permission
+  toggle occurred between this cycle's start and stop.
 
 ## Preserved foreground-cycle artifacts
 
@@ -151,12 +157,14 @@ Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA
 ## Remaining checks
 
 - Repeated authorized physical starts/stops and unauthorized/malformed/canceled-tag
-  cases; this run records only one complete foreground cycle.
+  cases; this run records one complete foreground cycle and one complete post-fix
+  warm direct cycle, not the required 10/10 repetitions.
 - Longer recorded touch, Back, Home, Recents, rotation, split-screen, and rapid-launch
   checks; all required target/entry-path coverage.
-- Confirmed direct stops, repeated post-update direct unlocked-Home navigation,
+- Repeated post-update direct unlocked-Home starts/stops and navigation,
   cold-process and remaining negative direct-entry cases; lifecycle/reboot/battery/Doze/overnight,
   privacy/false-positive, escape, policy, and Galaxy A17 evidence.
 
 All 38 matrix cells remain `BLOCKED`. This run establishes meaningful progress on the
-reported flicker defect without changing the Gate 0 or production-implementation hold.
+reported flicker defect and direct NFC navigation without changing the Gate 0 or
+production-implementation hold.

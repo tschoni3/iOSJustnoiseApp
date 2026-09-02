@@ -11,9 +11,9 @@ forgeries, feeds the shared parser/controller, and shares a short process mutati
 with the foreground reader. Those source and test properties are not routing evidence.
 The [September 2 A16 follow-up](../spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md#warm-home--navigation-follow-up)
 records the initial warm unlocked-Home start that revealed the existing app screen,
-then a successful post-fix physical start without Justnoise or a chooser appearing;
-Samsung Home remained foreground. The task-isolation update also passed no-live-tag
-rejection samples while idle and active. Confirmed direct stops, repetitions,
+then one successful post-fix physical start/stop cycle without Justnoise or a chooser
+appearing; Samsung Home remained foreground. The task-isolation update also passed
+no-live-tag rejection samples while idle and active. Repetitions,
 cold-process, lock, competing-handler, and Force Stop cases remain unverified;
 G0-19 is still blocked.
 
