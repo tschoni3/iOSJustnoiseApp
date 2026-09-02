@@ -43,7 +43,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | G0-16 | Service crash/restart, process death, OEM reclaim, and Force Stop recover truthfully | BLOCKED | BLOCKED | Not run |
 | G0-17 | Natural Doze and eight-hour overnight pass in both default and unrestricted battery modes | BLOCKED | BLOCKED | Not run; unrestricted-only pass fails gate |
 | G0-18 | Minimal metadata plus local-only inventory match reviewed logs/network observation | BLOCKED | BLOCKED | Static claims exist; device observation not run |
-| G0-19 | Unlocked Home direct legacy-Zap start/stop needs no app-open, Scan button, chooser, or second confirmation | BLOCKED | BLOCKED | September 2: one owner-confirmed warm Home start, idle/revision 9 to active/revision 10, but the existing app screen was revealed. Task-isolation update passed a synthetic no-tag return-to-Home check; post-update physical navigation, direct stop, repetitions, chooser, cold process, lock, competing-handler, and Force Stop evidence remains pending. Later idle/revision 11 has no confirmed cause and is not counted as direct-stop evidence |
+| G0-19 | Unlocked Home direct legacy-Zap start/stop needs no app-open, Scan button, chooser, or second confirmation | BLOCKED | BLOCKED | September 2: initial warm Home start revealed the app; after task-isolation update, the owner confirmed a physical start without Justnoise or chooser, idle/revision 11 to active/revision 12, with Home foreground. Synthetic no-tag rejection passed while idle and active. Direct stop, repetitions, cold process, lock, competing-handler, remaining negatives, and Force Stop evidence remain pending. Earlier idle/revision 11 has no confirmed cause and is not counted as direct-stop evidence |
 
 ## Decision arithmetic
 

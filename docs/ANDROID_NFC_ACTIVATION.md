@@ -10,10 +10,12 @@ live `EXTRA_TAG`, re-reads NDEF from the physical tag, ignores message-only inte
 forgeries, feeds the shared parser/controller, and shares a short process mutation gate
 with the foreground reader. Those source and test properties are not routing evidence.
 The [September 2 A16 follow-up](../spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md#warm-home--navigation-follow-up)
-records one owner-confirmed warm unlocked-Home start, which revealed the existing app
-screen. A task-isolation update passed a synthetic no-tag navigation check, but its
-physical retest is pending. Confirmed direct stops, repetitions, chooser, cold-process,
-lock, competing-handler, and Force Stop cases remain unverified; G0-19 is still blocked.
+records the initial warm unlocked-Home start that revealed the existing app screen,
+then a successful post-fix physical start without Justnoise or a chooser appearing;
+Samsung Home remained foreground. The task-isolation update also passed no-live-tag
+rejection samples while idle and active. Confirmed direct stops, repetitions,
+cold-process, lock, competing-handler, and Force Stop cases remain unverified;
+G0-19 is still blocked.
 
 ## Product outcome
 

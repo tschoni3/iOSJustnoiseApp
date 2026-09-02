@@ -1,6 +1,6 @@
 # Galaxy A16 partial run — 2026-09-02
 
-Status: **ONE FOREGROUND CYCLE AND ONE WARM HOME START OBSERVED — no complete Gate 0 cell passes**
+Status: **ONE FOREGROUND CYCLE AND A POST-FIX WARM HOME START OBSERVED — no complete Gate 0 cell passes**
 
 ## Device and tested build
 
@@ -94,7 +94,7 @@ seconds and 176 video frames**; do not label it a 30-second stability recording.
   no-tag sample. An earlier diagnostic lacked an immediate baseline and is not used
   to attribute any state transition.
 
-### Task-isolation build: navigation-only check
+### Task-isolation build: navigation and physical-start follow-up
 
 - Source: `d93ae010024101fdd93c9246a94dc146ca0593f2`.
 - APK SHA-256, matched against the installed `base.apk`:
@@ -114,8 +114,24 @@ seconds and 176 video frames**; do not label it a 30-second stability recording.
   same synthetic no-tag `NEW_TASK` launch then left Samsung Home foreground. Immediate
   before/after state remained idle/revision `11`. This is a successful **navigation
   and no-tag rejection check**, not evidence of a physical NFC start or stop.
-- Post-update physical NFC return-to-Home behavior remains pending. Accessibility
-  re-enablement and a fresh readiness check are required before that test.
+- The owner subsequently reported **“enabled.”** Android listed the expected
+  `Gate0AccessibilityService`; sanitized state showed `service_connected=true` and
+  an advancing heartbeat. The app showed **Ready to Zap** with Chrome selected and
+  idle/revision `11`. The phone was returned to unlocked Samsung Home.
+- Asked to tap the physical Zap once without opening Justnoise or pressing Scan,
+  the owner confirmed **“session started without justnoise or app chooser.”**
+  Sanitized state changed to active/revision `12`, with the service connected;
+  a passive window check found Samsung Home foreground and unlocked. This is one
+  owner-confirmed successful warm direct-start/navigation sample on the updated APK,
+  not repetition, cold-process, or other-device coverage.
+- After the physical entry had finished, with the owner asked to keep the Zap away, a synthetic
+  `ACTION_NDEF_DISCOVERED` / `text/plain` / `NEW_TASK` request containing no live tag
+  and no copied NDEF messages was rejected while the session was active. Immediate
+  before/after state remained active/revision `12`; the heartbeat advanced and Home
+  remained foreground. Together with the idle sample above, this verifies no-tag
+  rejection in both sampled states. It does not cover copied-authorized-message
+  forgery or unauthorized physical tags.
+- A physical direct stop has been requested; its result is not yet confirmed.
 
 ## Preserved foreground-cycle artifacts
 
@@ -138,8 +154,8 @@ Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA
   cases; this run records only one complete foreground cycle.
 - Longer recorded touch, Back, Home, Recents, rotation, split-screen, and rapid-launch
   checks; all required target/entry-path coverage.
-- Post-update direct unlocked-Home navigation, confirmed direct stops, repetitions,
-  cold-process and negative direct-entry cases; lifecycle/reboot/battery/Doze/overnight,
+- Confirmed direct stops, repeated post-update direct unlocked-Home navigation,
+  cold-process and remaining negative direct-entry cases; lifecycle/reboot/battery/Doze/overnight,
   privacy/false-positive, escape, policy, and Galaxy A17 evidence.
 
 All 38 matrix cells remain `BLOCKED`. This run establishes meaningful progress on the
