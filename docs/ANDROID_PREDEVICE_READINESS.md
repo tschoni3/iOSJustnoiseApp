@@ -46,7 +46,7 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 | --- | --- | --- |
 | Preserve the shipped iOS client | **Ready** | Android preparation is isolated under `spikes/`, `docs/`, `product/`, and CI/scripts; the production Android module is absent. iOS remains independently verified by `scripts/verify-ios.sh` and the **iOS verification** workflow. |
 | Native two-client architecture | **Ready** | `AGENTS.md` and `docs/MOBILE_ARCHITECTURE.md` require SwiftUI plus Jetpack Compose with shared contracts rather than a shared UI runtime. |
-| Shared product decisions | **Ready baseline** | `product/behavior/portable-fixtures.v1.json`, `product/copy/en.v1.json`, `product/design/tokens.v1.json`, and `product/api/signal/v1/` are versioned and verified. Direct Zap entry now freezes start-the-last-explicit-valid-mode versus stop-active behavior in Swift/Kotlin fixtures. History density and duration-label rules are deterministic in both native rule sets, while calendar bucketing remains explicit platform work. Schedule temporal/recovery semantics and Zap provisioning/envelope parity remain explicitly unresolved rather than guessed. |
+| Shared product decisions | **Ready baseline** | `product/behavior/portable-fixtures.v1.json`, `product/copy/en.v1.json`, `product/design/tokens.v1.json`, and `product/api/signal/v1/` are versioned and verified. Direct Zap entry freezes start-the-last-explicit-valid-mode versus stop-active behavior. History density and duration-label rules plus 38 schedule-temporal cases are shared in Swift/Kotlin; approved start-only/Zap-stop defaults and iOS differences are explicit in `docs/ANDROID_SCHEDULE_PLAN.md`. Calendar bucketing and Zap provisioning/envelope parity remain separate work. |
 | Android presentation fidelity | **Ready prototype** | `docs/ANDROID_UI_PARITY.md` maps every launch-ready iOS destination and major state to `spikes/android-ui/`, including the first-run coach tour and management editor/confirmation states. Device visual acceptance remains pending. It is presentation evidence only. |
 | Consumer restriction candidate | **Buildable, not proven** | `spikes/android-gate0/` contains the disposable capability candidate, static privacy/policy constraints, evidence templates, and native tests. Emulator/CI results cannot satisfy a physical matrix cell. |
 | Low-friction NFC activation | **Candidate implemented; physical evidence blocked** | `docs/ANDROID_NFC_ACTIVATION.md` separates direct Android tag routing from authorization and Accessibility enforcement. The integrated disposable APK now contains the live-tag direct NDEF entry Activity and shared mutation gate. G0-19 still requires unlocked Home start/stop without app-open, Scan button, chooser, or second confirmation on the existing required A16; A17 validation is deferred and non-blocking. |
@@ -70,7 +70,7 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 - Do not promote spike code into production packages.
 - Do not connect production accounts, analytics, backend data, signing keys, or store listings to a spike.
 - Do not claim working app restriction, NFC parity, background durability, or release readiness from unit tests, screenshots, or an emulator.
-- Do not implement Android schedules from the current iOS timing behavior while the portable time-zone, DST, collision, missed-fire, duration, and recovery rules remain unresolved.
+- Implement Android schedules from the approved plan and shared temporal fixtures, not an inferred copy of the iOS monitoring interval. Physical delivery/recovery acceptance remains separate.
 
 ## Full reliability and distribution gates
 
@@ -101,8 +101,8 @@ local-first on the existing A16; no account system or framework rewrite is requi
 | --- | --- | --- |
 | Select apps to block | Development source persists a set with explicit Save/Cancel and an immutable active-session snapshot; all 24 API-36 emulator instrumentation tests pass, including migration/picker and the exact Google Personal Safety exclusion; refreshed full local verification after that fix also passed | Sample multiple eligible targets on the A16 while preserving protected-system exclusions; A16 still has the earlier single-target build |
 | Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16; development source now implements stable identity/outbox with passing local History tests | Physically verify the History-capable candidate while preserving NFC authorization, stop guards and safe recovery |
-| Schedules | Separate preview list/editor and pure eligibility rules only | Persist/edit/enable/delete schedules, calculate occurrences, deliver real background starts and reconcile missed/duplicate delivery |
-| History | Real local UUID/outbox/SQLite records, native list/summary and v3 disclosure implemented; 36 emulator instrumentation tests including 12 History tests and full local verification pass | A16 real-Zap completion/History and physical visual acceptance; scheduled sessions must later use the same engine |
+| Schedules | Versioned configuration, shared temporal rules, atomic occurrence/start receipts and native alarm runtime now implemented; the preview editor remains disconnected | Connect the real editor/enable/exact-access/outcome states, then verify actual background starts and recovery on A16 |
+| History | Real local UUID/outbox/SQLite records and native list/summary; scheduled starts reuse the same completion engine and the new v4 consent boundary | A16 real-Zap and scheduled completion/History plus physical visual acceptance |
 
 Minimum implementation order:
 
@@ -218,18 +218,43 @@ revisions, malformed-store protection and failed-write rollback. It shares the
 existing private preference transaction boundary; active session identity, immutable
 targets, pairing and completed History are not rewritten by successful CRUD.
 
-This is **rules and configuration only**: no UI caller, alarm receiver, new permission,
-scheduled session execution or persisted occurrence outcome/receipt exists yet.
-Before enabling schedules, implement atomic receipt/start and the native delivery
-adapter, update disclosure/retention, then connect the schedule UI and verify the
-new flow on the existing A16. Current v3 consent is not silently treated as approval
-for automatic scheduled starts. This progress does not promote a physical gate.
+That first slice was **rules and configuration only**, without a UI caller, alarm
+receiver, new permission, scheduled execution or persisted occurrence receipt.
+The runtime follow-up below adds the next source boundary; the real schedule UI
+and A16 flow remain unfinished. Earlier v3 consent is not silently treated as
+approval for automatic scheduled starts. This progress does not promote a physical gate.
 
 Final local verification passed: **116 JVM tests**, the full Android lint/build/
 release-boundary verifier, **48 emulator instrumentation tests** (8 new storage
 tests), and the iOS Release build plus **66 XCTest methods**. The 38 temporal
 fixtures pass both native consumers. [Scoped evidence and artifact hashes](../spikes/android-gate0/evidence/emulator-schedule-foundation-2026-09-03/README.md)
 record the runs. This source is not installed on the paired A16.
+
+### Schedule runtime — 2026-09-03
+
+The development engine now has atomic occurrence/start receipts, replay guards,
+latest outcomes and a native exact-alarm receiver. Scheduled starts use the same
+session UUID, target snapshot, stop and History path as Zap starts. Bound-service
+preflight and a transient latest foreground package support immediate interception;
+stale heartbeat data alone cannot authorize a start. The v4 disclosure now describes
+automatic starts and local schedule/execution retention, with fresh consent required.
+
+Force Stop/unknown startup remains suspended until explicit visible recovery, using
+one entry cutoff and full repeating high-water coverage. Withdrawal cancels alarms
+and clears local execution state, protected against late rearm. These are native
+adapter changes under the approved shared rules; iOS runtime/UI remain untouched.
+
+Final local checks passed: **143 JVM tests**, **69 emulator instrumentation tests**,
+lint/builds, **13 release-checker tests**, actual unsigned release-APK boundary and
+product contracts. The real alarm test proves a callback refuses to claim a start
+without a bound service, not live A16 enforcement. [Scoped evidence and hashes](../spikes/android-gate0/evidence/emulator-schedule-runtime-2026-09-03/README.md)
+record the final source results. The disposable emulator was closed; the phone was
+not installed or changed.
+
+**Next is the usable schedule screen:** real CRUD/enable, exact-access setup, next
+occurrence and latest outcome. Then verify the combined four-feature flow and new
+background/recovery boundaries on the existing A16. No A17 purchase is required,
+and no physical gate or Play readiness claim follows from these tests.
 
 ### Rejected-Zap notification safety fix — 2026-09-03
 

@@ -5,6 +5,9 @@ import android.content.Intent
 import android.os.SystemClock
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.data.HmacZapStore
+import com.justnoise.gate0.data.ScheduledOccurrence
+import com.justnoise.gate0.data.ScheduleDispatchResult
+import com.justnoise.gate0.data.ScheduleOutcomeCode
 import com.justnoise.gate0.domain.PayloadClassification
 import com.justnoise.gate0.domain.RestrictionAction
 import com.justnoise.gate0.domain.RestrictionCapability
@@ -19,6 +22,8 @@ import com.justnoise.gate0.platform.discovery.ProtectedPackagePolicy
 import com.justnoise.gate0.platform.discovery.ProtectedPackageResolver
 import com.justnoise.gate0.platform.restriction.AccessibilityServiceStatus
 import com.justnoise.gate0.platform.restriction.Gate0AccessibilityService
+import com.justnoise.gate0.platform.restriction.ScheduledEnforcement
+import com.justnoise.gate0.platform.schedule.ScheduleAlarmScheduler
 
 data class ZapInteraction(
     val readDecision: ZapReadDecision,
@@ -123,6 +128,32 @@ class Gate0Controller(
         )
     }
 
+    fun startScheduled(occurrence: ScheduledOccurrence): ScheduleDispatchResult {
+        val storedBefore = preferences.snapshot()
+        val pending = preferences.loadScheduleExecutions().entries
+            .find { it.scheduleId == occurrence.scheduleId }?.pending
+        val prepared = if (!storedBefore.desiredActive && pending == occurrence &&
+            hasAcceptedCurrentDisclosure() && !storedBefore.recoveryRequired &&
+            !preferences.areSchedulesSuspended()
+        ) ScheduledEnforcement.prepareStart() else null
+        val result = preferences.dispatchSchedule(occurrence) { stored, _ ->
+            when {
+                !hasAcceptedCurrentDisclosure() -> ScheduleOutcomeCode.CONSENT_REQUIRED
+                preferences.areSchedulesSuspended() || stored.recoveryRequired -> ScheduleOutcomeCode.RECOVERY_REQUIRED
+                stored.zapDigest.isNullOrBlank() -> ScheduleOutcomeCode.ZAP_REQUIRED
+                !targetsAreEligible(stored.selectedPackages) -> ScheduleOutcomeCode.TARGET_UNAVAILABLE
+                !ScheduleAlarmScheduler(applicationContext).hasExactAlarmAccess() -> ScheduleOutcomeCode.EXACT_ALARM_REQUIRED
+                !AccessibilityServiceStatus.isEnabled(applicationContext) ||
+                    prepared?.isStillReady() != true -> ScheduleOutcomeCode.CAPABILITY_UNAVAILABLE
+                else -> null
+            }
+        }
+        // Skips and duplicates must leave an existing overlay untouched. A start can
+        // now intercept the last observed foreground target without waiting for navigation.
+        if (result.started || result.persistenceFailed) ScheduledEnforcement.stateChanged()
+        return result
+    }
+
     fun selectedPackages(): Set<String> = preferences.snapshot().selectedPackages
 
     fun sessionPackages(): Set<String> = preferences.snapshot().let { stored ->
@@ -138,7 +169,11 @@ class Gate0Controller(
         }
 
     fun withdrawAndClear(): Boolean {
-        val preferencesCleared = preferences.clearForWithdrawal()
+        val localStateCleared = preferences.withScheduleLock {
+            val preferencesCleared = preferences.clearForWithdrawal()
+            val alarmsCleared = ScheduleAlarmScheduler(applicationContext).cancel()
+            preferencesCleared && alarmsCleared
+        }
         publishStateChange()
         val keyCleared = try {
             zapStore.clear()
@@ -149,7 +184,7 @@ class Gate0Controller(
             Intent(Gate0AccessibilityService.ACTION_WITHDRAW)
                 .setPackage(applicationContext.packageName),
         )
-        return keyCleared && preferencesCleared
+        return keyCleared && localStateCleared
     }
 
     private fun publishStateChange() {

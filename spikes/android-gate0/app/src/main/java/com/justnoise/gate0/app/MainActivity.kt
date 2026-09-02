@@ -19,6 +19,7 @@ import com.justnoise.gate0.domain.SessionTransition
 import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.feature.Gate0Truth
+import com.justnoise.gate0.feature.ScheduleRuntime
 import com.justnoise.gate0.platform.discovery.LauncherAppRepository
 import com.justnoise.gate0.platform.nfc.NdefReadFailure
 import com.justnoise.gate0.platform.nfc.NdefReadResult
@@ -71,6 +72,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        ScheduleRuntime(this).onExplicitForeground()
         val accepted = controller.hasAcceptedCurrentDisclosure()
         consentCheckbox.isChecked = accepted
         consentCheckbox.isEnabled = !accepted

@@ -8,5 +8,6 @@ DerivedData/
 
 # Disposable Android Gate 0 build state
 spikes/android-gate0/.gradle/
+spikes/android-gate0/.kotlin/
 spikes/android-gate0/local.properties
 spikes/android-gate0/**/build/

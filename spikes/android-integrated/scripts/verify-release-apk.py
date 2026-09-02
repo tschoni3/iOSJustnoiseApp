@@ -12,6 +12,21 @@ import sys
 ANDROID = "http://schemas.android.com/apk/res/android:"
 SERVICE = "com.justnoise.gate0.platform.restriction.Gate0AccessibilityService"
 RECEIVER_PERMISSION = ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+SCHEDULE_RECEIVER = "com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver"
+PROFILE_RECEIVER = "androidx.profileinstaller.ProfileInstallReceiver"
+PLATFORM_PERMISSIONS = {
+    "android.permission.NFC",
+    "android.permission.SCHEDULE_EXACT_ALARM",
+    "android.permission.RECEIVE_BOOT_COMPLETED",
+    "android.permission.WAKE_LOCK",
+}
+SCHEDULE_ACTIONS = {
+    "android.intent.action.BOOT_COMPLETED",
+    "android.intent.action.TIME_SET",
+    "android.intent.action.TIMEZONE_CHANGED",
+    "android.intent.action.MY_PACKAGE_REPLACED",
+    "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED",
+}
 
 
 class BoundaryError(ValueError):
@@ -78,6 +93,44 @@ def one(nodes, description):
     return nodes[0]
 
 
+def receiver_boundary(app):
+    receivers = [node for node in app.children if node.name == "receiver"]
+    names = [text_attr(node, "android:name") for node in receivers]
+    require(len(names) == len(set(names)) and
+            set(names) <= {SCHEDULE_RECEIVER, PROFILE_RECEIVER},
+            "Unexpected or duplicate release receiver")
+    receiver = one([node for node in receivers
+                    if text_attr(node, "android:name") == SCHEDULE_RECEIVER],
+                   "schedule receiver")
+    require(set(receiver.attrs) <= {"android:name", "android:exported", "android:directBootAware", "android:enabled"},
+            "Unexpected schedule receiver attribute or process override")
+    require(receiver.attrs.get("android:exported") == "false",
+            "Schedule receiver must explicitly be non-exported")
+    require(receiver.attrs.get("android:directBootAware", "false") == "false" and
+            app.attrs.get("android:directBootAware", "false") == "false",
+            "Schedule delivery must not run before first unlock")
+    require(receiver.attrs.get("android:enabled", "true") == "true",
+            "Schedule receiver must be enabled")
+    intent_filter = one(receiver.children, "schedule receiver intent filter")
+    require(intent_filter.name == "intent-filter" and not intent_filter.attrs,
+            "Unexpected schedule receiver intent filter")
+    actions = []
+    for node in intent_filter.children:
+        require(node.name == "action" and set(node.attrs) == {"android:name"} and not node.children,
+                "Schedule filter must contain only named system actions")
+        actions.append(text_attr(node, "android:name"))
+    require(len(actions) == len(SCHEDULE_ACTIONS) and set(actions) == SCHEDULE_ACTIONS,
+            "Schedule receiver system actions differ from the exact allowlist")
+
+    for node in receivers:
+        if text_attr(node, "android:name") == PROFILE_RECEIVER:
+            require(text_attr(node, "android:permission") == "android.permission.DUMP",
+                    "Profile installer receiver must remain DUMP-protected")
+            require(node.attrs.get("android:exported") == "true" and
+                    node.attrs.get("android:directBootAware", "false") == "false",
+                    "Profile installer receiver boundary changed")
+
+
 def manifest_boundary(dump, expected_id):
     root = xml_tree(dump)
     require(root.name == "manifest", "Expected a manifest XML root")
@@ -94,17 +147,22 @@ def manifest_boundary(dump, expected_id):
                     "Release activity alias targets Compose PreviewActivity")
 
     expected_permission = expected_id + RECEIVER_PERMISSION
-    requested = [text_attr(n, "android:name") for n in root.children
-                 if n.name.startswith("uses-permission")]
-    require(len(requested) == 2 and set(requested) ==
-            {"android.permission.NFC", expected_permission},
-            "Requested permissions must be exactly NFC and the app-scoped receiver permission")
+    permission_nodes = [n for n in root.children if n.name.startswith("uses-permission")]
+    require(all(n.name == "uses-permission" and set(n.attrs) == {"android:name"} and
+                not n.children for n in permission_nodes),
+            "Unexpected requested-permission tag or attribute")
+    requested = [text_attr(n, "android:name") for n in permission_nodes]
+    expected_permissions = PLATFORM_PERMISSIONS | {expected_permission}
+    require(len(requested) == len(expected_permissions) and set(requested) == expected_permissions,
+            "Requested permissions must be exactly NFC, explicit scheduling permissions and the app-scoped receiver permission")
     declared = one([n for n in root.children if n.name == "permission"],
                    "app-scoped permission declaration")
     require(text_attr(declared, "android:name") == expected_permission,
             "Unexpected permission declaration")
     require(declared.attrs.get("android:protectionLevel") == "0x00000002",
             "App-scoped receiver permission must be signature-only")
+
+    receiver_boundary(app)
 
     service = one([n for n in app.children if n.name == "service"], "Accessibility service")
     require(text_attr(service, "android:name") == SERVICE, "Unexpected release service")

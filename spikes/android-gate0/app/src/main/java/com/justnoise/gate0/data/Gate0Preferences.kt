@@ -4,8 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import com.justnoise.gate0.domain.PortableScheduleTimingRules
+import com.justnoise.gate0.domain.ScheduleDeliveryDecision
+import com.justnoise.gate0.domain.ScheduleDeliveryRules
 import com.justnoise.gate0.domain.SessionHistoryTiming
 import com.justnoise.gate0.domain.SessionStateWriter
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 data class StoredGate0State(
@@ -21,7 +25,15 @@ data class StoredGate0State(
     val serviceConnected: Boolean,
     val serviceHeartbeatElapsedMilliseconds: Long,
     val activeSessionId: String? = null,
+    val activeScheduleId: String? = null,
 )
+
+data class ScheduleDispatchResult(
+    val outcome: ScheduleOutcome? = null,
+    val persistenceFailed: Boolean = false,
+) {
+    val started: Boolean get() = outcome?.code == ScheduleOutcomeCode.STARTED
+}
 
 class Gate0Preferences(
     context: Context,
@@ -31,6 +43,9 @@ class Gate0Preferences(
         FILE_NAME,
         Context.MODE_PRIVATE,
     )
+
+    /** Short native arm/revoke section only; callers must never wait for a main-thread callback here. */
+    fun <T> withScheduleLock(action: () -> T): T = synchronized(STATE_LOCK, action)
 
     fun snapshot(): StoredGate0State = synchronized(STATE_LOCK) {
         val selectedPackages = readSelectedPackages()
@@ -61,6 +76,7 @@ class Gate0Preferences(
                 0L,
             ),
             activeSessionId = preferences.getString(KEY_ACTIVE_SESSION_ID, null),
+            activeScheduleId = preferences.getString(KEY_ACTIVE_SCHEDULE_ID, null),
         )
     }
 
@@ -104,11 +120,17 @@ class Gate0Preferences(
         if (!drainPendingHistory()) return false
         val selection = readSelectedPackages()
         if (selection.isEmpty()) return false
-        commitState(preferences.edit()
+        commitState(sessionStartEditor(epochMilliseconds, UUID.randomUUID().toString()))
+    }
+
+    private fun sessionStartEditor(epochMilliseconds: Long, sessionId: String): SharedPreferences.Editor {
+        val selection = readSelectedPackages()
+        return preferences.edit()
             .putStringSet(KEY_SELECTED_PACKAGES, selection)
             .remove(KEY_SELECTED_PACKAGE)
             .putStringSet(KEY_ACTIVE_PACKAGES, selection)
-            .putString(KEY_ACTIVE_SESSION_ID, UUID.randomUUID().toString())
+            .putString(KEY_ACTIVE_SESSION_ID, sessionId)
+            .remove(KEY_ACTIVE_SCHEDULE_ID)
             .putLong(KEY_ACTIVE_SINCE_ELAPSED, SystemClock.elapsedRealtime())
             .putString(KEY_ACTIVE_PROCESS, PROCESS_ID)
             .putBoolean(KEY_HISTORY_ELIGIBLE, hasHistoryConsent())
@@ -117,7 +139,6 @@ class Gate0Preferences(
             .putLong(KEY_ACTIVE_SINCE_EPOCH_MILLIS, epochMilliseconds)
             .putLong(KEY_SESSION_REVISION, nextSessionRevision())
             .remove(KEY_RECOVERY_REQUIRED)
-        )
     }
 
     override fun stopSession(epochMilliseconds: Long, expectedSessionId: String?): Boolean = synchronized(STATE_LOCK) {
@@ -157,6 +178,7 @@ class Gate0Preferences(
             .remove(KEY_ACTIVE_PACKAGES)
             .remove(KEY_ACTIVE_SINCE_EPOCH_MILLIS)
             .remove(KEY_ACTIVE_SESSION_ID)
+            .remove(KEY_ACTIVE_SCHEDULE_ID)
             .remove(KEY_ACTIVE_SINCE_ELAPSED)
             .remove(KEY_ACTIVE_PROCESS)
             .remove(KEY_HISTORY_ELIGIBLE)
@@ -233,6 +255,154 @@ class Gate0Preferences(
             (preferences.contains(KEY_SELECTED_PACKAGES) || preferences.contains(KEY_SELECTED_PACKAGE))
     }
 
+    fun loadScheduleExecutions(): ScheduleExecutionSnapshot = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) {
+                return ScheduleExecutionSnapshot(error = true)
+            }
+            ScheduleExecutionSnapshot(readScheduleExecutions())
+        } catch (_: Exception) {
+            ScheduleExecutionSnapshot(error = true)
+        }
+    }
+
+    fun areSchedulesSuspended(): Boolean = synchronized(STATE_LOCK) {
+        preferences.getBoolean(KEY_SCHEDULE_SUSPENDED, false)
+    }
+
+    fun suspendSchedules(): Boolean = synchronized(STATE_LOCK) {
+        if (!preferences.contains(KEY_SCHEDULES) && !preferences.contains(KEY_DISCLOSURE_VERSION)) return true
+        commitState(preferences.edit().putBoolean(KEY_SCHEDULE_SUSPENDED, true))
+    }
+
+    fun scheduleRecoveryAcknowledgedAt(): Long = synchronized(STATE_LOCK) {
+        preferences.getLong(KEY_SCHEDULE_RECOVERY_ACKNOWLEDGED, 0L)
+    }
+
+    fun acknowledgeScheduleRecovery(
+        epochMilliseconds: Long,
+        zoneId: String = ZoneId.systemDefault().id,
+    ): Boolean = synchronized(STATE_LOCK) {
+        try {
+            if (epochMilliseconds !in 0L..PortableScheduleTimingRules.MAXIMUM_EPOCH_MILLISECONDS ||
+                zoneId !in ZoneId.getAvailableZoneIds() + "UTC"
+            ) return false
+            if (!confirmFailedWrite() || !finishPendingDeletion() || !hasHistoryConsent()) return false
+            val schedules = readSchedules().associateBy { it.id }
+            val today = Instant.ofEpochMilli(epochMilliseconds).atZone(ZoneId.of(zoneId)).toLocalDate()
+            val executions = readScheduleExecutions().map { execution ->
+                val schedule = schedules[execution.scheduleId] ?: return@map execution
+                if (schedule.timing.repeatWeekdays.isEmpty()) return@map execution
+                val firstToday = PortableScheduleTimingRules.resolveOneTimeEpochMilliseconds(
+                    today.toString(), requireNotNull(schedule.timing.hour), requireNotNull(schedule.timing.minute),
+                    zoneId, 0L,
+                )
+                // Cover the whole stopped interval, not merely its oldest pending day.
+                // This also prevents westward travel from replaying an intervening day.
+                val through = (if (firstToday == null || firstToday <= epochMilliseconds) today else today.minusDays(1L))
+                    .toString()
+                val highWater = maxOf(execution.lastResolvedLocalDate ?: through, through)
+                execution.copy(
+                    lastResolvedLocalDate = highWater,
+                    pending = execution.pending?.takeUnless { it.localDate != null && it.localDate <= highWater },
+                )
+            }
+            commitState(preferences.edit().remove(KEY_SCHEDULE_SUSPENDED)
+                .putLong(KEY_SCHEDULE_RECOVERY_ACKNOWLEDGED, epochMilliseconds)
+                .putString(KEY_SCHEDULE_EXECUTIONS, ScheduleExecutionCodec.encode(executions)))
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun reconcileSchedulePlan(now: Long, zoneId: String): ScheduleExecutionSnapshot = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) {
+                return ScheduleExecutionSnapshot(error = true)
+            }
+            val previous = readScheduleExecutions()
+            val updated = SchedulePlanner.reconcile(readSchedules(), previous, now, zoneId)
+            if (updated != previous && !commitState(preferences.edit().putString(
+                    KEY_SCHEDULE_EXECUTIONS, ScheduleExecutionCodec.encode(updated),
+                ))
+            ) return ScheduleExecutionSnapshot(error = true)
+            ScheduleExecutionSnapshot(updated)
+        } catch (_: Exception) {
+            ScheduleExecutionSnapshot(error = true)
+        }
+    }
+
+    /** Validate the exact stored candidate and commit its receipt with the session, never a toggle. */
+    fun dispatchSchedule(
+        occurrence: ScheduledOccurrence,
+        now: Long? = null,
+        startBlocker: (StoredGate0State, StoredSchedule) -> ScheduleOutcomeCode?,
+    ): ScheduleDispatchResult = synchronized(STATE_LOCK) {
+        try {
+            if (!confirmFailedWrite() || !finishPendingDeletion()) {
+                return ScheduleDispatchResult(persistenceFailed = true)
+            }
+            val schedules = readSchedules()
+            val schedule = schedules.find { it.id == occurrence.scheduleId } ?: return ScheduleDispatchResult()
+            val executions = readScheduleExecutions()
+            val execution = executions.find { it.scheduleId == schedule.id } ?: return ScheduleDispatchResult()
+            if (execution.pending != occurrence || !SchedulePlanner.matches(schedule, execution, occurrence)) {
+                return ScheduleDispatchResult()
+            }
+            // Production time is sampled inside the lock, after persistence recovery.
+            // Explicit times are for deterministic tests and the fixed recovery cutoff.
+            val dispatchNow = now ?: System.currentTimeMillis()
+            val stored = snapshot()
+            val decision = ScheduleDeliveryRules.evaluate(
+                currentRevisionEnabled = true,
+                alreadyHandled = false, // Exact pending identity + high-water guards above own this check.
+                sessionRequested = stored.desiredActive,
+                scheduledAtEpochMilliseconds = occurrence.epochMilliseconds,
+                nowEpochMilliseconds = dispatchNow,
+            )
+            val code = when (decision) {
+                ScheduleDeliveryDecision.MISSED -> ScheduleOutcomeCode.MISSED
+                ScheduleDeliveryDecision.SKIP_ACTIVE -> ScheduleOutcomeCode.ACTIVE_SESSION
+                ScheduleDeliveryDecision.START_CANDIDATE -> {
+                    when {
+                        !isScheduleSelectionResolvable(schedule.modeReference) -> ScheduleOutcomeCode.MODE_UNAVAILABLE
+                        stored.selectedPackages.isEmpty() -> ScheduleOutcomeCode.EMPTY_SELECTION
+                        else -> startBlocker(stored, schedule) ?: ScheduleOutcomeCode.STARTED
+                    }
+                }
+                else -> return ScheduleDispatchResult()
+            }
+            if (code == ScheduleOutcomeCode.STARTED && !drainPendingHistory()) {
+                markRecoveryRequired()
+                return ScheduleDispatchResult(persistenceFailed = true)
+            }
+            val sessionId = if (code == ScheduleOutcomeCode.STARTED) UUID.randomUUID().toString() else null
+            val outcome = ScheduleOutcome(code, occurrence, dispatchNow, sessionId)
+            val resolved = execution.copy(
+                pending = null,
+                lastResolvedLocalDate = occurrence.localDate ?: execution.lastResolvedLocalDate,
+                lastResolvedOneTimeEpochMilliseconds = if (occurrence.localDate == null) {
+                    occurrence.epochMilliseconds
+                } else execution.lastResolvedOneTimeEpochMilliseconds,
+                lastOutcome = outcome,
+            )
+            val updatedSchedules = if (occurrence.localDate == null) {
+                schedules.map { if (it.id == schedule.id) it.copy(enabled = false) else it }
+            } else schedules
+            val editor = if (sessionId == null) preferences.edit() else sessionStartEditor(dispatchNow, sessionId)
+                .putString(KEY_ACTIVE_SCHEDULE_ID, schedule.id)
+            val committed = commitState(editor
+                .putString(KEY_SCHEDULES, ScheduleStoreCodec.encode(updatedSchedules))
+                .putString(KEY_SCHEDULE_EXECUTIONS, ScheduleExecutionCodec.encode(
+                    executions.map { if (it.scheduleId == schedule.id) resolved else it },
+                )))
+            if (committed) ScheduleDispatchResult(outcome) else ScheduleDispatchResult(persistenceFailed = true)
+        } catch (_: Exception) {
+            markRecoveryRequired()
+            ScheduleDispatchResult(persistenceFailed = true)
+        }
+    }
+
     /** Configuration only: no alarm registration or session mutation occurs here. */
     fun saveSchedule(
         draft: ScheduleDraft,
@@ -243,6 +413,7 @@ class Gate0Preferences(
         try {
             if (!confirmFailedWrite() || !finishPendingDeletion()) return false
             val schedules = readSchedules()
+            val previousExecutions = readScheduleExecutions()
             val previous = schedules.find { it.id == id }
             if (id == null) {
                 if (expectedRevision != null) return false
@@ -259,14 +430,23 @@ class Gate0Preferences(
                 creationZoneId = draft.creationZoneId,
                 modeReference = previous?.modeReference ?: DEFAULT_SCHEDULE_MODE_REFERENCE,
             )
+            val replayGuard = previousExecutions.find { it.scheduleId == updated.id }
+            if (updated.enabled && updated.timing.oneTimeEpochMilliseconds?.let { instant ->
+                    replayGuard?.lastResolvedOneTimeEpochMilliseconds?.let { instant <= it }
+                } == true
+            ) return false
             // Past one-time drafts may remain disabled, but cannot be armed silently.
             if (updated.enabled && PortableScheduleTimingRules.nextOccurrence(
-                    updated.timing, nowEpochMilliseconds, updated.creationZoneId,
+                    updated.timing, nowEpochMilliseconds, updated.creationZoneId, replayGuard?.lastResolvedLocalDate,
                 ) == null
             ) return false
             val replacement = if (previous == null) schedules + updated else
                 schedules.map { if (it.id == previous.id) updated else it }
-            commitState(preferences.edit().putString(KEY_SCHEDULES, ScheduleStoreCodec.encode(replacement)))
+            val executions = previousExecutions.map {
+                if (it.scheduleId == updated.id) it.copy(pending = null) else it
+            }
+            commitState(preferences.edit().putString(KEY_SCHEDULES, ScheduleStoreCodec.encode(replacement))
+                .putString(KEY_SCHEDULE_EXECUTIONS, ScheduleExecutionCodec.encode(executions)))
         } catch (_: Exception) {
             false
         }
@@ -300,7 +480,9 @@ class Gate0Preferences(
             if (current.revision != expectedRevision) return false
             commitState(preferences.edit().putString(
                 KEY_SCHEDULES, ScheduleStoreCodec.encode(schedules.filterNot { it.id == id }),
-            ))
+            ).putString(KEY_SCHEDULE_EXECUTIONS, ScheduleExecutionCodec.encode(
+                readScheduleExecutions().filterNot { it.scheduleId == id },
+            )))
         } catch (_: Exception) {
             false
         }
@@ -345,6 +527,9 @@ class Gate0Preferences(
     private fun readSchedules(): List<StoredSchedule> =
         preferences.getString(KEY_SCHEDULES, null)?.let(ScheduleStoreCodec::decode).orEmpty()
 
+    private fun readScheduleExecutions(): List<ScheduleExecution> =
+        preferences.getString(KEY_SCHEDULE_EXECUTIONS, null)?.let(ScheduleExecutionCodec::decode).orEmpty()
+
     private fun confirmFailedWrite(): Boolean {
         if (!unconfirmedWrite) return true
         // Failed session writes were restored in memory; confirm that rollback durably
@@ -387,7 +572,7 @@ class Gate0Preferences(
         }
 
     companion object {
-        const val CURRENT_DISCLOSURE_VERSION = "gate0-accessibility-v3"
+        const val CURRENT_DISCLOSURE_VERSION = "gate0-accessibility-v4"
         const val HEARTBEAT_STALE_AFTER_MILLISECONDS = 8_000L
 
         private val STATE_LOCK = Any()
@@ -402,12 +587,16 @@ class Gate0Preferences(
         private const val KEY_SELECTED_PACKAGES = "selected_packages"
         private const val KEY_ACTIVE_PACKAGES = "active_packages"
         private const val KEY_ACTIVE_SESSION_ID = "active_session_id"
+        private const val KEY_ACTIVE_SCHEDULE_ID = "active_schedule_id"
         private const val KEY_ACTIVE_SINCE_ELAPSED = "active_since_elapsed_millis"
         private const val KEY_ACTIVE_PROCESS = "active_process_id"
         private const val KEY_HISTORY_ELIGIBLE = "history_eligible"
         private const val KEY_HISTORY_INTERRUPTED = "history_interrupted"
         private const val KEY_PENDING_HISTORY = "pending_session_history"
         private const val KEY_SCHEDULES = "schedules_v1"
+        private const val KEY_SCHEDULE_EXECUTIONS = "schedule_executions_v1"
+        private const val KEY_SCHEDULE_SUSPENDED = "schedule_suspended"
+        private const val KEY_SCHEDULE_RECOVERY_ACKNOWLEDGED = "schedule_recovery_acknowledged_at"
         private const val KEY_LAST_FINISHED_ID = "last_finished_session_id"
         private const val KEY_HISTORY_DELETION_PENDING = "history_deletion_pending"
         private const val KEY_ZAP_DIGEST = "zap_hmac_digest"

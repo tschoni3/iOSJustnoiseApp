@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.justnoise.gate0.platform.schedule.ScheduleAlarmDispatchTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-09-02T23:22:41.409Z" hostname="TJs-MacBook-Pro.local" time="0.0">
+  <properties/>
+  <testcase name="only the private alarm action dispatches due schedule revalidation" classname="com.justnoise.gate0.platform.schedule.ScheduleAlarmDispatchTest" time="0.0"/>
+  <testcase name="missing unrelated and lookalike actions never invoke runtime" classname="com.justnoise.gate0.platform.schedule.ScheduleAlarmDispatchTest" time="0.0"/>
+  <testcase name="only the five approved system changes request revalidation" classname="com.justnoise.gate0.platform.schedule.ScheduleAlarmDispatchTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

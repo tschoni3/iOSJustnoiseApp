@@ -4,8 +4,10 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.w3c.dom.Document
 import org.w3c.dom.Element
 
 class StaticPolicyContractTest {
@@ -17,20 +19,45 @@ class StaticPolicyContractTest {
     private val spikeRoot = File(repositoryRoot, "spikes/android-gate0")
 
     @Test
-    fun `manifest has only scoped NFC permission and launcher visibility`() {
-        val manifest = file("app/src/main/AndroidManifest.xml").readText()
+    fun `manifests keep NFC visibility and only explicit scheduling permissions and receiver`() {
+        for (path in sourceManifests()) {
+            val manifest = path.readText()
+            assertScheduleManifestBoundary(parseManifest(path))
+            assertTrue(manifest.contains("android.permission.NFC"))
+            assertTrue(manifest.contains("android.intent.category.LAUNCHER"))
+            assertTrue(manifest.contains("android.nfc.action.NDEF_DISCOVERED"))
+            assertTrue(manifest.contains("android:mimeType=\"text/plain\""))
+            assertFalse(manifest.contains("android.permission.INTERNET"))
+            assertFalse(manifest.contains("android.permission.USE_EXACT_ALARM"))
+            assertFalse(manifest.contains("android.permission.QUERY_ALL_PACKAGES"))
+            assertFalse(manifest.contains("android.permission.SYSTEM_ALERT_WINDOW"))
+            assertFalse(manifest.contains("android.permission.PACKAGE_USAGE_STATS"))
+            assertTrue(manifest.contains("android:allowBackup=\"false\""))
+            assertTrue(manifest.contains("android:fullBackupContent=\"false\""))
+            assertTrue(manifest.contains("android:dataExtractionRules=\"@xml/data_extraction_rules\""))
+        }
+    }
 
-        assertTrue(manifest.contains("android.permission.NFC"))
-        assertTrue(manifest.contains("android.intent.category.LAUNCHER"))
-        assertTrue(manifest.contains("android.nfc.action.NDEF_DISCOVERED"))
-        assertTrue(manifest.contains("android:mimeType=\"text/plain\""))
-        assertFalse(manifest.contains("android.permission.INTERNET"))
-        assertFalse(manifest.contains("android.permission.QUERY_ALL_PACKAGES"))
-        assertFalse(manifest.contains("android.permission.SYSTEM_ALERT_WINDOW"))
-        assertFalse(manifest.contains("android.permission.PACKAGE_USAGE_STATS"))
-        assertTrue(manifest.contains("android:allowBackup=\"false\""))
-        assertTrue(manifest.contains("android:fullBackupContent=\"false\""))
-        assertTrue(manifest.contains("android:dataExtractionRules=\"@xml/data_extraction_rules\""))
+    @Test
+    fun `schedule manifest boundary rejects extra permissions and exported receivers`() {
+        for (permission in listOf("android.permission.INTERNET", "android.permission.USE_EXACT_ALARM")) {
+            val manifest = parseManifest(sourceManifests().first())
+            val extra = manifest.createElement("uses-permission").apply {
+                setAttributeNS(ANDROID_NAMESPACE, "android:name", permission)
+            }
+            manifest.documentElement.appendChild(extra)
+            assertThrows(AssertionError::class.java) { assertScheduleManifestBoundary(manifest) }
+        }
+        for ((attribute, value) in listOf("exported" to "true", "directBootAware" to "true")) {
+            val manifest = parseManifest(sourceManifests().first())
+            val receiver = manifest.getElementsByTagName("receiver").item(0) as Element
+            receiver.setAttributeNS(ANDROID_NAMESPACE, "android:$attribute", value)
+            assertThrows(AssertionError::class.java) { assertScheduleManifestBoundary(manifest) }
+        }
+        val manifest = parseManifest(sourceManifests().first())
+        val application = manifest.getElementsByTagName("application").item(0) as Element
+        application.appendChild(manifest.createElement("receiver"))
+        assertThrows(AssertionError::class.java) { assertScheduleManifestBoundary(manifest) }
     }
 
     @Test
@@ -214,5 +241,80 @@ class StaticPolicyContractTest {
 
     private fun file(relativePath: String): File = File(spikeRoot, relativePath).also {
         require(it.isFile) { "Required Gate 0 file is missing: ${it.path}" }
+    }
+
+    private fun sourceManifests(): List<File> = listOf(
+        file("app/src/main/AndroidManifest.xml"),
+        File(repositoryRoot, "spikes/android-integrated/app/src/main/AndroidManifest.xml"),
+    )
+
+    private fun parseManifest(path: File): Document = DocumentBuilderFactory.newInstance().apply {
+        isNamespaceAware = true
+        setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+    }.newDocumentBuilder().parse(path)
+
+    private fun assertScheduleManifestBoundary(document: Document) {
+        val root = document.documentElement
+        assertEquals("manifest", root.tagName)
+        val permissions = root.childElements().filter { it.tagName.startsWith("uses-permission") }
+        val expectedPermissions = setOf(
+            "android.permission.NFC",
+            "android.permission.SCHEDULE_EXACT_ALARM",
+            "android.permission.RECEIVE_BOOT_COMPLETED",
+            "android.permission.WAKE_LOCK",
+        )
+        assertEquals(expectedPermissions.size, permissions.size)
+        assertEquals(expectedPermissions, permissions.map { it.getAttributeNS(ANDROID_NAMESPACE, "name") }.toSet())
+        for (permission in permissions) {
+            assertEquals("uses-permission", permission.tagName)
+            assertEquals(1, permission.attributes.length)
+            assertTrue(permission.childElements().isEmpty())
+        }
+        val applications = root.childElements().filter { it.tagName == "application" }
+        assertEquals(1, applications.size)
+        val application = applications.single()
+        val receivers = application.childElements().filter { it.tagName == "receiver" }
+        assertEquals(1, receivers.size)
+        val receiver = receivers.single()
+        assertTrue(receiver.getAttributeNS(ANDROID_NAMESPACE, "name") in setOf(
+            ".platform.schedule.ScheduleAlarmReceiver",
+            "com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver",
+        ))
+        for (index in 0 until receiver.attributes.length) {
+            val attribute = receiver.attributes.item(index)
+            assertEquals(ANDROID_NAMESPACE, attribute.namespaceURI)
+            assertTrue(attribute.localName in setOf("name", "exported", "directBootAware", "enabled"))
+        }
+        assertEquals("false", receiver.getAttributeNS(ANDROID_NAMESPACE, "exported"))
+        assertTrue(receiver.getAttributeNS(ANDROID_NAMESPACE, "directBootAware") in setOf("", "false"))
+        assertTrue(application.getAttributeNS(ANDROID_NAMESPACE, "directBootAware") in setOf("", "false"))
+        assertTrue(receiver.getAttributeNS(ANDROID_NAMESPACE, "enabled") in setOf("", "true"))
+        val filters = receiver.childElements()
+        assertEquals(1, filters.size)
+        val filter = filters.single()
+        assertEquals("intent-filter", filter.tagName)
+        assertEquals(0, filter.attributes.length)
+        val actions = filter.childElements()
+        val expectedActions = setOf(
+            "android.intent.action.BOOT_COMPLETED",
+            "android.intent.action.TIME_SET",
+            "android.intent.action.TIMEZONE_CHANGED",
+            "android.intent.action.MY_PACKAGE_REPLACED",
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED",
+        )
+        assertEquals(expectedActions.size, actions.size)
+        assertEquals(expectedActions, actions.map { it.getAttributeNS(ANDROID_NAMESPACE, "name") }.toSet())
+        for (action in actions) {
+            assertEquals("action", action.tagName)
+            assertEquals(1, action.attributes.length)
+            assertTrue(action.childElements().isEmpty())
+        }
+    }
+
+    private fun Element.childElements(): List<Element> = (0 until childNodes.length)
+        .mapNotNull { childNodes.item(it) as? Element }
+
+    private companion object {
+        const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
     }
 }

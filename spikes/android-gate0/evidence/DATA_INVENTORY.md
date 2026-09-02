@@ -11,22 +11,32 @@ This inventory also covers the source-level local History integration designed i
 36-test emulator suite includes 12 passing History tests, and the full local verifier
 passed; see the [readiness record](../../../docs/ANDROID_PREDEVICE_READINESS.md).
 A16 acceptance, device privacy observation and OEM recovery remain unverified.
-The schedule foundation now implements pure timing rules and private configuration
-storage; no UI caller, alarm, occurrence receipt/outcome or scheduled session
-execution is connected. See the [schedule plan](../../../docs/ANDROID_SCHEDULE_PLAN.md).
+The schedule-runtime slice now adds persisted execution state, atomic scheduled
+dispatch, exact-alarm/system-change adapters, startup recovery and a bounded
+in-memory foreground observation. The schedule editor/enable flow still has no UI
+caller; this is not a usable schedule feature or A16/release acceptance claim.
+See the [schedule plan](../../../docs/ANDROID_SCHEDULE_PLAN.md).
 
 | Source | Field or derived value | Purpose | Processing | Persistence and retention | Network destination |
 | --- | --- | --- | --- | --- | --- |
-| Accessibility `TYPE_WINDOW_STATE_CHANGED` | `packageName` and `eventType` | Event type guards the declared callback; package identifier is the only observed app value and is compared with the active target set and Justnoise | Transient, in the service callback | Not persisted, queued, logged, or collected as history | None |
+| Accessibility `TYPE_WINDOW_STATE_CHANGED` | `packageName` and `eventType` | Event type guards the declared callback; package identifier is the only observed app value and is compared with the active target set and Justnoise | In the service callback; the latest package may replace the single in-memory observation below | No event log, disk persistence or event queue | None |
+| Latest foreground observation | At most one package identifier (`lastForegroundPackage`) | Re-evaluate the already-foreground target after a committed scheduled start without reading window content | Service memory only; replaced by window-change observations, excluding the blocker-owned self event | Cleared on screen off, interruption, disconnect, withdrawal/consent mismatch and uncertain locked/noninteractive scheduled refresh; no sequence/history, logging or persistence | None |
+| Scheduled-start readiness | Foreground generation counter, bound-service reference, main-thread acknowledgment and elapsed-time lease expiry | Preflight rejects a stale/unresponsive service or changed foreground state; it is not an atomic guarantee of OS readiness through subsequent disk I/O | Process memory only; main-thread preparation waits at most 750 ms and yields a lease valid for at most 1 second, checked against the same bound endpoint/generation | Invalidated by foreground/lifecycle changes, disconnect or expiry; not persisted, logged, collected as event history or sent to telemetry | None |
 | Accessibility event | Node tree, source, text, content description, password state, notification content, window list | Not used | APIs are not called; `canRetrieveWindowContent=false`; no retrieval flags | None | None |
 | Scoped launcher query | App label and package identifier for launchable activities | Display the local multi-app picker and the matched foreground app name on the blocked surface | In memory while the picker or blocked surface is built | Only chosen package identifiers persist; labels are resolved locally | None |
 | Platform safety resolution | Home activity package identifiers, resolved Settings/uninstaller package identifiers, and default dialer package; fixed protected-package list and own package | Exclude system/escape apps from selection and enforcement | Transient local PackageManager/TelecomManager queries and set comparison | Not persisted, logged, or collected as history | None |
 | Accessibility enablement setting | Flattened enabled-service component list from `ENABLED_ACCESSIBILITY_SERVICES`; derived Boolean for this app's service | Report whether the user enabled Justnoise, separately from service heartbeat | Transient parsing and exact comparison with Justnoise's expected component | Component list is not retained; the Boolean is recomputed for readiness | None |
 | User configuration | Selected package identifier set (`selected_packages`); legacy single-package fallback (`selected_package`) | Saved restriction targets for the next session | Private `gate0_local_state` SharedPreferences; explicit Save while idle; Cancel makes no change | Until changed, withdrawal, uninstall, or app-data clear; changed selections are rejected while a session is requested | None |
-| Schedule configuration foundation | Schedule UUID, positive revision, name, enabled flag, one-time instant or repeating weekdays/hour/minute, named creation-zone ID, and mode reference (new records use `local-default`) | Store validated schedule configuration; pure rules calculate timing without registering or executing work | Schema-v1 JSON under `schedules_v1` in the same private `gate0_local_state` SharedPreferences; revision-checked create/update/enable/delete APIs, with no UI callers yet; maximum 100 records | Until explicit deletion, withdrawal, app-data clear or uninstall; edits replace the prior configuration, not an edit-history log | None |
+| Schedule configuration | Schedule UUID, positive revision, name, enabled flag, one-time instant or repeating weekdays/hour/minute, named creation-zone ID, and mode reference (new records use `local-default`) | Define chosen start times and reference the current saved selection at dispatch | Schema-v1 JSON under `schedules_v1` in private `gate0_local_state` SharedPreferences; revision-checked CRUD, with no editor/enable UI caller yet; maximum 100 records | Until explicit deletion, withdrawal, app-data clear or uninstall; edits replace configuration, not an edit-history log | None |
+| Schedule execution | Per schedule: at most one pending occurrence (schedule UUID/revision, nominal key, fire epoch, optional local date, zone), independent last-resolved local-date/one-time-epoch high-water markers, and only the latest outcome (code, occurrence, handled epoch, session UUID only if started) | Prevent replay, reconcile delivery and report start/skip/miss; successful receipt and active-session UUID/target snapshot commit together | Schema-v1 JSON under `schedule_executions_v1` in the same private preferences; maximum 100 entries, no unbounded outcome log | Pending replaced/cleared on resolution or edit; high-water markers survive edits; latest outcome replaced on resolution; entry removed with schedule deletion, withdrawal, app-data clear or uninstall. Schedule deletion does not erase completed session History | None |
+| Schedule recovery state | Suspended Boolean (`schedule_suspended`) and acknowledgment epoch (`schedule_recovery_acknowledged_at`); process-local startup evidence latch | Prevent background restart after Force Stop or uncertain startup; explicit foreground recovery discards due starts before acknowledging future work | Private preferences plus an in-memory latch; acknowledgment requires current consent | Suspension removed only after successful foreground acknowledgment; acknowledgment replaced by later recovery; preferences cleared on withdrawal/app-data clear/uninstall, process latch ends with process | None |
+| Own-process startup evidence | API 35+: process-start PID/name and `wasForceStopped`; API 31–34: own-process name, exit timestamp and whether reason is `USER_REQUESTED` | Distinguish current-process stopped starts; older APIs conservatively require recovery when user-requested/unknown evidence warrants it | Temporary ActivityManager records filtered to this app/process; compare with current PID/name or saved recovery acknowledgment | Raw process records are not retained or logged; only the derived recovery state above persists; no traces or other-app exit history are read | None |
+| Schedule delivery adapter | Exact-alarm access Boolean, next fire epoch, package-scoped immutable broadcast PendingIntent; recognized alarm/boot/time/zone/update/access-change action; current wall/elapsed time and device zone | Revalidate the persisted plan, dispatch due candidates and rearm future work; intent extras never authorize a start | Non-exported receiver; `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` and `WAKE_LOCK`; one running plus at most one queued delivery, each with a 9-second partial-wake-lock lease and 8-second processing budget including queue wait | Alarm is replaced/canceled through the OS; worker/lease/deadline are transient and released on completion/rejection/timeout. No delivery event log | None |
+| Screen/lock readiness | Interactive and keyguard-locked Booleans; screen-off broadcast | Avoid showing a cached-target blocker over an uncertain locked/noninteractive surface | Temporary PowerManager/KeyguardManager checks and service callback | Not persisted or logged; screen off clears the latest foreground observation | None |
 | Active target snapshot | Package identifier set copied from saved selection at start (`active_packages`) | Keep the session's exact targets stable and identify the matching foreground target | Private `gate0_local_state` SharedPreferences; written with the start state | Removed on successful stop, withdrawal, uninstall, or app-data clear; not appended to a history log | None |
+| Active scheduled-session ownership | Originating schedule UUID (`active_schedule_id`) | Identify an active scheduled session for truthful unknown-foreground recovery | Same private preferences; written atomically with a successful scheduled start | Exists only during the active scheduled session; removed on successful stop, manual start, withdrawal, app-data clear or uninstall; not added to completed History | None |
 | Consent | Disclosure version and acceptance epoch milliseconds | Prove which prominent disclosure was affirmatively accepted | Local SharedPreferences | Until withdrawal, uninstall, app-data clear, or a new version requires fresh consent | None |
-| Session state, including History identity | Desired-active Boolean, stable random session UUID, wall/monotonic start timestamps and random process UUID, sticky interruption and v3-history-eligibility flags, monotonic session revision, fail-closed recovery marker | Start/stop guard and reconciliation; identify one completion; distinguish uncertain duration from verified protection | Private `gate0_local_state` SharedPreferences; same-process duration uses monotonic time, cross-process non-negative wall-time fallback is interrupted | Active identity/clocks/flags cleared at stop; eligible completed fields move to the pending record; revision/recovery follow existing transition/cleanup rules | None |
+| Session state, including History identity | Desired-active Boolean, stable random session UUID, wall/monotonic start timestamps and random process UUID, sticky interruption and History-eligibility flags, monotonic session revision, fail-closed recovery marker | Start/stop guard and reconciliation; identify one completion; distinguish uncertain duration from verified protection | Private `gate0_local_state` SharedPreferences; same-process duration uses monotonic time, cross-process non-negative wall-time fallback is interrupted | Active identity/clocks/flags cleared at stop; eligible completed fields move to the pending record; revision/recovery follow existing transition/cleanup rules | None |
 | Last-finished identity | Last completed/stopped session UUID (`last_finished_session_id`) | Recognize an idempotent repeated stop without ending a newer session | Private `gate0_local_state` SharedPreferences; no target names or observed events | Until a later stop replaces it, withdrawal, app-data clear or uninstall | None |
 | Pending completion | Session UUID, start/end epoch milliseconds, non-negative duration milliseconds, selected-target count, interrupted Boolean | Bridge one committed stop to durable History without duplicate or lost retry identity | One pending value in private `gate0_local_state` SharedPreferences, written atomically with active-state removal; drain before later starts/History reads, not during stop | Retained until idempotent database insertion is confirmed or withdrawal/app-data clear/uninstall; no package names or event contents | None |
 | Completed History | Only session UUID, start/end epoch milliseconds, duration milliseconds, selected-target count and interrupted Boolean | Real History list and shared summary; labeled Session time, not verified protected time | Private SQLite `session_history.db`, `sessions` table keyed by UUID; no foreground-event collection | Until withdrawal, app-data clear or uninstall; no cloud backup/transfer or network destination | None |
@@ -63,18 +73,17 @@ that restored selection; an explicitly stored empty set never falls back to the 
 key. Starting a session writes the set-based selection and snapshot together. These
 changes do not erase or replace the Zap digest or Keystore key.
 
-The multi-app baseline used `gate0-accessibility-v2`. The History source integration
-uses `gate0-accessibility-v3` and explicitly describes completed session fields,
-local retention and interruption limits. Older acceptance is not silently upgraded;
-new service/start use requires fresh affirmative consent without clearing selection
-or pairing. Existing v1/v2 active intent remains stoppable but does not create a
-backfilled History record; only new v3 starts are history-eligible.
-
-The schedule foundation does not change the current v3 disclosure or authorize
-background activation. Its enabled flag is configuration only, not an armed alarm.
-There are no persisted occurrence receipts, delivery outcomes or schedule-generated
-sessions yet. Before connecting schedule activation, update the disclosure/consent
-version and this inventory for the actual execution and retention boundary.
+The multi-app baseline used `gate0-accessibility-v2`, and the History integration
+used v3. Current source requires `gate0-accessibility-v4`, adding the single temporary
+foreground observation, local schedule settings/replay markers/latest outcome,
+scheduled start/Zap stop, separate exact-alarm access and delayed/missed/Force Stop
+limitations. The exact source text is copied in the [declaration draft](PLAY_DECLARATION_DRAFT.md#prominent-in-app-disclosure-shown-before-consent).
+Older acceptance is never silently upgraded; new starts/service use require fresh
+affirmative v4 consent without clearing selection or pairing. A pre-existing v3
+session keeps its previously granted History eligibility when stopped; v1/v2
+sessions remain stoppable without backfilled History. New eligible starts use v4.
+The editor and schedule-enable permission entry still require UI wiring; source
+copy describing that flow is not evidence it is already available to users.
 
 ## Withdrawal and deletion behavior
 
@@ -88,8 +97,12 @@ History cleanup; disabling Accessibility alone does not erase saved History. Thi
 new cleanup path and its injected-failure cases passed emulator tests; this does not
 prove every OEM/storage-failure outcome or the paired A16 result.
 
-The schedule foundation uses the same preference file, so withdrawal also clears
-`schedules_v1`; it adds no separate database or external deletion destination.
+The schedule runtime uses the same preference file, so withdrawal also clears
+`schedules_v1`, execution entries, suspension and recovery acknowledgment. The
+controller also cancels the alarm and requires successful cancellation for complete
+cleanup feedback. A late callback cannot recreate a deleted definition. Deleting
+one schedule clears only its configuration/execution entry, not completed History.
+These source paths add no separate database or external deletion destination.
 
 Re-enabling instructions require a newly accepted current disclosure. Android uninstall or Clear storage is intended to start with consent unchecked because cloud backup and device transfer are explicitly excluded. Failed durable writes and OEM restore behavior remain device-validation cases, not guaranteed deletion outcomes.
 
@@ -99,4 +112,5 @@ Re-enabling instructions require a newly accepted current disclosure. Android un
 - Observe network traffic on the required A16; expected Gate 0 traffic from the app is zero. A17 validation is deferred and non-blocking.
 - Confirm OEM backups do not restore consent or pairing; `allowBackup=false` is a source claim until verified.
 - Verify History stores only the six declared fields, retries one completion without duplicates, and clears both pending/database records through interrupted withdrawal without claiming premature success.
+- Verify v4 re-consent and preserved v3 active-session eligibility; single-observation reset, bounded alarm delivery, explicit stopped-state recovery and schedule/receipt/alarm cleanup on the candidate release. Existing dated A16 evidence does not cover this runtime slice.
 - Review every dependency and merged manifest from the CI report before policy sign-off.

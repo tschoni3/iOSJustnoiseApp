@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import re
 import runpy
 import tempfile
 import types
@@ -10,10 +11,32 @@ import unittest
 
 check = types.SimpleNamespace(**runpy.run_path(str(Path(__file__).with_name("verify-release-apk.py"))))
 PACKAGE = "com.justnoise.androiddev"
-MANIFEST = """E: manifest (line=1)
+SCHEDULE_RECEIVER_XML = """        E: receiver (line=7)
+          A: android:name="com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver"
+          A: android:exported=false
+          A: android:directBootAware=false
+            E: intent-filter (line=7)
+                E: action (line=7)
+                  A: android:name="android.intent.action.BOOT_COMPLETED"
+                E: action (line=7)
+                  A: android:name="android.intent.action.TIME_SET"
+                E: action (line=7)
+                  A: android:name="android.intent.action.TIMEZONE_CHANGED"
+                E: action (line=7)
+                  A: android:name="android.intent.action.MY_PACKAGE_REPLACED"
+                E: action (line=7)
+                  A: android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
+"""
+MANIFEST = f"""E: manifest (line=1)
   A: package="com.justnoise.androiddev"
     E: uses-permission (line=2)
       A: android:name="android.permission.NFC"
+    E: uses-permission (line=2)
+      A: android:name="android.permission.SCHEDULE_EXACT_ALARM"
+    E: uses-permission (line=2)
+      A: android:name="android.permission.RECEIVE_BOOT_COMPLETED"
+    E: uses-permission (line=2)
+      A: android:name="android.permission.WAKE_LOCK"
     E: uses-permission (line=3)
       A: android:name="com.justnoise.androiddev.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
     E: permission (line=4)
@@ -24,9 +47,10 @@ MANIFEST = """E: manifest (line=1)
         E: activity (line=6)
           A: android:name="com.justnoise.integrated.MainActivity"
           A: android:exported=true
-        E: receiver (line=7)
+{SCHEDULE_RECEIVER_XML}        E: receiver (line=7)
           A: android:name="androidx.profileinstaller.ProfileInstallReceiver"
           A: android:permission="android.permission.DUMP"
+          A: android:exported=true
         E: service (line=8)
           A: android:name="com.justnoise.gate0.platform.restriction.Gate0AccessibilityService"
           A: android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -83,6 +107,53 @@ class ReleaseBoundaryTests(unittest.TestCase):
     def test_wrong_application_id(self):
         with self.assertRaises(check.BoundaryError):
             check.manifest_boundary(MANIFEST, "com.justnoise.other")
+
+    def test_permissions_are_an_exact_allowlist(self):
+        for permission in ["android.permission.INTERNET", "android.permission.USE_EXACT_ALARM",
+                           "android.permission.QUERY_ALL_PACKAGES", "android.permission.SYSTEM_ALERT_WINDOW",
+                           "android.permission.PACKAGE_USAGE_STATS", "android.permission.POST_NOTIFICATIONS"]:
+            extra = f'    E: uses-permission (line=99)\n      A: android:name="{permission}"\n'
+            with self.subTest(permission=permission), self.assertRaises(check.BoundaryError):
+                check.manifest_boundary(MANIFEST.replace("    E: application", extra + "    E: application"), PACKAGE)
+        for permission in check.PLATFORM_PERMISSIONS | {PACKAGE + check.RECEIVER_PERMISSION}:
+            pattern = rf'    E: uses-permission \(line=\d+\)\n      A: android:name="{re.escape(permission)}"\n'
+            declaration = re.search(pattern, MANIFEST).group()
+            for mutation in ["", declaration * 2, declaration + '      A: android:maxSdkVersion=31\n']:
+                with self.subTest(permission=permission, mutation=mutation), self.assertRaises(check.BoundaryError):
+                    check.manifest_boundary(MANIFEST.replace(declaration, mutation), PACKAGE)
+
+    def test_schedule_receiver_export_and_filter_changes_are_rejected(self):
+        changes = {
+            "missing": "",
+            "duplicate": SCHEDULE_RECEIVER_XML * 2,
+            "exported": SCHEDULE_RECEIVER_XML.replace("android:exported=false", "android:exported=true"),
+            "missing_exported": SCHEDULE_RECEIVER_XML.replace("          A: android:exported=false\n", ""),
+            "direct_boot": SCHEDULE_RECEIVER_XML.replace("android:directBootAware=false", "android:directBootAware=true"),
+            "separate_process": SCHEDULE_RECEIVER_XML.replace("          A: android:exported=false", '          A: android:process=":schedule"\n          A: android:exported=false'),
+            "other_receiver": SCHEDULE_RECEIVER_XML.replace("com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver", "com.justnoise.UnexpectedReceiver"),
+            "unexpected_action": SCHEDULE_RECEIVER_XML.replace("android.intent.action.TIME_SET", "android.intent.action.PACKAGE_REPLACED"),
+            "duplicate_action": SCHEDULE_RECEIVER_XML.replace("android.intent.action.TIME_SET", "android.intent.action.BOOT_COMPLETED"),
+            "private_alarm_filter": SCHEDULE_RECEIVER_XML.replace("android.intent.action.TIME_SET", "com.justnoise.gate0.action.SCHEDULE_ALARM"),
+            "category": SCHEDULE_RECEIVER_XML.replace("E: action", "E: category", 1),
+            "extra_filter": SCHEDULE_RECEIVER_XML + "            E: intent-filter (line=99)\n",
+        }
+        for label, receiver in changes.items():
+            with self.subTest(label=label), self.assertRaises(check.BoundaryError):
+                check.manifest_boundary(MANIFEST.replace(SCHEDULE_RECEIVER_XML, receiver), PACKAGE)
+        extra = '        E: receiver (line=99)\n          A: android:name="com.justnoise.OtherReceiver"\n          A: android:exported=false\n'
+        with self.assertRaises(check.BoundaryError):
+            check.manifest_boundary(MANIFEST.replace(SCHEDULE_RECEIVER_XML, SCHEDULE_RECEIVER_XML + extra), PACKAGE)
+
+    def test_existing_profile_receiver_cannot_lose_its_protection(self):
+        unprotected = MANIFEST.replace("android.permission.DUMP", "android.permission.NFC")
+        with self.assertRaises(check.BoundaryError):
+            check.manifest_boundary(unprotected, PACKAGE)
+        exported_by_default = MANIFEST.replace(
+            '          A: android:permission="android.permission.DUMP"\n          A: android:exported=true\n',
+            '          A: android:permission="android.permission.DUMP"\n',
+        )
+        with self.assertRaises(check.BoundaryError):
+            check.manifest_boundary(exported_by_default, PACKAGE)
 
     def test_application_id_uses_android_ascii_rules(self):
         with self.assertRaisesRegex(check.BoundaryError, "Invalid expected application ID"):

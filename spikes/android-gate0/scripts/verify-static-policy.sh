@@ -6,6 +6,7 @@ SCRIPT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPIKE_ROOT="$(cd "$SCRIPT_DIRECTORY/.." && pwd)"
 REPOSITORY_ROOT="$(cd "$SPIKE_ROOT/../.." && pwd)"
 MANIFEST="$SPIKE_ROOT/app/src/main/AndroidManifest.xml"
+INTEGRATED_MANIFEST="$REPOSITORY_ROOT/spikes/android-integrated/app/src/main/AndroidManifest.xml"
 ACCESSIBILITY_METADATA="$SPIKE_ROOT/app/src/main/res/xml/gate0_accessibility_service.xml"
 SERVICE_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/restriction/Gate0AccessibilityService.kt"
 OVERLAY_EVENT_RULES_SOURCE="$SPIKE_ROOT/app/src/main/java/com/justnoise/gate0/platform/restriction/OverlayEventRules.kt"
@@ -87,11 +88,73 @@ require_literal 'android:fullBackupContent="false"' "$MANIFEST"
 require_literal 'android:dataExtractionRules="@xml/data_extraction_rules"' "$MANIFEST"
 for permission in \
     android.permission.INTERNET \
+    android.permission.USE_EXACT_ALARM \
     android.permission.QUERY_ALL_PACKAGES \
     android.permission.SYSTEM_ALERT_WINDOW \
     android.permission.PACKAGE_USAGE_STATS; do
     reject_literal "$permission" "$MANIFEST"
 done
+
+python3 - "$MANIFEST" "$INTEGRATED_MANIFEST" <<'PY'
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+android = "{http://schemas.android.com/apk/res/android}"
+permissions = {
+    "android.permission.NFC",
+    "android.permission.SCHEDULE_EXACT_ALARM",
+    "android.permission.RECEIVE_BOOT_COMPLETED",
+    "android.permission.WAKE_LOCK",
+}
+actions = {
+    "android.intent.action.BOOT_COMPLETED",
+    "android.intent.action.TIME_SET",
+    "android.intent.action.TIMEZONE_CHANGED",
+    "android.intent.action.MY_PACKAGE_REPLACED",
+    "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED",
+}
+
+for filename in sys.argv[1:]:
+    def require(condition, message):
+        if not condition:
+            raise SystemExit(f"Android source policy boundary failed: {filename}: {message}")
+
+    contents = Path(filename).read_text()
+    require("<!DOCTYPE" not in contents and "<!ENTITY" not in contents, "Unexpected XML declarations")
+    root = ET.fromstring(contents)
+    require(root.tag == "manifest", "Expected a manifest root")
+    requested_nodes = [node for node in root if node.tag.startswith("uses-permission")]
+    require(all(node.tag == "uses-permission" and set(node.attrib) == {android + "name"}
+                and len(node) == 0 for node in requested_nodes), "Unexpected permission shape")
+    requested = [node.get(android + "name") for node in requested_nodes]
+    require(len(requested) == len(permissions) and set(requested) == permissions,
+            "Permissions must be exactly NFC and the three explicit scheduling permissions")
+    applications = root.findall("application")
+    require(len(applications) == 1, "Expected one application")
+    application = applications[0]
+    receivers = application.findall("receiver")
+    require(len(receivers) == 1, "Expected only the schedule receiver in source")
+    receiver = receivers[0]
+    require(receiver.get(android + "name") in {
+        ".platform.schedule.ScheduleAlarmReceiver",
+        "com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver",
+    }, "Unexpected receiver class")
+    require(set(receiver.attrib) <= {android + name for name in ("name", "exported", "directBootAware", "enabled")},
+            "Unexpected receiver attribute or process override")
+    require(receiver.get(android + "exported") == "false", "Schedule receiver must explicitly be non-exported")
+    require(receiver.get(android + "directBootAware", "false") == "false"
+            and application.get(android + "directBootAware", "false") == "false", "Direct-boot scheduling is prohibited")
+    require(receiver.get(android + "enabled", "true") == "true", "Schedule receiver is disabled")
+    require(len(receiver) == 1 and receiver[0].tag == "intent-filter" and not receiver[0].attrib,
+            "Expected one unqualified schedule intent filter")
+    entries = list(receiver[0])
+    require(all(node.tag == "action" and set(node.attrib) == {android + "name"}
+                and len(node) == 0 for node in entries), "Only named system actions belong in the schedule filter")
+    received_actions = [node.get(android + "name") for node in entries]
+    require(len(received_actions) == len(actions) and set(received_actions) == actions,
+            "Schedule receiver actions differ from the exact allowlist")
+PY
 
 require_literal 'android:accessibilityEventTypes="typeWindowStateChanged"' "$ACCESSIBILITY_METADATA"
 require_literal 'android:canRetrieveWindowContent="false"' "$ACCESSIBILITY_METADATA"

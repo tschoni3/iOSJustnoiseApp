@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-09-02T23:22:41.410Z" hostname="TJs-MacBook-Pro.local" time="0.001">
+  <properties/>
+  <testcase name="uninitialized unknown and persisted suspension each block background work" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.0"/>
+  <testcase name="failed persistence and later component initialization cannot clear recovery" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.0"/>
+  <testcase name="current process stopped start is retained despite later warm starts" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.0"/>
+  <testcase name="empty invalid or clock-rollback legacy evidence stays unknown" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.001"/>
+  <testcase name="failed acknowledgment blocks even when the earlier startup was clear" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.0"/>
+  <testcase name="missing current process evidence never permits background scheduling" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.0"/>
+  <testcase name="older platform user-requested exit requires recovery only after acknowledgment" classname="com.justnoise.gate0.platform.schedule.ScheduleStartupGuardTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

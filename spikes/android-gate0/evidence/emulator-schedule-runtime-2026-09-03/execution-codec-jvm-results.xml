@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.justnoise.gate0.data.ScheduleExecutionCodecTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-09-02T23:22:41.244Z" hostname="TJs-MacBook-Pro.local" time="0.085">
+  <properties/>
+  <testcase name="repeating keys require matching civil date and zero padded valid hour minute" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.033"/>
+  <testcase name="unknown missing and wrong type fields never become an empty execution" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.005"/>
+  <testcase name="exact long revisions epoch endpoints and civil date endpoints survive" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.002"/>
+  <testcase name="started requires a session id and other outcomes cannot claim one" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.005"/>
+  <testcase name="all outcome codes round trip and only started links a session" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.001"/>
+  <testcase name="invalid civil dates and raw offset zones fail without normalization" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.009"/>
+  <testcase name="integers never coerce fractions exponent overflow strings booleans or null" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.009"/>
+  <testcase name="schedule and session ids require canonical UUIDs and nested ids match their parent" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.004"/>
+  <testcase name="epochs must stay inside supported range throughout the record" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.002"/>
+  <testcase name="malformed roots schemas and trailing documents fail" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.001"/>
+  <testcase name="duplicate entries or one corrupt entry reject the entire list" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.001"/>
+  <testcase name="empty execution set and default snapshot round trip without error" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.0"/>
+  <testcase name="one time keys must exactly encode their instant with no local date" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.001"/>
+  <testcase name="entry and encoded character caps are inclusive and checked before parsing" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.01"/>
+  <testcase name="omitted and explicit null optional fields have a canonical encoding" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.001"/>
+  <testcase name="pending and latest outcome preserve independent high water markers across edits" classname="com.justnoise.gate0.data.ScheduleExecutionCodecTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

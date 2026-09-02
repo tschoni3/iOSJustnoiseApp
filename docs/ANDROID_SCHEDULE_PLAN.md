@@ -75,14 +75,63 @@ cancels pending intents in stopped state; recovery must re-register future work
 only after appropriate user action.
 [Android stopped-state changes](https://developer.android.com/about/versions/15/behavior-changes-all#stopped-state).
 
-The first implementation slice adds pure rules and versioned configuration storage;
-it does not yet register alarms, execute scheduled sessions or change consent.
+The completed first implementation slice added pure rules and versioned configuration
+storage; it did not register alarms, execute scheduled sessions or change consent.
 Any new native permission, wake-lock need or background work must be justified in
 the data inventory, disclosure and packaged-release checks before delivery.
 Use an explicit non-exported alarm receiver and validate the persisted schedule ID,
 revision and due occurrence; intent extras alone never authorize a start. Withdrawal
 must cancel alarms and clear schedules, outcomes and receipts through retryable
 cleanup, without allowing a late callback to recreate revoked state.
+
+### Native delivery implementation boundary — 2026-09-03
+
+The runtime source slice adds one non-exported alarm receiver and one immutable explicit
+wakeup PendingIntent. It revalidates all persisted due candidates in instant/ID order;
+intent extras carry no start authority. A schema-v1 execution record per schedule
+stores the pending candidate, independent repeating-date/one-time-instant high-water
+markers and only the latest outcome. Configuration edits invalidate pending revisions
+but retain those replay guards; deleting a schedule removes its execution record.
+Successful start commits its receipt and UUID/target snapshot in the same private
+preference write and uses the existing completion/History path. An active collision
+does not publish a state-change signal or dismiss its blocker.
+
+Native permissions are user-granted `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`
+for revalidation, and `WAKE_LOCK` for a timeout-bound 9-second partial CPU lease around
+asynchronous broadcast work. The processing budget is 8 seconds including queue wait,
+with one worker and one queued delivery maximum. No foreground service, broad package
+query, network, notification or battery-exemption permission is added. A deadline is
+cooperative, not a guarantee that an individual disk/binder call can be interrupted.
+
+Startup uses API 35+ current-process `ApplicationStartInfo.wasForceStopped()` evidence;
+unknown evidence remains paused. Older API 31–34 uses conservative user-requested-exit
+evidence, not a precise Force Stop detector. A visible explicit app entry resolves due
+work without starting it before acknowledging recovery and arming future work. Boot,
+time and permission broadcasts never count as that acknowledgment: Android 15+ may
+send `BOOT_COMPLETED` when stopped state is removed without a real reboot.
+
+Scheduled capability preflight uses the actual currently bound Accessibility service,
+not inherited heartbeat data. A main-thread acknowledgment has a 750 ms wait limit and
+a one-second generation/endpoint lease. It is checked inside the session transaction,
+not an atomic OS guarantee through later disk I/O; subsequent uncertainty enters
+interrupted/recovery state. One latest package-only foreground observation is retained
+in service memory while idle or active, reset on screen-off/interruption/disconnection;
+this enables an immediate scheduled interruption without a new app-navigation event.
+No node/window-content retrieval or event history is introduced. This behavior and its
+unknown-foreground/screen-off limits require A16 evidence before a reliability claim.
+
+The native disclosure moves to v4 before activation; existing pairing/selection and
+eligible History remain, but earlier consent is not silently upgraded. Schedule UI,
+physical acceptance and Play/signing remain separate work. This section describes the
+implementation boundary, not a passed device test or released feature.
+
+Recovery uses one fixed explicit-entry cutoff for planning, discarding due work and
+acknowledgment. Repeating high-water dates cover the whole stopped interval, including
+rollback/westward-travel replay; one-times after the entry cutoff remain future work
+even if processing finishes later. Normal dispatch samples its wall clock inside the
+preference lock, after failed-write recovery, so waiting for that lock cannot reuse
+an earlier grace-window timestamp. The active scheduled session also retains its
+schedule ID for conservative unknown-foreground recovery, not in completed History.
 
 ## Three focused implementation slices
 
@@ -94,12 +143,16 @@ cleanup, without allowing a late callback to recreate revoked state.
    records 38 temporal fixtures, configuration CRUD and passing local checks.
    Persisted occurrence receipts/outcomes belong to the atomic start slice below;
    this completed foundation does not execute a schedule.
-2. **Real background start.** Add an explicit scheduled-start command using shared
+2. **Real background start — locally verified.** Add an explicit scheduled-start command using shared
    start validation, not a synthetic NFC read. Atomically commit the occurrence
    receipt with the active UUID/target snapshot so failed or repeated delivery
    cannot consume or replay a session. Reuse History and recovery. Add the native
    alarm adapter and permission/rearm handling. A live bound service must establish
    readiness; stale heartbeats after idle are not proof of enforcement.
+   [Runtime evidence](../spikes/android-gate0/evidence/emulator-schedule-runtime-2026-09-03/README.md)
+   records 143 JVM tests, 69 emulator tests, lint/build/release checks and their exact
+   boundaries. The real alarm test proves refusal without a bound service, not A16
+   blocking reliability or a complete user-facing scheduling feature.
 3. **Usable schedule screen and A16 acceptance.** Connect create/edit/enable/delete,
    next occurrence and outcome states to real data. Test a due schedule while a
    selected app is already open: today's event-triggered blocker alone does not

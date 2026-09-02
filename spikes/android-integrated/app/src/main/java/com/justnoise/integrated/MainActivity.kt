@@ -23,6 +23,7 @@ import com.justnoise.gate0.domain.SessionTransition
 import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.feature.Gate0Truth
+import com.justnoise.gate0.feature.ScheduleRuntime
 import com.justnoise.gate0.platform.nfc.NdefReadFailure
 import com.justnoise.gate0.platform.nfc.NdefReadResult
 import com.justnoise.gate0.platform.nfc.NdefTagReader
@@ -100,6 +101,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        ScheduleRuntime(this).onExplicitForeground()
         handler.removeCallbacks(refresh)
         refresh.run()
         if (showingHistory) loadHistory(historyLimit)
