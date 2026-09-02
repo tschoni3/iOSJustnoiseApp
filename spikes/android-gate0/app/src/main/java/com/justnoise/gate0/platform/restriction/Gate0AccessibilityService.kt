@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -60,7 +61,7 @@ class Gate0AccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         preferences = Gate0Preferences(this)
-        overlayController = OverlayController(this)
+        overlayController = OverlayController(this, preferences::markRecoveryRequired)
         protectedPackageResolver = ProtectedPackageResolver(this)
 
         val stored = preferences.snapshot()
@@ -119,6 +120,11 @@ class Gate0AccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         shutdownServiceState()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::overlayController.isInitialized) overlayController.refreshBounds()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {

@@ -112,6 +112,21 @@ class StaticPolicyContractTest {
     }
 
     @Test
+    fun `overlay wires display metrics and keeps content touch blocking enabled`() {
+        val source = file(
+            "app/src/main/java/com/justnoise/gate0/platform/restriction/OverlayController.kt",
+        ).readText()
+        assertTrue(source.contains("currentWindowMetrics"))
+        assertTrue(source.contains("getInsets(WindowInsets.Type.systemBars())"))
+        assertTrue(source.contains("getInsetsIgnoringVisibility(WindowInsets.Type.displayCutout())"))
+        assertTrue(source.contains("OverlayWindowBounds.calculate"))
+        assertTrue(source.contains("setFitInsetsTypes(0)"))
+        assertTrue(source.contains("FLAG_NOT_FOCUSABLE"))
+        assertFalse(source.contains("FLAG_NOT_TOUCHABLE"))
+        assertFalse(source.contains("WindowManager.LayoutParams.MATCH_PARENT"))
+    }
+
+    @Test
     fun `service reads package name without content inspection APIs`() {
         val source = file(
             "app/src/main/java/com/justnoise/gate0/platform/restriction/" +

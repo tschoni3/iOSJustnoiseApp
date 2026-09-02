@@ -42,9 +42,12 @@ testing are pending, and no production `android-app/` is authorized.
 Device follow-up, 2026-09-02: the owner-assisted A16 run completed one foreground
 physical-Zap start, stable Chrome blocking in a short recording and separate touch
 checks, and an authorized stop followed by responsive Chrome. The owner confirmed
-that flickering was resolved in this sample. The exact build, recording limits,
+that flickering was resolved in this sample. A later task-isolation update completed
+one direct Home start/stop cycle without app UI or a chooser. A subsequent direct
+start and Chrome check exposed missing normal Android navigation controls; the
+window-bounds fix still needs a device retest. The exact builds, recording limits,
 screenshots, and remaining checks are in
-`spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md`; repeated, direct-Home,
+`spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md`; repetitions,
 multi-target, lifecycle/safety, and A17 evidence still prevent a full Gate 0 pass.
 
 Complexity is governed by responsibility, not by the smallest file count. Do not collapse legitimate Xcode target folders or combine unrelated features to reduce a number. Conversely, do not add layers, modules, or component catalogs solely to make both platforms look symmetrical. Extract a boundary only when it removes duplicated product decisions, isolates a system capability, or reduces measured change risk.

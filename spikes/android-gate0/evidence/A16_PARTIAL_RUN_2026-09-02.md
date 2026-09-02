@@ -139,6 +139,66 @@ seconds and 176 video frames**; do not label it a 30-second stability recording.
   No further APK installation, foreground scanner, pairing change, or permission
   toggle occurred between this cycle's start and stop.
 
+### Updated-build launcher-blocking follow-up (partial)
+
+On the same `d93ae01` / `d2de157...` APK, the owner was asked to start once from
+unlocked Home with the physical Zap, open Chrome using its launcher icon, and try
+tapping and scrolling. The owner reported **“chrome stays blocked after doing that.”**
+Sanitized state changed from idle/revision `13` to active/revision `14`, with the
+service connected and its heartbeat advancing. A passive window check identified
+Chrome's Activity; the screenshot showed Justnoise's app-specific Chrome interruption
+surface and white **Keep going** action, not usable browser content.
+
+This is a second post-fix warm start sample and an owner-reported manual
+launcher/touch-blocking sample on the updated build. It is not a launch recording,
+does not measure time-to-interception or pre-overlay input, and does not establish
+10/10 repetitions or multi-target coverage. Asked specifically about normal system
+Home, the owner reported using the prototype's **Go Home** button and not seeing any
+other controls. The supplied phone photo corroborates missing normal navigation
+buttons. The app's escape action must not be credited as a normal system-Home pass.
+Direct stop and post-stop normal Chrome interaction for this second cycle remain
+pending; the last observed state is active/revision `14` with Chrome foreground.
+
+The following artifact belongs to the updated build, unlike the original foreground
+artifacts below. It contains only the interruption UI and generic device status icons.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| [Chrome blocked after direct Home start](a16-2026-09-02/direct-chrome-blocked.png) | `b32d412a48ac3b22e1ab7516c44ab547d49b6004d1616825d45d2df61b2caaa6` |
+
+### Navigation-controls defect and candidate fix
+
+On the installed `d93ae01` build, passive window diagnostics placed the opaque
+accessibility overlay at `[0,100][1080,2340]`, above a shown 135-pixel navigation-bar
+window. Together with the screenshot and owner report, this establishes a visible
+system-navigation defect. G0-14 remains blocked by this known failure, not merely
+an unperformed check.
+
+The new candidate sizes the actual overlay window using `currentWindowMetrics`,
+visible system-bar insets, and the per-edge maximum of stable display-cutout insets.
+It does not merely add padding to a still-touchable full-screen window. Physical
+top/left coordinates and explicit dimensions avoid covering the navigation region;
+framework inset fitting is disabled to avoid subtracting insets twice. The clickable
+root and non-focusable touch-blocking window remain in place. Failed layout marks
+recovery required rather than claiming healthy enforcement.
+
+This choice is supported by Android's [WindowMetrics contract](https://developer.android.com/reference/android/view/WindowMetrics#getWindowInsets())
+and [AOSP's distinction between above-window insets and display-metrics insets](https://android.googlesource.com/platform/frameworks/base/+/android16-qpr2-release/services/core/java/com/android/server/wm/WindowState.java).
+The AOSP behavior is consistent with the observed window geometry; it is not a
+claim to have inspected Samsung's private window-manager implementation.
+
+Six pure geometry tests cover measured A16 portrait dimensions, side navigation,
+zero visible navigation inset, offset bounds, and invalid sizes. A source-wiring
+regression failed before the controller change. The full Android pre-device verifier
+passed afterward, including all six geometry and eight static-policy tests. The
+pre-install integrated candidate APK SHA-256 is
+`6487e3f462328b9a78d8bc767c36b4c7ee1e0fdaf483e93235725e35a1fb3d77`.
+These tests do not establish actual
+Home/Back touch routing. Configuration and inset callbacks refresh changed bounds
+without polling; immersive/transient bar changes may not reach an overlay above
+the bars and remain explicitly unverified. The candidate has not been installed
+or physically retested; the owner was asked to stop the active session first.
+
 ## Preserved foreground-cycle artifacts
 
 Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA-256.

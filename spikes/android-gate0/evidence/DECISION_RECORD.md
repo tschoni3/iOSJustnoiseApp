@@ -4,9 +4,15 @@ Decision: **HOLD / NO-GO for the full Android port**
 
 Date opened: 2026-07-22
 
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 
 The repository now contains a reviewable candidate and CI design, but the required consumer-device and policy evidence does not exist. All 38 A16/A17 launch-family cells remain `BLOCKED`, which is a gate failure. No production `android-app/` should be created from this spike yet.
+
+The September 2 A16 follow-up records one foreground cycle and one warm direct
+Home start/stop cycle. A further direct-start/Chrome-blocking check exposed missing
+normal Android navigation controls on `d93ae01`. A window-bounds fix is being
+verified; the app's own Go Home button is not a substitute for system navigation.
+See [the build-scoped evidence](A16_PARTIAL_RUN_2026-09-02.md). No safety PASS is implied.
 
 ## Pre-device evidence now recorded
 

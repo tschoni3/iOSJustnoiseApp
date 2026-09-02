@@ -1,6 +1,6 @@
 # Android Gate 0 device evidence matrix
 
-Status: **NOT RUN — all `BLOCKED` cells count as `FAIL`**
+Status: **PARTIAL — known A16 system-navigation defect; all `BLOCKED` cells count as `FAIL`**
 
 The exact criteria and interpretation are normative in [`../../../docs/ANDROID_GATE_0.md`](../../../docs/ANDROID_GATE_0.md). Never change a cell to `PASS` without attaching the requested recording/log notes and the device/run metadata below.
 
@@ -28,7 +28,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | G0-01 | Clean install, disclosure, unchecked consent, manual enable without privileged setup | BLOCKED | BLOCKED | Partial owner-assisted setup completed; clean-install recording and full escape verification missing |
 | G0-02 | Scoped picker includes Chrome, YouTube, and one third-party app; selection survives process death | BLOCKED | BLOCKED | Chrome selected and survived APK update; remaining picker/target coverage missing |
 | G0-03 | Authorized real NDEF Zap starts 10/10 once; malformed/unauthorized never starts | BLOCKED | BLOCKED | Authorized foreground starts reported on September 1 and 2; September 2 state changed idle/revision 7 to active/revision 8. Required repetitions and negative cases missing |
-| G0-04 | Three launcher targets intercepted 10/10 before usable content | BLOCKED | BLOCKED | September 2: fresh physical start, Chrome block stable through a short recorded interval and unchanged before/after separate taps/swipe; owner confirmed the fix. Brief Chrome splash during launch is visible. Longer/repeated and multi-target evidence remains missing |
+| G0-04 | Three launcher targets intercepted 10/10 before usable content | BLOCKED | BLOCKED | September 2 original build: Chrome block stable through a short recorded interval and unchanged before/after separate taps/swipe; owner confirmed the fix, with brief Chrome splash during launch. Updated `d93ae01` build: direct Home start to active/revision 14, owner-reported manual Chrome launcher/tap/scroll blocking, and a blocked-screen still preserved. Time-to-interception, longer/repeated, and multi-target evidence remains missing |
 | G0-05 | Recents, notification/deep link, browser link, and Settings Open are intercepted | BLOCKED | BLOCKED | Not run; record exact links/notifications |
 | G0-06 | Back, Home, Recents, rotation, split screen, and rapid launch do not bypass | BLOCKED | BLOCKED | Not run |
 | G0-07 | Screen-off 30-minute durability in default and unrestricted battery modes | BLOCKED | BLOCKED | Not run |
@@ -38,7 +38,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | G0-11 | Thirty-minute, ten-app false-positive/privacy script | BLOCKED | BLOCKED | Not run |
 | G0-12 | No crash, ANR, persistent overlay, loop, lockout, or visibly usable target flash | BLOCKED | BLOCKED | Owner confirmed no flicker on September 2 after `02f6e7c`/`dbb3ba6`; short video and before/after touch screenshots preserved. Full safety and repeated sustained-interaction coverage still pending |
 | G0-13 | Manifest, disclosure, data handling, and Play declaration policy review | BLOCKED | BLOCKED | Not reviewed |
-| G0-14 | Justnoise, Home, Settings, System UI, permission/package, phone/emergency surfaces never covered | BLOCKED | BLOCKED | Not run; use emergency test route only |
+| G0-14 | Justnoise, Home, Settings, System UI, permission/package, phone/emergency surfaces never covered | BLOCKED | BLOCKED | Known failure on installed `d93ae01`: owner and screenshot confirm missing normal Android navigation controls under the Chrome blocker; overlay geometry overlaps the navigation region. App GO HOME works per owner but does not establish normal system-Home usability. Metrics-derived window-bounds fix is pending installation/retest; remaining protected-surface coverage is missing. Use emergency test route only |
 | G0-15 | Disable, Force Stop, and uninstall escape via launcher and Settings; reinstall unchecked | BLOCKED | BLOCKED | Not run; no ADB rescue allowed |
 | G0-16 | Service crash/restart, process death, OEM reclaim, and Force Stop recover truthfully | BLOCKED | BLOCKED | Not run |
 | G0-17 | Natural Doze and eight-hour overnight pass in both default and unrestricted battery modes | BLOCKED | BLOCKED | Not run; unrestricted-only pass fails gate |
