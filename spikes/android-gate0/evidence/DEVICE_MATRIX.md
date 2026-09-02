@@ -14,7 +14,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | Sales region / CSC | NOT RECORDED | NOT RECORDED |
 | RAM tier | NOT RECORDED | NOT RECORDED |
 | One UI version | Device property `80500` (record the user-visible One UI label before a gate decision) | NOT RECORDED |
-| Prototype commit and APK SHA-256 | Integrated dev commit `dbb3ba6`; APK `f9a2c63cdb1cf3481d5007939bd0b96d02a126c1af6a2f1f709467aacf72b077` | NOT RECORDED |
+| Prototype commit and APK SHA-256 | Foreground cycle: `dbb3ba6` / `f9a2c63cdb1cf3481d5007939bd0b96d02a126c1af6a2f1f709467aacf72b077`. Later installed navigation candidate: `d93ae01` / `d2de157599fc77a59fb153f0fde1776bab6c0e26cfa10b9d48e0b4f1abe8ebc0`; see the build-scoped September 2 record | NOT RECORDED |
 | Install profile | Must be unmanaged personal | Must be unmanaged personal |
 | Default battery run | NOT RUN | NOT RUN |
 | Unrestricted battery run | NOT RUN | NOT RUN |
@@ -43,7 +43,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | G0-16 | Service crash/restart, process death, OEM reclaim, and Force Stop recover truthfully | BLOCKED | BLOCKED | Not run |
 | G0-17 | Natural Doze and eight-hour overnight pass in both default and unrestricted battery modes | BLOCKED | BLOCKED | Not run; unrestricted-only pass fails gate |
 | G0-18 | Minimal metadata plus local-only inventory match reviewed logs/network observation | BLOCKED | BLOCKED | Static claims exist; device observation not run |
-| G0-19 | Unlocked Home direct legacy-Zap start/stop needs no app-open, Scan button, chooser, or second confirmation | BLOCKED | BLOCKED | Live-tag direct-dispatch candidate implemented; physical unlocked-Home routing, chooser, warm/cold process, lock, competing-handler, and Force Stop evidence remains missing |
+| G0-19 | Unlocked Home direct legacy-Zap start/stop needs no app-open, Scan button, chooser, or second confirmation | BLOCKED | BLOCKED | September 2: one owner-confirmed warm Home start, idle/revision 9 to active/revision 10, but the existing app screen was revealed. Task-isolation update passed a synthetic no-tag return-to-Home check; post-update physical navigation, direct stop, repetitions, chooser, cold process, lock, competing-handler, and Force Stop evidence remains pending. Later idle/revision 11 has no confirmed cause and is not counted as direct-stop evidence |
 
 ## Decision arithmetic
 

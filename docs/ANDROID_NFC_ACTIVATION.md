@@ -8,9 +8,12 @@ As of 2026-09-01, the disposable Gate 0 sources and integrated development APK
 implement the narrow `ACTION_NDEF_DISCOVERED` Activity described below. It requires a
 live `EXTRA_TAG`, re-reads NDEF from the physical tag, ignores message-only intent
 forgeries, feeds the shared parser/controller, and shares a short process mutation gate
-with the foreground reader. Those source and test properties are not routing evidence:
-the unlocked-Home, warm/cold process, chooser, lock, competing-handler, and Force Stop
-cases in G0-19 remain physically unverified.
+with the foreground reader. Those source and test properties are not routing evidence.
+The [September 2 A16 follow-up](../spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md#warm-home--navigation-follow-up)
+records one owner-confirmed warm unlocked-Home start, which revealed the existing app
+screen. A task-isolation update passed a synthetic no-tag navigation check, but its
+physical retest is pending. Confirmed direct stops, repetitions, chooser, cold-process,
+lock, competing-handler, and Force Stop cases remain unverified; G0-19 is still blocked.
 
 ## Product outcome
 

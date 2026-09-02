@@ -1,6 +1,6 @@
 # Galaxy A16 partial run — 2026-09-02
 
-Status: **ONE FOREGROUND START / BLOCK / STOP CYCLE OBSERVED — no complete Gate 0 cell passes**
+Status: **ONE FOREGROUND CYCLE AND ONE WARM HOME START OBSERVED — no complete Gate 0 cell passes**
 
 ## Device and tested build
 
@@ -9,11 +9,13 @@ Status: **ONE FOREGROUND START / BLOCK / STOP CYCLE OBSERVED — no complete Gat
 - Android 16 / API 36; build `A165FXXSADZG3`; security patch `2026-07-05`.
   Full SKU/CSC, RAM tier, and user-visible One UI metadata remain incomplete.
 - Application ID: `com.justnoise.androiddev`.
-- Tested source: `dbb3ba6b1c03d222ba7e06623b904fb610d56379`.
-- Installed APK SHA-256, rechecked from the device during this run:
+- Foreground-cycle and initial warm-Home tested source:
+  `dbb3ba6b1c03d222ba7e06623b904fb610d56379`.
+- That phase's installed APK SHA-256, rechecked from the device:
   `f9a2c63cdb1cf3481d5007939bd0b96d02a126c1af6a2f1f709467aacf72b077`.
-- No APK update, state clearing, re-pairing, or permission toggle was performed.
-  The newer shared visual-mapping build was not installed for this run.
+- No APK update, state clearing, re-pairing, or permission toggle was performed
+  during the original foreground cycle. The later update is separately scoped below;
+  the eight preserved artifacts still show this original build.
 
 ## Readiness diagnostic
 
@@ -72,7 +74,50 @@ seconds and 176 video frames**; do not label it a 30-second stability recording.
   does not establish whether Chrome accepted input before interception or prove the
   exact timing of the separate tap/swipe commands.
 
-## Preserved artifacts
+## Warm Home / navigation follow-up
+
+### Original build: one physical start and a navigation defect
+
+- From unlocked Samsung Home, with Justnoise's existing task in the background,
+  the owner tapped the physical Zap and confirmed **“i tapped qithout opwn justnoise app.”**
+  Sanitized state changed from idle/revision `9` to active/revision `10`.
+- Justnoise's existing `MainActivity` became foreground afterward. This was not the
+  intended return-to-Home behavior. A narrow `text/plain` NDEF resolver query returned
+  only `DirectNfcActivity`, but the owner did not explicitly confirm whether a chooser
+  appeared; do not infer complete chooser-free coverage from the query.
+- A later read found idle/revision `11`. The owner has not confirmed the action that
+  caused that transition, so it is **not evidence of a physical direct stop**.
+- A separate synthetic `ACTION_NDEF_DISCOVERED` / `text/plain` / `NEW_TASK` launch,
+  containing neither a live tag nor copied NDEF messages, reproduced the navigation
+  defect: Home was replaced by the existing `MainActivity`. Its immediate baseline and
+  after-state were both idle/revision `11`, confirming no session mutation in that
+  no-tag sample. An earlier diagnostic lacked an immediate baseline and is not used
+  to attribute any state transition.
+
+### Task-isolation build: navigation-only check
+
+- Source: `d93ae010024101fdd93c9246a94dc146ca0593f2`.
+- APK SHA-256, matched against the installed `base.apk`:
+  `d2de157599fc77a59fb153f0fde1776bab6c0e26cfa10b9d48e0b4f1abe8ebc0`.
+- Installed using `adb install -r`; no app-data clearing, uninstall, or re-pairing.
+  The Chrome target and idle/revision `11` state were retained.
+- Only the transient NFC entry's task affinity changed in the two manifests. Its
+  explicit empty affinity is covered by a regression that failed before the change
+  and passed afterward. The full Android pre-device verifier passed, and the packaged
+  integrated manifest contains the attribute. This build also includes the previously
+  verified shared visual mappings from `113b660`.
+- After the update, the app truthfully showed **Enable Accessibility**, and Android's
+  enabled-service setting returned `null`. The cause of that disabled state has not
+  been established. No ADB permission grant or setting write was used; the owner was
+  asked to manually re-enable the service before further physical session checks.
+- With the existing main task primed, the phone was returned to unlocked Home. The
+  same synthetic no-tag `NEW_TASK` launch then left Samsung Home foreground. Immediate
+  before/after state remained idle/revision `11`. This is a successful **navigation
+  and no-tag rejection check**, not evidence of a physical NFC start or stop.
+- Post-update physical NFC return-to-Home behavior remains pending. Accessibility
+  re-enablement and a fresh readiness check are required before that test.
+
+## Preserved foreground-cycle artifacts
 
 Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA-256.
 
@@ -93,7 +138,8 @@ Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA
   cases; this run records only one complete foreground cycle.
 - Longer recorded touch, Back, Home, Recents, rotation, split-screen, and rapid-launch
   checks; all required target/entry-path coverage.
-- Direct unlocked-Home NFC start/stop, lifecycle/reboot/battery/Doze/overnight,
+- Post-update direct unlocked-Home navigation, confirmed direct stops, repetitions,
+  cold-process and negative direct-entry cases; lifecycle/reboot/battery/Doze/overnight,
   privacy/false-positive, escape, policy, and Galaxy A17 evidence.
 
 All 38 matrix cells remain `BLOCKED`. This run establishes meaningful progress on the
