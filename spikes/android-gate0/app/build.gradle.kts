@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.testing.Test
 
 plugins {
@@ -57,6 +58,10 @@ android {
 }
 
 tasks.withType<Test>().configureEach {
+    inputs.files(
+        rootProject.projectDir.resolve("app/src/main/AndroidManifest.xml"),
+        rootProject.projectDir.resolve("../android-integrated/app/src/main/AndroidManifest.xml"),
+    ).withPropertyName("nfcEntryManifests").withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty(
         "justnoise.repositoryRoot",
         rootProject.projectDir.resolve("../..").canonicalPath,

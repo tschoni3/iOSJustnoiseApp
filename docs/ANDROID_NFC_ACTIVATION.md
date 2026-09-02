@@ -65,6 +65,15 @@ The Gate 0 Android session-toggle candidate is a small exported NFC entry Activi
 
 The entry Activity must not treat an NFC scan as Accessibility consent, open Accessibility settings automatically, start when the device is locked unless device evidence proves and product review accepts that behavior, or resurrect enforcement after Force Stop. A forged or replayed explicit intent—even one containing copied authorized NDEF message bytes—must leave state unchanged without a usable live `Tag`. Requiring a live read reduces intent spoofing; it does not make a static NDEF tag unclonable.
 
+The entry declares an explicit empty `android:taskAffinity` in both disposable APKs,
+while keeping `singleTop`, `noHistory`, and `excludeFromRecents`. This prevents a
+new-task NFC launch from reusing the normal Justnoise task and revealing its existing
+screen when the entry finishes. Android documents this isolation pattern for
+[transient activities](https://developer.android.com/develop/ui/views/notifications/navigation).
+A node-scoped manifest regression checks both declarations. A synthetic launch without
+a live tag can verify navigation and rejection only; returning to Home after an actual
+physical scan still requires device evidence.
+
 ## Tag compatibility strategy
 
 ### Existing Zap profile

@@ -1,9 +1,12 @@
 package com.justnoise.gate0.policy
 
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.w3c.dom.Element
 
 class StaticPolicyContractTest {
     private val repositoryRoot = File(
@@ -44,6 +47,34 @@ class StaticPolicyContractTest {
         assertTrue(source.contains("ProcessDirectNfcMutationGate.tryClaim"))
         assertFalse(source.contains("EXTRA_NDEF_MESSAGES"))
         assertTrue(rules.contains("hasLiveTag"))
+    }
+
+    @Test
+    fun `direct NFC entry stays out of the application task in both APKs`() {
+        val androidNamespace = "http://schemas.android.com/apk/res/android"
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
+        val manifests = listOf(
+            file("app/src/main/AndroidManifest.xml"),
+            File(repositoryRoot, "spikes/android-integrated/app/src/main/AndroidManifest.xml"),
+        )
+        for (manifest in manifests) {
+            val activities = factory.newDocumentBuilder().parse(manifest)
+                .getElementsByTagName("activity")
+            val entry = (0 until activities.length)
+                .map { activities.item(it) as Element }
+                .single {
+                    it.getAttributeNS(androidNamespace, "name").endsWith(".app.DirectNfcActivity")
+                }
+            // A missing attribute also reads as an empty string; require an explicit opt-out.
+            assertTrue(manifest.path, entry.hasAttributeNS(androidNamespace, "taskAffinity"))
+            assertEquals(manifest.path, "", entry.getAttributeNS(androidNamespace, "taskAffinity"))
+            assertEquals("singleTop", entry.getAttributeNS(androidNamespace, "launchMode"))
+            assertEquals("true", entry.getAttributeNS(androidNamespace, "noHistory"))
+            assertEquals("true", entry.getAttributeNS(androidNamespace, "excludeFromRecents"))
+        }
     }
 
     @Test
