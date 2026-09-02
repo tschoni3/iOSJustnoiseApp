@@ -78,6 +78,14 @@ bash "$GATE_ROOT/scripts/verify-static-policy.sh"
 "$GRADLE_WRAPPER" --no-daemon -p "$INTEGRATED_ROOT" \
     testDebugUnitTest \
     lintDebug \
-    assembleDebug
+    assembleDebug \
+    lintRelease \
+    assembleRelease \
+    bundleRelease
+
+python3 -B -m unittest discover -s "$INTEGRATED_ROOT/scripts" -p 'test_*.py'
+python3 -B "$INTEGRATED_ROOT/scripts/verify-release-apk.py" \
+    "$INTEGRATED_ROOT/app/build/outputs/apk/release/output-metadata.json" \
+    com.justnoise.androiddev
 
 echo "Android spikes and integrated development APK verified; production remains HOLD pending physical and store gates."

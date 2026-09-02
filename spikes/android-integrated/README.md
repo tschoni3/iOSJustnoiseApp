@@ -58,7 +58,15 @@ this packaging check is not 16-KB-device runtime or native ELF alignment evidenc
 
 These artifacts still use `com.justnoise.androiddev`, version `0.1-integrated-dev`.
 They are local packaging evidence, not upload-ready or physically accepted release
-artifacts. Permanent identity, external upload signing, release labels and the
-internal-beta safety decision remain open. Nothing was uploaded or installed from
+artifacts. The subsequently selected production ID is `com.justnoise.app`, with
+public name **Justnoise**; Play registration/availability is not yet verified.
+External upload signing, release labels and the internal-beta safety decision
+remain open. Nothing was uploaded or installed from
 these unsigned release artifacts; the phone received only the separately verified
 debug cleanup-feedback follow-up described in the Gate 0 evidence.
+
+The pre-device verifier now repeats the release build and checks the actual APK
+boundary using `scripts/verify-release-apk.py` and SDK build-tools 36.0.0. It resolves
+the optimized Accessibility resource through the APK resource table rather than
+assuming the source XML filename survives packaging. Passing this check is not
+signing, device-safety, or Play approval.

@@ -4,6 +4,12 @@ Status: **PHYSICAL GATE 0 IN PROGRESS — PRODUCTION IMPLEMENTATION HOLD**
 
 This is the handoff between repository preparation and evidence that only consumer hardware, policy review, and Google Play can provide. It does not authorize `android-app/`.
 
+Release identity decision, 2026-09-02: the owner delegated a conventional Android ID;
+use `com.justnoise.app` with public name **Justnoise**, subject to Play Console
+availability/registration. The existing development installation stays
+`com.justnoise.androiddev`; do not rename or erase it while preparing the release.
+The chosen ID is not yet registered, signed, or used by a production build.
+
 ## One reproducible repository check
 
 From the repository root, with JDK 17 and Android SDK 36 configured, run:
@@ -20,6 +26,9 @@ The command fails unless all of the following remain true:
 - the integrated development shell passes its truthful-action state tests and compiles the reviewed Gate 0 capability sources,
   real foreground NFC reader, direct NDEF entry candidate, and polished truth-driven
   Zap surface into one disposable APK;
+- the integrated unsigned release APK/App Bundle and release lint also build, and
+  packaged-APK checks reject debug preview tooling, unexpected requested permissions,
+  or broadened Accessibility metadata; this does not verify release signing or Play approval;
 - the UI prototype declares no permission or service and neither its source nor the
   shared native copy/color mapping imports a restricted Android capability API; and
 - no production `android-app/` exists during the current internal-beta and full Gate 0 HOLD. After the smaller internal-beta checkpoint is recorded as GO, deliberately replace this phase-specific absence guard with release-app verification during promotion.
@@ -71,7 +80,7 @@ Budget-conscious sequence agreed 2026-09-02: complete the smaller A16 safety che
 
 Only after the separate internal-beta decision says `GO` (or full Gate 0 says `PASS`):
 
-1. Review and choose the permanent application ID.
+1. Confirm Play availability/registration for the selected `com.justnoise.app` application ID.
 2. Create one `android-app/app` module beside the existing iOS project.
 3. Reuse the working NFC, blocker, Compose and contract components after release-boundary review; avoid a wholesale rewrite or an unreviewed bulk rename of spike packages.
 4. Deliver the minimal local-only test scope below; keep the larger slices in `docs/MOBILE_ARCHITECTURE.md` as a later roadmap and schedules deferred until their portable semantics are approved.
