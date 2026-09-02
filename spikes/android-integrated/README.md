@@ -36,3 +36,8 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
 The APK is generated at `app/build/outputs/apk/debug/app-debug.apk` with the
 disposable application ID `com.justnoise.androiddev`. A fresh install has its own
 Android sandbox and therefore requires its own one-time local Zap pairing.
+
+Physical NFC/blocking checks follow the
+[non-interfering inspection protocol](../android-gate0/README.md#do-not-let-inspection-interrupt-the-blocker).
+In particular, do not use `uiautomator dump` to inspect this app while testing its
+Accessibility service. Preserve the paired installation and use screenshots instead.

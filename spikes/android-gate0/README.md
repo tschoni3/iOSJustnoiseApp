@@ -67,6 +67,33 @@ Review the generated `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.ja
 
 Collect screen recordings and redacted system/log evidence. Do not capture a raw Zap record or unrelated foreground package history. Record model, full OS build, security patch, battery mode, tester, prototype commit, and exact alternate entry paths.
 
+### Do not let inspection interrupt the blocker
+
+Do not use `adb shell uiautomator dump` during an Accessibility enforcement or
+recovery check. Android's [`UiAutomation` API](https://developer.android.com/reference/android/app/UiAutomation#FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+suppresses other Accessibility services by default. The legacy
+[`uiautomator dump` command](https://android.googlesource.com/platform/frameworks/uiautomator/+/17fac436d78f6ac642386a245fb4fdb7243a91a4/cmds/uiautomator/src/com/android/commands/uiautomator/DumpCommand.java)
+uses the default automation connection, so inspection can create a service disconnect
+and invalidate the observation; its [connection wrapper](https://android.googlesource.com/platform/prebuilts/fullsdk/sources/android-31/+/refs/heads/main/com/android/uiautomator/core/UiAutomationShellWrapper.java)
+does not request service preservation. Do not attribute a disconnect to the app
+without a clean retest.
+
+For the owner-assisted blocking run:
+
+- Keep the phone manually unlocked and Justnoise resumed for the readiness check.
+  Wait at least three seconds after resuming, then use `adb exec-out screencap -p`
+  or `adb shell screenrecord`, not an accessibility-tree dump.
+- Correlate the visible state with scoped `dumpsys activity` / `dumpsys accessibility`
+  checks and only the desired-active, recovery, connected, heartbeat, and revision
+  fields from local state. Never print the full preference file, Zap digest, or payload.
+- If inspection already interrupted the service, repeat the observation after it
+  reconnects. Preserve pairing and session state; do not toggle permissions or clear
+  app data merely to repair the test environment.
+- Keep instrumentation smoke tests separate from the paired physical run. Test runners
+  can disturb services or app data. Future UI automation for the blocker must explicitly
+  preserve services with `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` and verify that
+  assumption on the device before its results count as evidence.
+
 ## Gate interpretation
 
 Every current device cell is `BLOCKED`, which counts as `FAIL`. Code review or green CI proves only that the candidate is buildable and matches its declared static boundary. It cannot establish interception timing, OEM durability, escape safety, Google Play acceptance, or the Android product promise.

@@ -56,3 +56,6 @@ Status: **PARTIAL EVIDENCE ONLY — no Gate 0 cell passes from this run**
   false-positive/privacy, escape, and uninstall cases from the matrix.
 - Direct unlocked-Home NFC routing without first opening the app or pressing Scan.
 - Full A16 SKU metadata and a distinct Galaxy A17-family run.
+
+The follow-up clean inspection and owner-confirmed Chrome fix are recorded separately
+in [the September 2 run](A16_PARTIAL_RUN_2026-09-02.md).

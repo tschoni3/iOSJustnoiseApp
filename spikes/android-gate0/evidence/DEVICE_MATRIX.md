@@ -19,7 +19,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | Default battery run | NOT RUN | NOT RUN |
 | Unrestricted battery run | NOT RUN | NOT RUN |
 | Overnight start/end | NOT RUN | NOT RUN |
-| Tester/date | Owner-assisted run / 2026-09-01; see `A16_PARTIAL_RUN_2026-09-01.md` | NOT RECORDED |
+| Tester/date | Owner-assisted runs / 2026-09-01 and 2026-09-02; see the corresponding `A16_PARTIAL_RUN` records | NOT RECORDED |
 
 ## Results
 
@@ -27,16 +27,16 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | --- | --- | --- | --- | --- |
 | G0-01 | Clean install, disclosure, unchecked consent, manual enable without privileged setup | BLOCKED | BLOCKED | Partial owner-assisted setup completed; clean-install recording and full escape verification missing |
 | G0-02 | Scoped picker includes Chrome, YouTube, and one third-party app; selection survives process death | BLOCKED | BLOCKED | Chrome selected and survived APK update; remaining picker/target coverage missing |
-| G0-03 | Authorized real NDEF Zap starts 10/10 once; malformed/unauthorized never starts | BLOCKED | BLOCKED | One owner-reported authorized foreground start; repetition and negative cases missing |
-| G0-04 | Three launcher targets intercepted 10/10 before usable content | BLOCKED | BLOCKED | Chrome intercepted after the self-event fix with one immediate captured blocked screen; `dbb3ba6` explicitly consumes unused overlay touches, but a fresh physical start plus sustained and multi-target runs are missing |
+| G0-03 | Authorized real NDEF Zap starts 10/10 once; malformed/unauthorized never starts | BLOCKED | BLOCKED | Authorized foreground starts reported on September 1 and 2; September 2 state changed idle/revision 7 to active/revision 8. Required repetitions and negative cases missing |
+| G0-04 | Three launcher targets intercepted 10/10 before usable content | BLOCKED | BLOCKED | September 2: fresh physical start, Chrome block stable through a short recorded interval and unchanged before/after separate taps/swipe; owner confirmed the fix. Brief Chrome splash during launch is visible. Longer/repeated and multi-target evidence remains missing |
 | G0-05 | Recents, notification/deep link, browser link, and Settings Open are intercepted | BLOCKED | BLOCKED | Not run; record exact links/notifications |
 | G0-06 | Back, Home, Recents, rotation, split screen, and rapid launch do not bypass | BLOCKED | BLOCKED | Not run |
 | G0-07 | Screen-off 30-minute durability in default and unrestricted battery modes | BLOCKED | BLOCKED | Not run |
 | G0-08 | Reboot restores enforcement or truthfully requires recovery; five launches pass after restore | BLOCKED | BLOCKED | Not run |
-| G0-09 | Authorized real Zap stops 10/10; canceled/malformed/unauthorized do not stop | BLOCKED | BLOCKED | Not run |
+| G0-09 | Authorized real Zap stops 10/10; canceled/malformed/unauthorized do not stop | BLOCKED | BLOCKED | September 2: one owner-confirmed foreground stop, active/revision 8 to idle/revision 9, Ready to Zap, and neutral Chrome with responsive menu. Repetitions and canceled/malformed/unauthorized cases remain missing |
 | G0-10 | Revocation reports unavailable/recovery and preserves non-destructive escape | BLOCKED | BLOCKED | Not run |
 | G0-11 | Thirty-minute, ten-app false-positive/privacy script | BLOCKED | BLOCKED | Not run |
-| G0-12 | No crash, ANR, persistent overlay, loop, lockout, or visibly usable target flash | BLOCKED | BLOCKED | Original A16 run exposed an overlay show/hide loop; `02f6e7c` fixes the self-event feedback and `dbb3ba6` consumes background touches, but sustained interactive recording is pending |
+| G0-12 | No crash, ANR, persistent overlay, loop, lockout, or visibly usable target flash | BLOCKED | BLOCKED | Owner confirmed no flicker on September 2 after `02f6e7c`/`dbb3ba6`; short video and before/after touch screenshots preserved. Full safety and repeated sustained-interaction coverage still pending |
 | G0-13 | Manifest, disclosure, data handling, and Play declaration policy review | BLOCKED | BLOCKED | Not reviewed |
 | G0-14 | Justnoise, Home, Settings, System UI, permission/package, phone/emergency surfaces never covered | BLOCKED | BLOCKED | Not run; use emergency test route only |
 | G0-15 | Disable, Force Stop, and uninstall escape via launcher and Settings; reinstall unchecked | BLOCKED | BLOCKED | Not run; no ADB rescue allowed |

@@ -17,6 +17,11 @@ The spike is not expected to recreate Apple Family Controls. It must prove the u
 
 These constraints create both a technical gate and a distribution-policy gate.
 
+Device inspection must not suppress the service being tested. Do not use
+`uiautomator dump` during enforcement/recovery verification; follow the
+[non-interfering inspection protocol](../spikes/android-gate0/README.md#do-not-let-inspection-interrupt-the-blocker)
+and collect screenshots/recordings plus scoped passive state checks instead.
+
 ## Prototype constraints
 
 Build a disposable native Kotlin prototype with one application module. It may contain only enough UI to select a launchable app, enable the candidate capability, pair/scan a Zap, show active/idle state, intercept the selected app, and recover. A direct-dispatch extension may add one minimal NFC entry Activity solely to test the user-approved low-friction route in `docs/ANDROID_NFC_ACTIVATION.md`; it does not authorize a production module.

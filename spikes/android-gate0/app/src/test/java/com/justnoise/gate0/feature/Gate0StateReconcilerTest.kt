@@ -36,6 +36,66 @@ class Gate0StateReconcilerTest {
     }
 
     @Test
+    fun `temporary disconnect recovers idle and active truth from a fresh heartbeat`() {
+        for (desiredActive in listOf(false, true)) {
+            val disconnected = readyState().copy(
+                desiredActive = desiredActive,
+                serviceConnected = false,
+                serviceHeartbeatElapsedMilliseconds = 0L,
+            )
+            assertEquals(
+                Gate0Truth.RECOVERY_REQUIRED,
+                Gate0StateReconciler.reconcile(disconnected, true, 5_000L),
+            )
+
+            val reconnected = disconnected.copy(
+                serviceConnected = true,
+                serviceHeartbeatElapsedMilliseconds = 5_000L,
+            )
+            assertEquals(
+                if (desiredActive) Gate0Truth.ACTIVE else Gate0Truth.IDLE,
+                Gate0StateReconciler.reconcile(reconnected, true, 5_000L),
+            )
+        }
+    }
+
+    @Test
+    fun `heartbeat freshness includes zero and the timeout but rejects future and expired values`() {
+        val timeout = Gate0StateReconciler.HEARTBEAT_STALE_AFTER_MILLISECONDS
+        for (desiredActive in listOf(false, true)) {
+            val stored = readyState().copy(desiredActive = desiredActive)
+            for (age in listOf(-1L, 0L, timeout, timeout + 1L)) {
+                val expected = when {
+                    age !in 0L..timeout -> Gate0Truth.RECOVERY_REQUIRED
+                    desiredActive -> Gate0Truth.ACTIVE
+                    else -> Gate0Truth.IDLE
+                }
+                assertEquals(
+                    "desiredActive=$desiredActive, heartbeatAge=$age",
+                    expected,
+                    Gate0StateReconciler.reconcile(
+                        stored,
+                        accessibilityEnabled = true,
+                        nowElapsedMilliseconds = stored.serviceHeartbeatElapsedMilliseconds + age,
+                    ),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `connected flag without a recorded heartbeat is not ready`() {
+        assertEquals(
+            Gate0Truth.RECOVERY_REQUIRED,
+            Gate0StateReconciler.reconcile(
+                readyState().copy(serviceHeartbeatElapsedMilliseconds = 0L),
+                accessibilityEnabled = true,
+                nowElapsedMilliseconds = 0L,
+            ),
+        )
+    }
+
+    @Test
     fun `revocation is permission required while idle and recovery required while desired active`() {
         assertEquals(
             Gate0Truth.PERMISSION_REQUIRED,
