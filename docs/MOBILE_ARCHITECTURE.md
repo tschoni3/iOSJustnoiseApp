@@ -1,12 +1,19 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.14
+Status: target architecture, version 1.0.15
 
 ## Decision
 
 Justnoise will use native SwiftUI on iOS and native Kotlin with Jetpack Compose on Android. The two applications share product contracts rather than a UI runtime. This preserves the published iOS experience and gives each platform direct access to the system capabilities required for NFC, restrictions, background work, notifications, and platform-owned UI.
 
 The backend stays separately deployed. Its API contract can be consumed by both clients, but backend source code does not belong in either mobile application.
+
+Owner MVP clarification, 2026-09-02: Android must support selecting multiple apps,
+real Zap sessions, working schedules and actual session history. The earlier
+single-app local beta is only a foundation step, not MVP completion. These four
+features remain local-first; authentication/cloud sync, widgets and Capture/Signal
+are not prerequisites. The current dependency order and evidence are in
+`docs/ANDROID_PREDEVICE_READINESS.md`.
 
 ## Readiness checkpoint
 
@@ -188,9 +195,9 @@ Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftU
 ### Delivery slices
 
 1. **Current pre-device phase:** maintain shared contracts, the disposable Gate 0 and UI spikes, policy evidence, and this matrix. Do not create `android-app/`.
-2. **Minimal internal beta after its separate A16 safety GO:** one Compose application module with local onboarding/pairing, one remembered target app, Zap lifecycle, restriction capability, and recovery. Defer authentication, multiple modes and cloud data. **Full production slice 1 after Gate 0 PASS:** add startup/account boundaries, authentication and Modes deliberately; the larger slice is not a prerequisite for the initial beta.
-3. **Production slice 2:** history, completion/weekly states, account/settings surfaces, and an ongoing-notification adapter.
-4. **Production slice 3:** schedules only after the unresolved temporal rules have explicit product decisions and portable fixtures.
+2. **MVP foundation after the separate A16 safety GO:** one Compose application module with local onboarding/pairing, one saved multi-app selection, durable session identity/target snapshots, the existing Zap/restriction engine and truthful recovery. Authentication, multiple named modes and cloud data are not required for this slice.
+3. **Required MVP History:** persist real session completion once and connect native History to those records and shared summary rules. Preview data is not delivery; weekly insight and account/settings expansion are later work.
+4. **Required MVP schedules:** define temporal/collision/recovery rules and fixtures, persist schedules and deliver them through the same session engine. This is sequenced after the foundation, not deferred outside the MVP. Release acceptance must include all four required features on the A16 candidate.
 5. **Later products:** Capture, Signal UI, and an Android widget require separate launch decisions and are not allowed to delay the core Android focus experience.
 
 ### Contract expansion rule

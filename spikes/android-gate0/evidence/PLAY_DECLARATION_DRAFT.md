@@ -2,6 +2,12 @@
 
 Status: **draft / HOLD** — not legal advice, not submitted, and not evidence of Google Play approval
 
+Scope note, 2026-09-02: this draft describes the current single-target development
+candidate. The clarified MVP additionally requires multi-app selection, schedules
+and real session history. Do not submit this draft unchanged for that MVP: revise
+retention, schedule-triggered behavior, disclosure, labels and reviewer steps
+against the implemented release. Preview screens are not implemented features.
+
 ## Core functionality
 
 Justnoise is a focus product. At the user's explicit request, the Gate 0 candidate compares the foreground package identifier from Android window-state changes with one app the user selected locally. During a user-started focus session, an exact match displays a Justnoise-owned interruption overlay. The service does not suspend the target package and is not a tool whose primary purpose is assisting people with disabilities.

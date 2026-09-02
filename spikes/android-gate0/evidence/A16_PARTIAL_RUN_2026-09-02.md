@@ -474,6 +474,50 @@ was performed.
 | [Main screen after manual re-enable](a16-2026-09-02/main-after-accessibility-reenable.png) | `3117190dd079c6f018574442870370f4b823b0ca12fc19664dfc2c6291744985` |
 | [Chrome blocker after manual re-enable](a16-2026-09-02/blocker-after-accessibility-reenable.png) | `dd35aa5aa62f41882f0a443503c11ded4ace524a8aae92c1e5a0450a56106b9a` |
 
+### Owner-approved Force Stop and emulator withdrawal regression
+
+At approximately 23:42–23:45 device-local time, the owner approved one App-info
+Force Stop, explicitly excluding uninstall/data clearing. Source `909b41b` remained
+installed; active/revision `22`, fresh connected heartbeat and the Chrome blocker
+were confirmed before the action. The blocker's **App info / Force Stop** route
+reached Justnoise's Samsung App info. A coordinate touch selected **Stopp erzwingen**
+and the visible **OK** confirmation. No ADB force-stop or permission command was used.
+
+The package reported `stopped=true`, and `pidof com.justnoise.androiddev` returned
+no PID. Opening Chrome produced no Justnoise overlay and did not restart the app:
+the stopped flag and absent process remained on a later read. The disabled Force
+Stop control was visible in App info. This establishes one working force-stop
+escape, not long-term durability or a Zap stop.
+
+An explicit subsequent Justnoise launch showed **Reconnect Accessibility**, not
+active protection. Session intent/revision `22` remained, service-liveness entries
+were absent, and quiet presence checks confirmed pairing and Chrome selection.
+Samsung's Justnoise service page showed **Aus** with its separate shortcut unchanged.
+The phone was left on that top switch for the owner to restore manually. Re-enable
+after this Force Stop is pending; the earlier normal-disable recovery pass is a
+separate result, not evidence that this recovery has already completed.
+
+In parallel, the existing `ConsentUiInstrumentationTest` gained one normal-success
+withdrawal regression. It seeded synthetic pairing and session/consent/recovery state,
+pressed the real **Withdraw** UI button, checked the success message and every stored
+state default, verified the actual Android Keystore alias was gone, then recreated
+setup and confirmed unchecked/enabled consent with the Settings button disabled.
+All four consent/withdrawal tests passed on the isolated API-36 `medium_phone`
+emulator. No permission was granted or service enabled in that test, so it does not
+prove actual service disablement, OEM uninstall/reinstall or deletion-failure handling.
+No instrumentation ran on the owner's phone; the emulator was shut down afterward.
+
+The full Android pre-device verifier also passed for the test/MVP-plan change,
+including product/static contracts, all three Android builds/tests/lint, release
+APK/AAB and ten packaged-boundary regressions. No production app source, iOS source,
+phone APK or pairing changed in this step.
+
+| Artifact, source `909b41b` | SHA-256 |
+| --- | --- |
+| [Force Stop completed in App info](a16-2026-09-02/force-stop-completed.png) | `641efae420ed23e8aa853a6d75d205e03ff3243e0ac4fb2d3901da7cc845f417` |
+| [Main reports recovery after explicit reopen](a16-2026-09-02/main-after-force-stop.png) | `35b187b6f34e1f798ee1b704b54160485adb604d92fc36d9506822a178fbfe2a` |
+| [Service off after Force Stop](a16-2026-09-02/accessibility-after-force-stop.png) | `b7d89a4ed976751761abf22be3f7f3f33bb249ce589837ce6d02f1353405152f` |
+
 ### Play Console status — read-only
 
 The signed-in Play Console page still showed **Creating a Play Console developer

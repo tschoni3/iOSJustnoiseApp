@@ -92,7 +92,13 @@ Any technical failure on the required A16 is **NO-GO** until a revised prototype
 
 ## Smaller checkpoint for the first internal beta
 
-The first beta is local-only and may select one target app. Full iOS parity, multi-mode management, A17 coverage, and the full endurance matrix are not prerequisites for building this learning release. This is not a public-launch waiver.
+This core safety checkpoint can use the existing local-only single-target candidate.
+It does not define final MVP scope: the owner's later 2026-09-02 clarification
+requires multiple-app selection, Zap sessions, schedules and history, as recorded
+in `ANDROID_PREDEVICE_READINESS.md`. Do not label the single-app foundation or
+preview screens a completed MVP. Full iOS parity, multiple named modes, A17 coverage,
+and the full endurance matrix are not prerequisites for this core checkpoint.
+This is not a public-launch waiver; verify the added MVP behavior before distribution.
 
 Before promoting the existing capability into a signed internal-test app, record one end-to-end A16 safety smoke run on the candidate build covering:
 
@@ -109,7 +115,10 @@ The pre-device verifier intentionally continues to reject `android-app/` during 
 
 ## After the appropriate checkpoint
 
-After a recorded internal-beta GO, implement only the minimal local release app. After full Gate 0 PASS, expand the later product slices:
+After a recorded internal-beta GO, implement the local four-feature MVP in the
+dependency order in `ANDROID_PREDEVICE_READINESS.md`, including real History and
+schedules after their timing contract is defined. Full Gate 0 remains the later
+reliability/public-release decision. The platform implementation boundaries remain:
 
 1. Scaffold `android-app/` with one `app` module.
 2. Implement modes, Zap state, and recovery around a `RestrictionCapability` port.

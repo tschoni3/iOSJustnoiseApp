@@ -9,6 +9,13 @@ This repository is the client source for two native applications:
 
 Do not introduce a cross-platform UI runtime merely to share code. Share product decisions as versioned contracts; implement native UI and system integrations on each platform. The backend remains a separate deployable system and repository.
 
+Latest Android MVP scope (owner clarification, 2026-09-02): select multiple apps to
+block, tap the paired Zap to start/stop sessions, working schedules, and real session
+history. The earlier single-app beta is a foundation step, not the accepted MVP.
+Keep accounts, cloud sync, widgets, Capture/Signal and advanced polish out of this
+MVP unless separately requested. Follow `docs/ANDROID_PREDEVICE_READINESS.md`; do
+not defer schedules/history out of the MVP or count preview screens as implementation.
+
 ## Read before changing mobile behavior
 
 Before implementing a mobile feature or refactor, read:

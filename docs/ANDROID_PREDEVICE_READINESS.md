@@ -4,6 +4,11 @@ Status: **PHYSICAL GATE 0 IN PROGRESS — PRODUCTION IMPLEMENTATION HOLD**
 
 This is the handoff between repository preparation and evidence that only consumer hardware, policy review, and Google Play can provide. It does not authorize `android-app/`.
 
+**Latest MVP scope, 2026-09-02:** the owner requires multiple-app selection, Zap
+sessions, schedules and history. This supersedes the earlier proposal to deliver
+a single-selected-app build as the MVP. That build remains a foundation/safety
+sample, not the requested finished app. The four-feature scope below controls planning.
+
 Release identity decision, 2026-09-02: the owner delegated a conventional Android ID;
 use `com.justnoise.app` with public name **Justnoise**, subject to Play Console
 availability/registration. The existing development installation stays
@@ -61,7 +66,7 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 
 ## Work not authorized during the current internal-beta HOLD
 
-- Do not create `android-app/` until the smaller A16 internal-beta checkpoint is recorded as GO (or full Gate 0 passes). The permanent production application ID requires an explicit owner decision before use.
+- Do not create `android-app/` until the smaller A16 internal-beta checkpoint is recorded as GO (or full Gate 0 passes). The owner-delegated ID decision is already `com.justnoise.app`; verify availability/registration without asking for the same naming decision again.
 - Do not promote spike code into production packages.
 - Do not connect production accounts, analytics, backend data, signing keys, or store listings to a spike.
 - Do not claim working app restriction, NFC parity, background durability, or release readiness from unit tests, screenshots, or an emulator.
@@ -83,16 +88,50 @@ Only after the separate internal-beta decision says `GO` (or full Gate 0 says `P
 1. Confirm Play availability/registration for the selected `com.justnoise.app` application ID.
 2. Create one `android-app/app` module beside the existing iOS project.
 3. Reuse the working NFC, blocker, Compose and contract components after release-boundary review; avoid a wholesale rewrite or an unreviewed bulk rename of spike packages.
-4. Deliver the minimal local-only test scope below; keep the larger slices in `docs/MOBILE_ARCHITECTURE.md` as a later roadmap and schedules deferred until their portable semantics are approved.
+4. Implement the four-feature local MVP below. Define schedule semantics before scheduling implementation, but do not move schedules or history outside the MVP. Broader parity remains a later roadmap.
 5. Preserve physical-device and Play Console evidence as release gates, not one-time assumptions.
 
-## Immediate milestone: minimal Play internal test, not full parity
+## Required MVP: apps, Zap sessions, schedules and history
 
-The owner's latest instruction is to skip nonessential work and reach Play Console quickly. The next milestone is a small, truthful internal-test app, not a public launch or a complete iOS replica. Keep the full delivery matrix as a later roadmap, not as prerequisites for this first test build.
+The owner clarified: **“mvp is select apps to block, tap zap to start session, and
+schedule, history.”** All four must work with real persisted data. Keep this
+local-first on the existing A16; no account system or framework rewrite is required.
 
-- **Keep:** local onboarding/pairing, remembered selection of one target app, real authorized Zap start/stop, blocked-app interception and reliable unblock, truthful active/recovery state, essential permission/privacy controls, and safe Home/Back/disable/Force Stop/uninstall routes. The first internal beta deliberately does not promise multi-app modes.
-- **Defer:** A17/cross-OEM hardware acquisition, multi-app/multi-mode management, full visual-parity sign-off, cosmetic polish, cloud accounts/sync and purchase flows, History/Noise Rewind, schedules, widgets, Capture/Signal, component-library work, and architecture rewrites. No paid access or account parity is implied by a local-only test build. This is milestone sequencing, not removal from the longer-term product.
-- **Before distribution:** pass the smaller A16 safety checkpoint on the actual release candidate and record the separate internal-beta GO; confirm Play account eligibility and permanent package identity; prepare release signing, a non-debuggable release App Bundle without preview/debug tooling, actual-behavior privacy/declaration/reviewer material, and the requirements applicable to the selected Play track. Do not upload or publish without the owner's approval. Internal testing is not an exemption from applicable policy requirements or permission to ship the current debug spike as production.
-- **Then:** install through the internal test track on the existing A16, collect focused feedback, fix observed problems, and expand only when the core is usable. Additional tester hardware is opportunistic, not a purchasing requirement.
+| Required feature | Current evidence | Completion needed |
+| --- | --- | --- |
+| Select apps to block | One persisted package and real picker | Persist multiple selected apps, enforce each eligible target and preserve protected-system exclusions |
+| Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16 | Reuse this engine with a stable session identity and immutable multi-app target snapshot; preserve safe stop/recovery |
+| Schedules | Separate preview list/editor and pure eligibility rules only | Persist/edit/enable/delete schedules, calculate occurrences, deliver real background starts and reconcile missed/duplicate delivery |
+| History | Shared summary/duration rules; UI displays fixed preview data | Save real session records and show their dates/durations/totals, including manual and scheduled sessions exactly once |
 
-Track these as three outcome-based work packages: (1) safe/reliable A16 core, (2) minimal release app and Play package, (3) internal-test installation and feedback. These are not promises of exactly three coding iterations or a fixed approval date. The earlier full-parity estimate must not be reused as the estimate for this narrower milestone, and reduced scope does not turn incomplete work into a PASS.
+Minimum implementation order:
+
+1. **Saved apps and session data:** one saved multi-app selection, stable session
+   identity and active target snapshot. Preserve pairing during migration. Multiple
+   named modes are not required merely to select several apps.
+2. **Real sessions and History:** connect the working Zap/restriction engine to that
+   model, save completion exactly once and connect the native History UI to records.
+   Do not count periods of unknown enforcement as verified protected time.
+3. **Schedules:** define portable timing/collision/recovery cases, persist schedules
+   and add native delivery to the same session engine, then connect the schedule UI.
+   Do not create a second session implementation for scheduled starts.
+4. **MVP release and Play:** verify all four features and essential escape/recovery
+   on the A16 release candidate, update privacy/disclosure for actual history and
+   schedules, sign the release bundle and use the applicable Play test track after
+   account setup and owner upload approval. Do not upload the debug spike.
+
+One material schedule choice remains: scheduled **start only, ending on Zap**, or a
+scheduled **start/end window**. The observed iOS 20-minute monitor is not an approved
+duration. Time-zone/DST, active-session collision and missed-fire rules also need
+explicit fixtures from `SCHEDULE_PORTABILITY_AUDIT.md`; propose cohesive defaults
+rather than nine separate setup questions. This need not block apps/History work.
+
+Still outside this MVP: accounts/cloud sync, purchases, widgets, Capture/Signal,
+weekly Noise Rewind, advanced reports/polish, A17 hardware acquisition, component
+libraries and architecture rewrites. Keep essential permission/privacy controls,
+native navigation, disable/Force Stop/uninstall access and truthful recovery.
+
+The smaller core safety checkpoint controls release-app promotion, not MVP feature
+scope. Longer endurance/cross-OEM/full-parity work must not justify omitting required
+MVP features. These work packages describe dependencies, not a promise of exactly
+four iterations or a fixed approval date; local tests cannot guarantee Play approval.

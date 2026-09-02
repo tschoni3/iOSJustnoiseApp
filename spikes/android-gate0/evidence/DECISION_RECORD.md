@@ -4,13 +4,28 @@ Decision: **HOLD / NO-GO for the full Android port**
 
 Internal beta decision: **HOLD — smaller A16 safety checkpoint incomplete**
 
-Latest bounded safety run: on installed `909b41b`, the owner-authorized system-UI
+Latest owner scope clarification, 2026-09-02: the MVP requires multiple-app
+selection, Zap sessions, working schedules and real History. This supersedes the
+earlier single-app MVP proposal below. A single-app foundation remains useful for
+safety work but is not completion of the requested MVP. See the current delivery
+order in `docs/ANDROID_PREDEVICE_READINESS.md`; no new device purchase or account/cloud
+feature is implied.
+
+Latest bounded follow-up: an owner-approved App-info Force Stop terminated the app,
+removed the blocker and remained stopped after opening Chrome. Explicit Justnoise
+reopen truthfully showed recovery; pairing/selection and session intent `22` survived.
+Samsung set Accessibility off; the phone is on that switch awaiting owner re-enable.
+The actual Withdraw-button success/reset regression passed with synthetic state on
+an emulator, not the paired phone. No new complete gate or MVP feature is claimed.
+
+Preceding recovery run: on installed `909b41b`, the owner-authorized system-UI
 Accessibility disable retained pairing, Chrome selection and session intent/revision
 `22`. Setup and main truthfully reported recovery; opening Chrome did not restore a
 stale overlay. After the owner's manual re-enable, service heartbeat resumed, main
 showed active protection and Chrome was blocked again. Native Home remained usable.
 This recovery smoke passed without clearing data or another Zap scan. It is not
-Force Stop, cleanup/reinstall or a complete Gate 0 PASS. The earlier Keep going reset
+cleanup/reinstall or a complete Gate 0 PASS. The separate Force Stop result is above.
+The earlier Keep going reset
 is fixed and physically retested; do not credit that earlier unintended end as a
 Zap stop. Dedicated emergency access, physical negative input and cleanup remain
 open. Prior stop/unblock results stand. See the September 2 record. Play Console
