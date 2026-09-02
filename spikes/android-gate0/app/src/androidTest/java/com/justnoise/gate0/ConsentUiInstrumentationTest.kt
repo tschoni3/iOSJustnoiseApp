@@ -39,10 +39,11 @@ class ConsentUiInstrumentationTest {
     fun openingRefreshingAndRecreatingSetupPreservesActiveSelection() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val preferences = Gate0Preferences(context)
-        val target = LauncherAppRepository(context).load().first().packageName
+        val targets = LauncherAppRepository(context).load().take(2).map { it.packageName }.toSet()
+        assertEquals("Emulator fixture requires two eligible launcher apps", 2, targets.size)
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         assertTrue(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION))
-        assertTrue(preferences.setSelectedPackage(target))
+        assertTrue(preferences.setSelectedPackages(targets))
 
         for (recoveryRequired in listOf(false, true)) {
             assertTrue(preferences.startSession(200_000L))
@@ -51,7 +52,7 @@ class ConsentUiInstrumentationTest {
 
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 instrumentation.waitForIdleSync()
-                assertEquals("Activity creation must not reselect the stored target", before, preferences.snapshot())
+                assertEquals("Activity creation must not reselect the stored targets", before, preferences.snapshot())
 
                 scenario.onActivity { activity ->
                     activity.findViewById<android.widget.Button>(R.id.refreshAppsButton).performClick()
@@ -63,6 +64,7 @@ class ConsentUiInstrumentationTest {
                 instrumentation.waitForIdleSync()
                 assertEquals("Activity recreation must not reset the session", before, preferences.snapshot())
             }
+            assertTrue(preferences.stopSession())
         }
     }
 
@@ -112,7 +114,8 @@ class ConsentUiInstrumentationTest {
         val emptyState = StoredGate0State(
             acceptedDisclosureVersion = null,
             acceptedDisclosureEpochMilliseconds = 0L,
-            selectedPackage = null,
+            selectedPackages = emptySet(),
+            activePackages = emptySet(),
             zapDigest = null,
             desiredActive = false,
             activeSinceEpochMilliseconds = 0L,
@@ -124,8 +127,9 @@ class ConsentUiInstrumentationTest {
 
         try {
             assertTrue(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION))
-            val target = LauncherAppRepository(context).load().first().packageName
-            assertTrue(preferences.setSelectedPackage(target))
+            val targets = LauncherAppRepository(context).load().take(2).map { it.packageName }.toSet()
+            assertEquals("Emulator fixture requires two eligible launcher apps", 2, targets.size)
+            assertTrue(preferences.setSelectedPackages(targets))
             assertTrue(store.pair(syntheticRecord))
             assertTrue(store.isAuthorized(syntheticRecord))
             assertTrue(keyStore.containsAlias(keyAlias))

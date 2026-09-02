@@ -2,15 +2,18 @@
 
 Status: **draft / HOLD** — not legal advice, not submitted, and not evidence of Google Play approval
 
-Scope note, 2026-09-02: this draft describes the current single-target development
-candidate. The clarified MVP additionally requires multi-app selection, schedules
-and real session history. Do not submit this draft unchanged for that MVP: revise
-retention, schedule-triggered behavior, disclosure, labels and reviewer steps
-against the implemented release. Preview screens are not implemented features.
+Scope note, 2026-09-02: this draft now describes the multi-app development source,
+including saved targets and an active-session target snapshot. That source is not
+yet installed or accepted on the A16; the dated single-target checkpoint below is
+unchanged and remains build-specific. The clarified MVP still requires working
+schedules and real persisted session history, neither implemented here. Do not
+submit this draft unchanged for that MVP: revise retention, schedule-triggered
+behavior, disclosure, labels and reviewer steps against the implemented release.
+Preview screens are not implemented features.
 
 ## Core functionality
 
-Justnoise is a focus product. At the user's explicit request, the Gate 0 candidate compares the foreground package identifier from Android window-state changes with one app the user selected locally. During a user-started focus session, an exact match displays a Justnoise-owned interruption overlay. The service does not suspend the target package and is not a tool whose primary purpose is assisting people with disabilities.
+Justnoise is a focus product. At the user's explicit request, the Gate 0 candidate compares the foreground package identifier from Android window-state changes with the locally selected apps copied into the active session's target snapshot. During a user-started focus session, an exact match displays a Justnoise-owned interruption overlay naming that foreground app. The service does not suspend the target package and is not a tool whose primary purpose is assisting people with disabilities.
 
 ## Why the Accessibility API is proposed
 
@@ -20,18 +23,18 @@ A normal consumer-installed application does not receive device-owner package-su
 
 - Accessibility event type: `TYPE_WINDOW_STATE_CHANGED` only.
 - Fields accessed: `eventType` as a callback guard and `packageName` as the only observed app value.
-- Derived value: package equality with the selected target or Justnoise, combined with local consent/session/recovery state to show, hide, or retain the overlay.
+- Derived value: exact package membership in the active-session target set or equality with Justnoise, combined with local consent/session/recovery state to show, hide, or retain the overlay.
 - Accessibility node/window content, typed text, passwords, notifications, and UI content: not accessed.
 - Retention of event data or foreground history: none.
 - Sharing or network destination: none. The app has no Internet permission.
-- Configuration retained locally: selected package, disclosure version/timestamp, enforcement state/revision/heartbeat, and a Keystore-backed Zap HMAC digest.
+- Configuration retained locally: selected packages, the active-session target snapshot, disclosure version/timestamp, enforcement state/revision/heartbeat, and a Keystore-backed Zap HMAC digest. Successful stop removes the active snapshot and start time; saved selection and pairing remain. No completed-session history or schedule data is stored yet.
 - Separate local platform metadata: enabled-service components for Justnoise readiness, protected-package resolution, and window bounds/insets for safe overlay placement. None is used as app-usage history or sent off-device; see `DATA_INVENTORY.md`.
 
 ## Prominent in-app disclosure shown before consent
 
-> Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It observes window-change events and reads the foreground package identifier so it can compare that identifier with the one app you selected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes. Foreground event contents are not retained or sent anywhere. The selected app, consent version, enforcement state, and a keyed Zap digest stay only on this device. You can withdraw below, disable the service in Accessibility settings, Force Stop, or uninstall at any time.
+> Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It observes window-change events and reads the foreground package identifier so it can compare that identifier with the apps you selected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes. Foreground event contents are not retained or sent anywhere. The selected apps, consent version, enforcement state, and a keyed Zap digest stay only on this device. You can withdraw below, disable the service in Accessibility settings, Force Stop, or uninstall at any time.
 
-The disclosure is followed by an initially unchecked control reading: “I understand this disclosure and choose to test the Accessibility capability.” Only the user's subsequent button press records consent and opens Accessibility settings. Installation, launch, onboarding, app selection, or NFC scan does not open settings. Accepted consent stays visibly checked until the separate withdrawal action clears it.
+The disclosure is followed by an initially unchecked control reading: “I understand this disclosure and choose to test the Accessibility capability.” Only the user's subsequent button press records consent and opens Accessibility settings. Installation, launch, onboarding, app selection, or NFC scan does not open settings. Current-version consent stays visibly checked until withdrawal. The multi-app wording is version `gate0-accessibility-v2`: upgrading from v1 requires fresh affirmative consent, not a silent version upgrade. The existing single-app selection and Zap pairing are retained.
 
 ## User control and escape
 
@@ -83,9 +86,10 @@ establish approval of the complete product.
 
 ## Minimal internal-beta reviewer walkthrough — draft
 
-Prepared from the current local-only code on 2026-09-02. These are review instructions
-and expected outcomes, not a claim that every step has passed. Build-specific results
-remain in [the September 2 evidence](A16_PARTIAL_RUN_2026-09-02.md).
+Prepared from the current local-only multi-app source on 2026-09-02. These are review
+instructions and expected outcomes, not a claim that every step has passed or that
+this source is installed on the A16. Build-specific single-target results remain in
+[the September 2 evidence](A16_PARTIAL_RUN_2026-09-02.md).
 
 - **Current development app:** `com.justnoise.androiddev`, label **Justnoise Android Dev**.
   The setup screen still uses Gate 0 wording. Do not upload its debug or unsigned
@@ -99,19 +103,29 @@ remain in [the September 2 evidence](A16_PARTIAL_RUN_2026-09-02.md).
   no private production payload, factory allow-list or hidden review bypass is used.
 
 1. Begin with a fresh review installation on the agreed test device, not by clearing
-   the owner's existing paired app. Open **Open setup** or **SETUP**. Select an app such as
-   Chrome, under **App to test**. This beta does not offer multiple target modes.
+   the owner's existing paired app. Open **Open setup** or **SETUP**. Under **Apps to
+   block**, press **Select apps to block**, select multiple launchable apps such as Chrome and
+   YouTube, then **Save**. Show that reopening restores the saved selection and
+   **Cancel** discards unsaved edits. This source has one saved selection, not multiple
+   named modes. An empty selection cannot start; unavailable saved apps are shown and
+   must be removed while idle before starting.
 2. Read the separate Accessibility disclosure. Initially leave the consent box
    unchecked: **Continue to Accessibility settings** is disabled. Leave and return
    to demonstrate refusal/re-entry. Then explicitly check the box, press that button,
    and manually enable **Justnoise Android Dev app blocking** in Android settings.
+   For a separate upgrade check, verify that v1 consent does not bypass acceptance of
+   v2, while the legacy single-app selection and pairing remain present.
 3. Return to setup, press **Pair or replace test Zap**, and scan the physical tag.
    Pairing is device-local; it does not create an online account or verify a purchase.
 4. Use **Scan Zap to start** on the main surface and scan the paired tag. Open the
-   selected app: its Justnoise interruption should appear. **Keep going** returns to
-   Justnoise without ending the session; opening the selected app again should block.
+   selected apps in turn: each should show its own name on the Justnoise interruption.
+   **Keep going** returns to Justnoise without ending the session; opening a selected
+   app again should block. While the session is requested, **Select apps to block**
+   should be disabled, with guidance to stop using the Zap before editing targets.
+   Non-selected and protected
+   system apps must remain usable.
 5. After at least three seconds, use **Scan Zap to stop** and scan the paired tag;
-   the selected app should become usable. Also demonstrate the advertised direct
+   all selected apps should become usable and selection editing should return. Also demonstrate the advertised direct
    route from unlocked Home: tap the paired tag to start or stop without first opening
    Justnoise. Report any chooser or failure honestly; do not describe a foreground
    scan as a successful direct tap.
@@ -137,20 +151,20 @@ before publication.
 
 **Publisher and privacy contact:** [OWNER TO SUPPLY: publishing identity and public privacy-contact email or URL].
 
-Justnoise helps you interrupt one app you select during a focus session. This beta
+Justnoise helps you interrupt apps you select during a focus session. This candidate
 has no app accounts, purchases, cloud sync, advertising, analytics or crash-reporting
 service. It does not transmit the data below to us or third parties or sell them.
 
 While you have enabled its Accessibility service, Justnoise receives window-change
 event types and foreground app identifiers, including when no focus session is active.
-It processes those identifiers locally; the interruption is shown only for the selected
-app during an eligible active session. It does not read screen contents, typed text,
+It processes those identifiers locally; the interruption is shown only for an app in
+the active session's saved target snapshot during an eligible active session. It does not read screen contents, typed text,
 passwords, notifications or accessibility nodes, or save a foreground-app history.
 
 The local app picker reads launchable app names and identifiers. Justnoise also reads
 system app identifiers, service-enablement metadata and screen/inset geometry for
 readiness and safe navigation. These observations are temporary. It saves only your
-selected target, consent version/time, session start/state/revision, recovery and
+selected targets, active-session target snapshot, consent version/time, session start/state/revision, recovery and
 service-liveness state, and the keyed digest used to recognize your paired tag.
 NFC Text data is processed temporarily, not saved or logged; the tag's hardware
 identifier is not read. Configuration uses private app storage, and the digest's
@@ -158,13 +172,15 @@ non-exportable key is managed by Android Keystore. Configuration is not claimed 
 be wholly encrypted. The app excludes its data from Android backup and transfer;
 this is not a guarantee about every manufacturer's restore behavior.
 
-Stopping removes the active-session start time; other configuration remains until
+Stopping removes the active-session target snapshot and start time; other configuration remains until
 changed or cleared. **Withdraw consent and clear Gate 0 data** attempts to remove
 the saved configuration and key and disable the service. Success and incomplete
 cleanup have different feedback; if cleanup cannot be confirmed, retry or use
 Android App info to clear storage or uninstall. Disabling Accessibility alone stops
 service access but does not erase saved configuration. There is no server account
-to delete. Raw foreground events and NFC payloads are not retained as history.
+to delete. Raw foreground events and NFC payloads are not retained as history. This
+candidate does not yet store completed-session history or schedules. Both are required
+for the MVP and need updated retention and behavior disclosures before that release.
 
 The detailed implementation inventory is [DATA_INVENTORY.md](DATA_INVENTORY.md).
 Before publishing, provide a working contact, review the final release's actual data

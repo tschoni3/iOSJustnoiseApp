@@ -29,15 +29,14 @@ class OverlayController(
         get() = overlay != null
 
     fun show(selectedAppDisplayName: String?) {
-        if (overlay != null) {
+        val existing = overlay
+        if (existing != null) {
+            updateMessage(existing, selectedAppDisplayName)
             refreshBounds()
             return
         }
         val view = LayoutInflater.from(service).inflate(R.layout.overlay_blocked, null)
-        view.findViewById<TextView>(R.id.overlayMessage).text = ShieldMessageRenderer.render(
-            displayName = selectedAppDisplayName,
-            fallbackName = ShieldMessageRenderer.APPLICATION_FALLBACK_NAME,
-        )
+        updateMessage(view, selectedAppDisplayName)
         wireEscapeRoutes(view)
         view.setOnApplyWindowInsetsListener { _, insets ->
             refreshBounds()
@@ -52,6 +51,15 @@ class OverlayController(
             overlay = null
             onUnavailable()
         }
+    }
+
+    private fun updateMessage(view: View, selectedAppDisplayName: String?) {
+        val label = view.findViewById<TextView>(R.id.overlayMessage)
+        val message = ShieldMessageRenderer.render(
+            displayName = selectedAppDisplayName,
+            fallbackName = ShieldMessageRenderer.APPLICATION_FALLBACK_NAME,
+        )
+        if (label.text.toString() != message) label.text = message
     }
 
     fun refreshBounds() {

@@ -99,8 +99,8 @@ local-first on the existing A16; no account system or framework rewrite is requi
 
 | Required feature | Current evidence | Completion needed |
 | --- | --- | --- |
-| Select apps to block | One persisted package and real picker | Persist multiple selected apps, enforce each eligible target and preserve protected-system exclusions |
-| Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16 | Reuse this engine with a stable session identity and immutable multi-app target snapshot; preserve safe stop/recovery |
+| Select apps to block | Development source now persists a set of selected apps with explicit Save/Cancel and an immutable active-session snapshot; full local build/JVM/lint checks pass; A16 still has the earlier single-target build | Run storage/picker instrumentation after freeing Mac disk space, then sample multiple eligible targets on the A16 while preserving protected-system exclusions |
+| Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16; development source now uses the multi-app snapshot | Add a stable session identity for durable History; physically verify the new multi-app candidate and preserve safe stop/recovery |
 | Schedules | Separate preview list/editor and pure eligibility rules only | Persist/edit/enable/delete schedules, calculate occurrences, deliver real background starts and reconcile missed/duplicate delivery |
 | History | Shared summary/duration rules; UI displays fixed preview data | Save real session records and show their dates/durations/totals, including manual and scheduled sessions exactly once |
 
@@ -119,6 +119,30 @@ Minimum implementation order:
    on the A16 release candidate, update privacy/disclosure for actual history and
    schedules, sign the release bundle and use the applicable Play test track after
    account setup and owner upload approval. Do not upload the debug spike.
+
+Multi-app adapter behavior, 2026-09-02: the existing Gate 0/integrated sources keep
+one saved set of eligible launchable package identifiers. Save validates the entire
+set; Cancel never persists a draft. Empty selection is allowed while idle but cannot
+start a session. A start copies the saved set into its active snapshot, and stop
+clears that snapshot. Changing/clearing targets while active or in active recovery
+is rejected; returning to setup or saving the same set cannot end a session. System
+and escape packages remain excluded. The blocker names the actual foreground
+selected app, including transitions between two selected apps without recreating
+the overlay. Unavailable saved targets stay visible until explicitly removed.
+
+The legacy single-package preference is read as a singleton when the new set is
+absent, including a legacy active session. Explicit empty new sets never fall back.
+Pairing and session start/revision are preserved. The disclosure is now
+`gate0-accessibility-v2` for selected **apps**; old consent is not silently upgraded.
+This is Android adapter implementation of existing portable multi-target selection,
+not a change to iOS behavior. It adds no event history, schedules, network access,
+new runtime dependency or production module. Device acceptance and stable session
+identity/real History remain separate work.
+
+Local verification for this slice is recorded in `spikes/android-gate0/README.md`.
+The 86 JVM tests and full verifier pass do not substitute for the new instrumentation
+tests, whose emulator execution is currently blocked by insufficient Mac disk space.
+Do not install the new candidate over the paired A16 merely to bypass that test limit.
 
 One material schedule choice remains: scheduled **start only, ending on Zap**, or a
 scheduled **start/end window**. The observed iOS 20-minute monitor is not an approved

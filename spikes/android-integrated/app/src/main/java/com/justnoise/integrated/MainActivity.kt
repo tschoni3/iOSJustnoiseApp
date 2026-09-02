@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         val stored = preferences.snapshot()
         screenState = screenState.copy(
             truth = truth,
-            selectedAppName = resolveAppLabel(controller.selectedPackage()),
+            selectedAppName = selectedAppsLabel(controller.sessionPackages()),
             desiredActive = stored.desiredActive,
             elapsedText = if (truth == Gate0Truth.ACTIVE) {
                 formatElapsed(
@@ -265,8 +265,12 @@ class MainActivity : ComponentActivity() {
         if (this is NdefReadResult.Accepted) transientCanonicalRecord.fill(0)
     }
 
-    private fun resolveAppLabel(packageName: String?): String? {
-        if (packageName.isNullOrBlank()) return null
+    private fun selectedAppsLabel(packages: Set<String>): String? {
+        if (packages.isEmpty()) return null
+        if (packages.size > 1) {
+            return resources.getQuantityString(R.plurals.selected_apps_count, packages.size, packages.size)
+        }
+        val packageName = packages.single()
         return try {
             val info = packageManager.getApplicationInfo(packageName, 0)
             packageManager.getApplicationLabel(info).toString()

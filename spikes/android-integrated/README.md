@@ -7,10 +7,18 @@ Gate 0 or permission-free UI evidence projects.
 
 The launcher shows only real local Gate 0 truth. It does not expose the prototype's
 fake authentication, modes, history, schedules, or navigation. **Setup** opens the
-existing Gate 0 screen for disclosure, one target-app selection, Accessibility
+existing Gate 0 screen for disclosure, saved multi-app selection, Accessibility
 enablement, local Zap pairing, and foreground scanning. After setup, the same APK
 also exposes the narrow live-tag direct NDEF entry candidate so an unlocked home-screen
 Zap tap can start or stop without navigating through the setup screen.
+
+The app picker saves only on **Save** and keeps unavailable saved entries visible.
+An active session uses a fixed target snapshot; changing apps requires stopping it
+with the Zap first. The legacy single target and pairing survive the upgrade, but
+the updated plural Accessibility disclosure (`gate0-accessibility-v2`) needs fresh
+consent. Source support is not physical multi-app acceptance: the A16 evidence below
+still identifies the earlier single-target candidates. History and schedules remain
+required MVP work, not real features of this shell yet.
 
 When the real local truth is ready or active, the polished Zap surface itself owns a
 lifecycle-scoped one-shot foreground reader. The large Zap and bottom action therefore

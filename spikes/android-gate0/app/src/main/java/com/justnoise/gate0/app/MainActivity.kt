@@ -1,6 +1,7 @@
 package com.justnoise.gate0.app
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.nfc.NfcAdapter
@@ -10,12 +11,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
-import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
-import android.widget.Spinner
 import android.widget.TextView
 import com.justnoise.gate0.R
 import com.justnoise.gate0.domain.SessionTransition
@@ -33,12 +30,14 @@ class MainActivity : Activity() {
     private lateinit var controller: Gate0Controller
     private lateinit var appRepository: LauncherAppRepository
     private lateinit var statusText: TextView
-    private lateinit var appSpinner: Spinner
+    private lateinit var selectAppsButton: Button
+    private lateinit var selectedAppsText: TextView
+    private var appChoices = emptyList<AppChoice>()
+    private var appPickerDialog: AlertDialog? = null
     private lateinit var consentCheckbox: CheckBox
     private lateinit var accessibilitySettingsButton: Button
     private var nfcAdapter: NfcAdapter? = null
     private val scanCoordinator = OneShotScanCoordinator<ScanPurpose>()
-    private var bindingSpinner = false
     private val handler = Handler(Looper.getMainLooper())
 
     private val refreshStatus = object : Runnable {
@@ -59,7 +58,8 @@ class MainActivity : Activity() {
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
         statusText = findViewById(R.id.statusText)
-        appSpinner = findViewById(R.id.appSpinner)
+        selectAppsButton = findViewById(R.id.selectAppsButton)
+        selectedAppsText = findViewById(R.id.selectedAppsText)
         consentCheckbox = findViewById(R.id.consentCheckbox)
         accessibilitySettingsButton = findViewById(R.id.accessibilitySettingsButton)
 
@@ -67,8 +67,6 @@ class MainActivity : Activity() {
         configureConsent()
         configureZapButtons()
         configureEscapeControls()
-        loadApps()
-        renderTruth()
     }
 
     override fun onResume() {
@@ -77,11 +75,13 @@ class MainActivity : Activity() {
         consentCheckbox.isChecked = accepted
         consentCheckbox.isEnabled = !accepted
         accessibilitySettingsButton.isEnabled = consentCheckbox.isChecked
+        loadApps()
         handler.removeCallbacks(refreshStatus)
         refreshStatus.run()
     }
 
     override fun onPause() {
+        appPickerDialog?.dismiss()
         cancelReaderMode()
         handler.removeCallbacks(refreshStatus)
         super.onPause()
@@ -215,22 +215,53 @@ class MainActivity : Activity() {
     }
 
     private fun configureAppPicker() {
-        appSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (bindingSpinner) return
-                val choice = parent?.getItemAtPosition(position) as? AppChoice ?: return
-                choice.packageName?.let { packageName ->
-                    if (!controller.selectTarget(packageName)) {
-                        showTransientStatus(R.string.status_target_required)
-                    } else {
-                        renderTruth()
-                    }
+        selectAppsButton.setOnClickListener { showAppPicker() }
+        findViewById<Button>(R.id.refreshAppsButton).setOnClickListener { loadApps() }
+    }
+
+    private fun showAppPicker() {
+        if (controller.isSessionRequested()) {
+            showTransientStatus(R.string.target_edit_requires_stop)
+            return
+        }
+        if (appPickerDialog?.isShowing == true) return
+        loadApps()
+        val choices = appChoices
+        val pendingSelection = controller.selectedPackages().toMutableSet()
+        val checked = BooleanArray(choices.size) { choices[it].packageName in pendingSelection }
+        appPickerDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.target_picker_title)
+            .setMultiChoiceItems(choices.map(AppChoice::label).toTypedArray(), checked) { dialog, which, selected ->
+                if (controller.isSessionRequested()) {
+                    dialog.dismiss()
+                    showTransientStatus(R.string.target_edit_requires_stop)
+                } else if (selected) {
+                    pendingSelection.add(choices[which].packageName)
+                } else {
+                    pendingSelection.remove(choices[which].packageName)
                 }
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-        }
-        findViewById<Button>(R.id.refreshAppsButton).setOnClickListener { loadApps() }
+            .setPositiveButton(R.string.target_save) { _, _ ->
+                val saved = controller.selectTargets(pendingSelection.toSet())
+                loadApps()
+                if (saved) {
+                    renderTruth()
+                } else {
+                    showTransientStatus(
+                        if (controller.isSessionRequested()) {
+                            R.string.target_edit_requires_stop
+                        } else {
+                            R.string.target_save_failed
+                        },
+                    )
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+            .also { dialog ->
+                dialog.setOnDismissListener { appPickerDialog = null }
+                dialog.show()
+            }
     }
 
     private fun configureConsent() {
@@ -286,20 +317,38 @@ class MainActivity : Activity() {
     }
 
     private fun loadApps() {
-        val selectedPackage = controller.selectedPackage()
-        val choices = buildList {
-            add(AppChoice(getString(R.string.target_placeholder), null))
-            addAll(appRepository.load().map { AppChoice(it.label, it.packageName) })
+        val availableApps = appRepository.load().map { AppChoice(it.label, it.packageName) }
+        val availablePackages = availableApps.mapTo(mutableSetOf(), AppChoice::packageName)
+        val unavailableApps = (controller.selectedPackages() - availablePackages).sorted().map {
+            AppChoice(getString(R.string.target_unavailable, it), it)
         }
-        bindingSpinner = true
-        appSpinner.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            choices,
-        )
-        val selectedIndex = choices.indexOfFirst { it.packageName == selectedPackage }
-        appSpinner.setSelection(selectedIndex.coerceAtLeast(0), false)
-        bindingSpinner = false
+        // Keep unavailable saved targets visible until the user explicitly removes them.
+        appChoices = availableApps + unavailableApps
+        renderAppSelection()
+    }
+
+    private fun renderAppSelection() {
+        val sessionRequested = controller.isSessionRequested()
+        val selectedPackages = controller.sessionPackages()
+        val labels = appChoices.associateBy(AppChoice::packageName)
+        val summary = if (selectedPackages.isEmpty()) {
+            getString(R.string.target_placeholder)
+        } else {
+            resources.getQuantityString(
+                R.plurals.selected_apps_count,
+                selectedPackages.size,
+                selectedPackages.size,
+            ) + "\n" + selectedPackages.sorted().joinToString("\n") {
+                labels[it]?.label ?: getString(R.string.target_unavailable, it)
+            }
+        }
+        selectAppsButton.isEnabled = !sessionRequested
+        val selectionText = if (sessionRequested) {
+            summary + "\n\n" + getString(R.string.target_edit_requires_stop)
+        } else {
+            summary
+        }
+        if (selectedAppsText.text.toString() != selectionText) selectedAppsText.text = selectionText
     }
 
     private fun beginOneShotScan(purpose: ScanPurpose) {
@@ -346,6 +395,7 @@ class MainActivity : Activity() {
     }
 
     private fun renderTruth() {
+        renderAppSelection()
         statusText.setText(
             when (controller.truth()) {
                 Gate0Truth.CONSENT_REQUIRED -> R.string.status_consent_required
@@ -386,10 +436,8 @@ class MainActivity : Activity() {
 
     private data class AppChoice(
         val label: String,
-        val packageName: String?,
-    ) {
-        override fun toString(): String = label
-    }
+        val packageName: String,
+    )
 
     private enum class ScanPurpose {
         PAIR,

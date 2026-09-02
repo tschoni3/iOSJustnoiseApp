@@ -11,7 +11,7 @@ object OverlayEventRules {
         isWindowStateChange: Boolean,
         foregroundPackage: String?,
         justnoisePackage: String,
-        selectedPackage: String?,
+        selectedPackages: Set<String>,
         enforcementEligible: Boolean,
         overlayIsShowing: Boolean,
     ): OverlayEventDecision {
@@ -21,7 +21,7 @@ object OverlayEventRules {
         if (overlayIsShowing && foregroundPackage == justnoisePackage) {
             return OverlayEventDecision.IGNORE
         }
-        return if (enforcementEligible && foregroundPackage == selectedPackage) {
+        return if (enforcementEligible && foregroundPackage in selectedPackages) {
             OverlayEventDecision.SHOW
         } else {
             OverlayEventDecision.HIDE

@@ -37,17 +37,14 @@ class Gate0Controller(
         Gate0Preferences.CURRENT_DISCLOSURE_VERSION,
     )
 
-    fun selectTarget(packageName: String): Boolean {
-        // Spinner restoration can deliver a delayed selection callback after binding ends.
-        // Restoring the existing target is not a session change or a broadcast event.
-        if (preferences.snapshot().selectedPackage == packageName) return true
+    fun selectTargets(packageNames: Set<String>): Boolean {
+        val state = preferences.snapshot()
+        // Restoring the same selection is not a session change or a broadcast event.
+        if (state.selectedPackages == packageNames) return true
+        if (state.desiredActive || !targetsAreEligible(packageNames)) return false
 
-        val eligible = launchableApps.load().any { it.packageName == packageName }
-        if (!eligible || ProtectedPackagePolicy.isProtected(packageName, protectedPackages.resolve())) {
-            return false
-        }
-        val stored = preferences.setSelectedPackage(packageName)
-        publishStateChange()
+        val stored = preferences.setSelectedPackages(packageNames)
+        if (stored) publishStateChange()
         return stored
     }
 
@@ -70,11 +67,12 @@ class Gate0Controller(
 
         val stored = preferences.snapshot()
         val priorState = if (stored.desiredActive) SessionState.ACTIVE else SessionState.IDLE
-        val targetIsEligible = stored.selectedPackage?.let { packageName ->
-            launchableApps.load().any { it.packageName == packageName } &&
-                !ProtectedPackagePolicy.isProtected(packageName, protectedPackages.resolve())
-        } ?: false
-        val serviceReady = Gate0StateReconciler.isServiceReady(
+        val targetsAreEligible = stored.selectedPackages.isNotEmpty() &&
+            targetsAreEligible(stored.selectedPackages)
+        val currentConsent = stored.acceptedDisclosureVersion ==
+            Gate0Preferences.CURRENT_DISCLOSURE_VERSION &&
+            stored.acceptedDisclosureEpochMilliseconds > 0L
+        val serviceReady = currentConsent && Gate0StateReconciler.isServiceReady(
             stored = stored,
             accessibilityEnabled = AccessibilityServiceStatus.isEnabled(applicationContext),
             nowElapsedMilliseconds = nowElapsedMilliseconds,
@@ -88,7 +86,7 @@ class Gate0Controller(
         val sessionDecision = SessionReducer.reduce(
             priorState = priorState,
             readOutcome = readDecision.outcome,
-            selectionValid = targetIsEligible,
+            selectionValid = targetsAreEligible,
             capability = capability,
             elapsedMilliseconds = elapsed,
         )
@@ -109,7 +107,13 @@ class Gate0Controller(
             nowElapsedMilliseconds = nowElapsedMilliseconds,
         )
 
-    fun selectedPackage(): String? = preferences.snapshot().selectedPackage
+    fun selectedPackages(): Set<String> = preferences.snapshot().selectedPackages
+
+    fun sessionPackages(): Set<String> = preferences.snapshot().let { stored ->
+        if (stored.desiredActive) stored.activePackages else stored.selectedPackages
+    }
+
+    fun isSessionRequested(): Boolean = preferences.snapshot().desiredActive
 
     fun hasAcceptedCurrentDisclosure(): Boolean =
         preferences.snapshot().let { stored ->
@@ -138,5 +142,14 @@ class Gate0Controller(
             Intent(Gate0AccessibilityService.ACTION_STATE_CHANGED)
                 .setPackage(applicationContext.packageName),
         )
+    }
+
+    private fun targetsAreEligible(packageNames: Set<String>): Boolean {
+        val launchablePackages = launchableApps.load().mapTo(mutableSetOf()) { it.packageName }
+        val protected = protectedPackages.resolve()
+        return packageNames.all { packageName ->
+            packageName in launchablePackages &&
+                !ProtectedPackagePolicy.isProtected(packageName, protected)
+        }
     }
 }

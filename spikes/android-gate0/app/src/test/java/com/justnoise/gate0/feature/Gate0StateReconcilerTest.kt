@@ -8,8 +8,7 @@ import org.junit.Test
 class Gate0StateReconcilerTest {
     @Test
     fun `stale heartbeat never produces active truth`() {
-        val stored = readyState().copy(
-            desiredActive = true,
+        val stored = readyState(desiredActive = true).copy(
             serviceHeartbeatElapsedMilliseconds = 1_000L,
         )
 
@@ -28,7 +27,7 @@ class Gate0StateReconcilerTest {
         assertEquals(
             Gate0Truth.ACTIVE,
             Gate0StateReconciler.reconcile(
-                readyState().copy(desiredActive = true),
+                readyState(desiredActive = true),
                 accessibilityEnabled = true,
                 nowElapsedMilliseconds = 5_000L,
             ),
@@ -38,8 +37,7 @@ class Gate0StateReconcilerTest {
     @Test
     fun `fresh heartbeat cannot clear interruption recovery while service stays connected`() {
         for (desiredActive in listOf(false, true)) {
-            val interrupted = readyState().copy(
-                desiredActive = desiredActive,
+            val interrupted = readyState(desiredActive).copy(
                 recoveryRequired = true,
             )
             for (heartbeat in listOf(4_000L, 6_000L)) {
@@ -59,8 +57,7 @@ class Gate0StateReconcilerTest {
     @Test
     fun `temporary disconnect recovers idle and active truth from a fresh heartbeat`() {
         for (desiredActive in listOf(false, true)) {
-            val disconnected = readyState().copy(
-                desiredActive = desiredActive,
+            val disconnected = readyState(desiredActive).copy(
                 serviceConnected = false,
                 serviceHeartbeatElapsedMilliseconds = 0L,
             )
@@ -84,7 +81,7 @@ class Gate0StateReconcilerTest {
     fun `heartbeat freshness includes zero and the timeout but rejects future and expired values`() {
         val timeout = Gate0StateReconciler.HEARTBEAT_STALE_AFTER_MILLISECONDS
         for (desiredActive in listOf(false, true)) {
-            val stored = readyState().copy(desiredActive = desiredActive)
+            val stored = readyState(desiredActive)
             for (age in listOf(-1L, 0L, timeout, timeout + 1L)) {
                 val expected = when {
                     age !in 0L..timeout -> Gate0Truth.RECOVERY_REQUIRED
@@ -129,7 +126,7 @@ class Gate0StateReconcilerTest {
         assertEquals(
             Gate0Truth.RECOVERY_REQUIRED,
             Gate0StateReconciler.reconcile(
-                readyState().copy(desiredActive = true),
+                readyState(desiredActive = true),
                 accessibilityEnabled = false,
                 nowElapsedMilliseconds = 5_000L,
             ),
@@ -149,7 +146,7 @@ class Gate0StateReconcilerTest {
         assertEquals(
             Gate0Truth.TARGET_REQUIRED,
             Gate0StateReconciler.reconcile(
-                readyState().copy(selectedPackage = null),
+                readyState().copy(selectedPackages = emptySet()),
                 accessibilityEnabled = true,
                 nowElapsedMilliseconds = 5_000L,
             ),
@@ -172,12 +169,66 @@ class Gate0StateReconcilerTest {
         )
     }
 
-    private fun readyState() = StoredGate0State(
+    @Test
+    fun `active truth uses captured targets even when saved selection is empty`() {
+        assertEquals(
+            Gate0Truth.ACTIVE,
+            Gate0StateReconciler.reconcile(
+                readyState(desiredActive = true).copy(selectedPackages = emptySet()),
+                accessibilityEnabled = true,
+                nowElapsedMilliseconds = 5_000L,
+            ),
+        )
+    }
+
+    @Test
+    fun `active truth cannot borrow saved targets when active snapshot is empty`() {
+        assertEquals(
+            Gate0Truth.TARGET_REQUIRED,
+            Gate0StateReconciler.reconcile(
+                readyState(desiredActive = true).copy(activePackages = emptySet()),
+                accessibilityEnabled = true,
+                nowElapsedMilliseconds = 5_000L,
+            ),
+        )
+    }
+
+    @Test
+    fun `idle truth does not use a stale active target snapshot`() {
+        assertEquals(
+            Gate0Truth.TARGET_REQUIRED,
+            Gate0StateReconciler.reconcile(
+                readyState().copy(
+                    selectedPackages = emptySet(),
+                    activePackages = setOf("fixture.old.active.target"),
+                ),
+                accessibilityEnabled = true,
+                nowElapsedMilliseconds = 5_000L,
+            ),
+        )
+    }
+
+    @Test
+    fun `legacy disclosure is retained but cannot authorize multi app behavior`() {
+        for (desiredActive in listOf(false, true)) {
+            assertEquals(
+                Gate0Truth.CONSENT_REQUIRED,
+                Gate0StateReconciler.reconcile(
+                    readyState(desiredActive).copy(acceptedDisclosureVersion = "gate0-accessibility-v1"),
+                    accessibilityEnabled = true,
+                    nowElapsedMilliseconds = 5_000L,
+                ),
+            )
+        }
+    }
+
+    private fun readyState(desiredActive: Boolean = false) = StoredGate0State(
         acceptedDisclosureVersion = Gate0Preferences.CURRENT_DISCLOSURE_VERSION,
         acceptedDisclosureEpochMilliseconds = 1_000L,
-        selectedPackage = "fixture.target",
+        selectedPackages = setOf("fixture.target", "fixture.second.target"),
+        activePackages = if (desiredActive) setOf("fixture.target", "fixture.second.target") else emptySet(),
         zapDigest = "digest",
-        desiredActive = false,
+        desiredActive = desiredActive,
         activeSinceEpochMilliseconds = 0L,
         sessionRevision = 1L,
         recoveryRequired = false,

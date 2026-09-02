@@ -4,14 +4,21 @@ Status: draft for technical, privacy, and Google Play policy review
 
 Gate 0 and the integrated development app have no Internet permission, backend client, account, analytics SDK, telemetry, crash reporter, or network destination. Their main app sources contain no logging calls. The inventory below is the intended data boundary, including platform metadata outside Accessibility events; device evidence must confirm it with reviewed logs and network observation. See the [September 2 static review](PLAY_DECLARATION_DRAFT.md#static-review-checkpoint--2026-09-02) for the inspected build and limits.
 
+Current-source update: selection now contains multiple app identifiers and a separate
+active-session target snapshot. This source is not yet installed or accepted on the
+A16; the dated September 2 single-target evidence is unchanged. There is still no
+persisted completed-session history or schedule data/delivery. Those required MVP
+features will need their own inventory and retention update when implemented.
+
 | Source | Field or derived value | Purpose | Processing | Persistence and retention | Network destination |
 | --- | --- | --- | --- | --- | --- |
-| Accessibility `TYPE_WINDOW_STATE_CHANGED` | `packageName` and `eventType` | Event type guards the declared callback; package identifier is the only observed app value and is compared with the selected target and Justnoise | Transient, in the service callback | Not persisted, queued, logged, or collected as history | None |
+| Accessibility `TYPE_WINDOW_STATE_CHANGED` | `packageName` and `eventType` | Event type guards the declared callback; package identifier is the only observed app value and is compared with the active target set and Justnoise | Transient, in the service callback | Not persisted, queued, logged, or collected as history | None |
 | Accessibility event | Node tree, source, text, content description, password state, notification content, window list | Not used | APIs are not called; `canRetrieveWindowContent=false`; no retrieval flags | None | None |
-| Scoped launcher query | App label and package identifier for launchable activities | Display the local picker and selected app name on the blocked surface | In memory while the picker or blocked surface is built | Only the chosen package identifier persists | None |
+| Scoped launcher query | App label and package identifier for launchable activities | Display the local multi-app picker and the matched foreground app name on the blocked surface | In memory while the picker or blocked surface is built | Only chosen package identifiers persist; labels are resolved locally | None |
 | Platform safety resolution | Home activity package identifiers, resolved Settings/uninstaller package identifiers, and default dialer package; fixed protected-package list and own package | Exclude system/escape apps from selection and enforcement | Transient local PackageManager/TelecomManager queries and set comparison | Not persisted, logged, or collected as history | None |
 | Accessibility enablement setting | Flattened enabled-service component list from `ENABLED_ACCESSIBILITY_SERVICES`; derived Boolean for this app's service | Report whether the user enabled Justnoise, separately from service heartbeat | Transient parsing and exact comparison with Justnoise's expected component | Component list is not retained; the Boolean is recomputed for readiness | None |
-| User configuration | Selected package identifier | Exact restriction target | Local SharedPreferences | Until changed, withdrawal, uninstall, or app-data clear | None |
+| User configuration | Selected package identifier set (`selected_packages`); legacy single-package fallback (`selected_package`) | Saved restriction targets for the next session | Private `gate0_local_state` SharedPreferences; explicit Save while idle; Cancel makes no change | Until changed, withdrawal, uninstall, or app-data clear; changed selections are rejected while a session is requested | None |
+| Active target snapshot | Package identifier set copied from saved selection at start (`active_packages`) | Keep the session's exact targets stable and identify the matching foreground target | Private `gate0_local_state` SharedPreferences; written with the start state | Removed on successful stop, withdrawal, uninstall, or app-data clear; not appended to a history log | None |
 | Consent | Disclosure version and acceptance epoch milliseconds | Prove which prominent disclosure was affirmatively accepted | Local SharedPreferences | Until withdrawal, uninstall, app-data clear, or a new version requires fresh consent | None |
 | Session state | Desired-active Boolean, start epoch milliseconds, monotonic session revision, fail-closed recovery marker | Start/stop guard and cross-component reconciliation; suppress enforcement after a failed durable write or overlay layout operation | Local SharedPreferences | Active-session lifetime; revision/recovery marker remain until a successful transition or withdrawal/uninstall/data clear | None |
 | Service liveness | Connected marker and `elapsedRealtime` heartbeat | Reject stale active claims | Local SharedPreferences; refreshed about every two seconds | Removed on known disconnect; invalidated at process start; cleared on withdrawal/uninstall/data clear | None |
@@ -21,7 +28,20 @@ Gate 0 and the integrated development app have no Internet permission, backend c
 | Android Keystore | Non-exportable HMAC-SHA256 key | Compute a keyed digest of the canonical NDEF Text record | Android Keystore | Until withdrawal, uninstall, or app-data/key clear | None |
 | Zap configuration | Base64 HMAC-SHA256 digest | Constant-time local authorization comparison | Local SharedPreferences | Until replacement, withdrawal, uninstall, or app-data clear | None |
 | Window layout | Current WindowMetrics bounds, visible system-bar insets, stable display-cutout insets, and calculated overlay rectangle | Keep the actual touch-blocking window outside visible system bars and cutouts | Transient local geometry on show/inset/configuration updates; no view-tree or other-app content access | Current rectangle exists in window layout parameters only; not persisted or logged | None |
-| Overlay | Justnoise copy template, selected app display label, and buttons | Interrupt exactly the selected package and expose escape routes | In memory while visible | No overlay content is retained | None |
+| Overlay | Justnoise copy template, matched foreground app display label, and buttons | Interrupt a matching active-session target and expose escape routes | In memory while visible | No overlay content is retained | None |
+
+## Selection migration and disclosure
+
+When the set-based selection key is absent, the legacy single package is read as a
+one-item selection. A legacy requested session without an active-snapshot key uses
+that restored selection; an explicitly stored empty set never falls back to the old
+key. Starting a session writes the set-based selection and snapshot together. These
+changes do not erase or replace the Zap digest or Keystore key.
+
+The disclosure now says “apps you selected” and uses version
+`gate0-accessibility-v2`. Existing v1 acceptance remains recorded as v1, not silently
+upgraded; the current disclosure must be affirmatively accepted again before service
+use. This consent change does not require clearing the saved selection or pairing.
 
 ## Withdrawal and deletion behavior
 

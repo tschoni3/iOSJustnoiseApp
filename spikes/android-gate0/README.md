@@ -10,20 +10,49 @@ The canonical decision criteria remain in [`../../docs/ANDROID_GATE_0.md`](../..
 
 - One application module, native Kotlin, platform Views/XML, min SDK 31.
 - Scoped discovery of launcher activities through a manifest `<queries>` intent; no `QUERY_ALL_PACKAGES`.
-- A prominent disclosure and unchecked affirmative consent before opening Accessibility settings.
-- One locally selected, non-protected package identifier.
+- A prominent disclosure and unchecked affirmative consent before opening Accessibility settings. The current multi-app wording uses disclosure version `gate0-accessibility-v2`; an older acceptance does not silently become consent to this version.
+- One locally saved set of non-protected launchable app identifiers, edited with **Select apps to block**, **Save**, and **Cancel**. An empty saved selection is allowed, but cannot start a session.
+- An active-session target snapshot copied from the saved selection at start and removed on stop. Changing the selection is refused while a session is requested, including recovery; saving an unchanged set is a no-op. Existing single-app selection and Zap pairing are preserved on upgrade.
 - Foreground-only, one-shot NFC reader mode for one NDEF message containing exactly one bounded UTF-8 NDEF Text record. Non-Text auxiliary records are allowed; multiple Text records are rejected as ambiguous.
 - A narrow unlocked-device `ACTION_NDEF_DISCOVERED` candidate for legacy Text Zaps. It requires and re-reads a live `EXTRA_TAG`; copied `EXTRA_NDEF_MESSAGES` alone can never mutate session state.
 - A lifecycle generation guard invalidates an armed or in-flight scan on pause, cancellation, or replacement. Reader mode is disabled after tag I/O and before any accepted state mutation.
 - Android Keystore HMAC-SHA256 pairing. Only the digest is stored; tag IDs and raw NDEF records are not stored or logged.
 - An Accessibility service subscribed only to `TYPE_WINDOW_STATE_CHANGED`, with window-content retrieval disabled and no accessibility flags.
-- Exact equality between the transient event `packageName` and the locally selected package.
+- Exact membership of the transient event `packageName` in the active-session target snapshot; the blocked surface names the matched foreground app.
 - A Justnoise-owned `TYPE_ACCESSIBILITY_OVERLAY` with visible Home, Justnoise, Accessibility-settings, and App-info escape routes.
 - Local heartbeat and process-start invalidation. A stale or disconnected service produces `RECOVERY_REQUIRED`, never a false active claim.
 - Explicit withdrawal that stops the session, removes the overlay, deletes the Keystore key and local Gate 0 configuration, and asks the service to disable itself.
 - JVM contract/static tests and instrumentation smoke tests. The JVM suite directly consumes `product/behavior/portable-fixtures.v1.json`.
 
 There is no backend, account, analytics, network permission, `QUERY_ALL_PACKAGES`, usage-stats permission, draw-over-other-apps permission, device-owner path, Compose runtime, or production identifier in this spike.
+
+The multi-app behavior above describes current source, not a new A16 installation or
+physical acceptance result. The dated September 2 runs used single-target builds;
+their evidence remains specific to those builds. This source change adds no schedule
+delivery or completed-session history. Both remain required MVP work, not optional
+features or capabilities delivered by preview screens.
+
+## Multi-app source verification — 2026-09-03
+
+The complete `scripts/verify-android-predevice-readiness.sh` passed for this multi-app
+change (base `a97b054`): 86 JVM tests across the three projects, product/static
+contracts, debug lint/builds, instrumentation APK compilation, integrated release
+lint/APK/App Bundle builds, 10 release-checker tests, and the packaged release boundary.
+Local log: `/private/tmp/justnoise-multiapp-final-verification.log`.
+
+Storage/migration, picker Save/Cancel, setup restoration/withdrawal, and blocker-label
+instrumentation tests compile but **have not run for this change**. Both the existing
+API-36 emulator and a separate smaller temporary emulator refused to start because
+the Mac lacked disk space. Do not convert compilation into a migration/UI pass.
+After freeing space, run instrumentation only on a disposable emulator with an
+explicit `ANDROID_SERIAL`, never against the owner's paired A16 installation.
+
+Integrated debug APK SHA-256:
+`c00bcd112cfb18b4eeb6676bdfbc6be2482e5dcae226d8ef86c674c249e3947a`.
+It was not installed on the A16. No phone permission, pairing, app data, session or
+tag was changed during this multi-app work; no artifact was signed for upload or
+sent to Play. New physical multi-target checks and the v2 consent upgrade remain
+pending, and no device-matrix cell is promoted by this local verification.
 
 ## Verified pre-device baseline
 
@@ -58,10 +87,10 @@ Review the generated `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.ja
 2. Download the `android-gate0-debug` artifact and verify each APK against `SHA256SUMS`.
 3. On the existing unmanaged Galaxy A16 `SM-A165F` with its current public stable OS, install `app-debug.apk` normally. Record the full model code, region/CSC, RAM tier, OS build, and One UI version. `adb install app-debug.apk` is acceptable for installation only; do not grant a production permission through ADB. Other-device runs may be added later but are not prerequisites.
 4. Open Justnoise Gate 0. Confirm the disclosure appears before an unchecked control and that declining leaves the service off.
-5. Select Chrome, YouTube, and one third-party launcher app in turn. Record any app omitted by scoped visibility.
-6. Accept the disclosure, use the button to open Accessibility settings, and manually enable the service. Confirm no draw-over-other-apps permission is requested.
+5. Under **Apps to block**, press **Select apps to block**, choose Chrome, YouTube, and one third-party launchable app together, then **Save**. Confirm the selection is restored after reopening setup; use **Cancel** to confirm unsaved picker changes do not apply. Record any app omitted by scoped visibility or marked unavailable. Unavailable saved targets are shown rather than silently erased; deselect them while idle before starting.
+6. Accept the current disclosure, use the button to open Accessibility settings, and manually enable the service. Confirm no draw-over-other-apps permission is requested. On an upgrade from disclosure v1, confirm fresh affirmative v2 consent is required while the saved target and pairing remain intact.
 7. Press **Pair or replace test Zap** and scan one real UTF-8 NDEF Text tag. Use a different real NDEF tag for unauthorized cases.
-8. Press **Scan Zap to start or stop**, then repeat from the unlocked home screen by tapping the paired Zap without opening Justnoise. Record whether Android routes directly, displays a chooser, or does nothing.
+8. Press **Scan Zap to start or stop**, then repeat from the unlocked home screen by tapping the paired Zap without opening Justnoise. While active, verify each selected app is intercepted with its own name, non-selected apps remain usable, and **Select apps to block** is disabled with guidance to stop with the Zap before changing targets. After a valid stop, verify the targets are released and selection editing is available again. Record whether Android routes directly, displays a chooser, or does nothing.
 9. Complete every scenario in `evidence/DEVICE_MATRIX.md`, including default battery mode, unrestricted battery mode, reboot, natural Doze, eight-hour overnight, service death, Force Stop, and uninstall.
 10. Run the instrumentation APK on-device only as supporting evidence. It cannot replace any physical matrix cell.
 

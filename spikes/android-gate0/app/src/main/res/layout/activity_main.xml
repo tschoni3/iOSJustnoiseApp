@@ -40,13 +40,21 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <Spinner
-            android:id="@+id/appSpinner"
+        <TextView
+            android:id="@+id/selectedAppsText"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:backgroundTint="@color/action_background"
-            android:contentDescription="@string/target_label" />
+            android:text="@string/target_placeholder"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/selectAppsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/target_picker_title" />
 
         <Button
             android:id="@+id/refreshAppsButton"

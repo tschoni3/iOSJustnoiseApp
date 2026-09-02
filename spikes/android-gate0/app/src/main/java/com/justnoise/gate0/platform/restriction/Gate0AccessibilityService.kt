@@ -82,15 +82,16 @@ class Gate0AccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val foregroundPackage = event?.packageName?.toString()?.takeIf(String::isNotBlank)
         val stored = preferences.snapshot()
-        val selectedPackage = stored.selectedPackage
+        val activePackages = stored.activePackages
         val protectedPackages = protectedPackageResolver.resolve()
         val enforcementEligible = stored.acceptedDisclosureVersion ==
             Gate0Preferences.CURRENT_DISCLOSURE_VERSION &&
             stored.acceptedDisclosureEpochMilliseconds > 0L &&
             stored.desiredActive &&
             !stored.recoveryRequired &&
-            selectedPackage != null &&
-            !ProtectedPackagePolicy.isProtected(selectedPackage, protectedPackages)
+            activePackages.isNotEmpty() &&
+            foregroundPackage != null &&
+            !ProtectedPackagePolicy.isProtected(foregroundPackage, protectedPackages)
 
         when (
             OverlayEventRules.decide(
@@ -98,13 +99,13 @@ class Gate0AccessibilityService : AccessibilityService() {
                     event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
                 foregroundPackage = foregroundPackage,
                 justnoisePackage = packageName,
-                selectedPackage = selectedPackage,
+                selectedPackages = activePackages,
                 enforcementEligible = enforcementEligible,
                 overlayIsShowing = overlayController.isShowing,
             )
         ) {
             OverlayEventDecision.SHOW ->
-                overlayController.show(resolveAppLabel(requireNotNull(selectedPackage)))
+                overlayController.show(resolveAppLabel(requireNotNull(foregroundPackage)))
 
             OverlayEventDecision.HIDE -> overlayController.hide()
             OverlayEventDecision.IGNORE -> Unit

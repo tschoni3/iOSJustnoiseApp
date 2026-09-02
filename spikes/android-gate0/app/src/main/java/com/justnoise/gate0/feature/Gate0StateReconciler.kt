@@ -27,7 +27,8 @@ object Gate0StateReconciler {
         ) {
             return Gate0Truth.CONSENT_REQUIRED
         }
-        if (stored.selectedPackage.isNullOrBlank()) return Gate0Truth.TARGET_REQUIRED
+        val targets = if (stored.desiredActive) stored.activePackages else stored.selectedPackages
+        if (targets.isEmpty() || targets.any(String::isBlank)) return Gate0Truth.TARGET_REQUIRED
         if (stored.zapDigest.isNullOrBlank()) return Gate0Truth.ZAP_REQUIRED
         if (stored.recoveryRequired) return Gate0Truth.RECOVERY_REQUIRED
 

@@ -313,7 +313,7 @@ private fun StateLabel(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = state.selectedAppName ?: "No app selected",
+            text = state.selectedAppName ?: "No apps selected",
             color = foreground,
             fontSize = 21.sp,
             fontWeight = FontWeight.SemiBold,
@@ -386,7 +386,7 @@ private fun CapabilityCard(
 
 private fun statusTitle(truth: Gate0Truth): String = when (truth) {
     Gate0Truth.CONSENT_REQUIRED -> "Consent required"
-    Gate0Truth.TARGET_REQUIRED -> "Choose an app"
+    Gate0Truth.TARGET_REQUIRED -> "Choose apps"
     Gate0Truth.ZAP_REQUIRED -> "Pair your Zap"
     Gate0Truth.PERMISSION_REQUIRED -> "Enable Accessibility"
     Gate0Truth.IDLE -> "Ready to Zap"
@@ -399,7 +399,7 @@ private fun statusDetail(truth: Gate0Truth): String = when (truth) {
         "Review the local Accessibility disclosure before enabling app blocking."
 
     Gate0Truth.TARGET_REQUIRED ->
-        "Select the app this development build should block."
+        "Select the apps this development build should block."
 
     Gate0Truth.ZAP_REQUIRED ->
         "Pair your physical Zap once on this Android phone."
@@ -411,7 +411,7 @@ private fun statusDetail(truth: Gate0Truth): String = when (truth) {
         "The restriction service is ready. Open the scan control and tap your Zap."
 
     Gate0Truth.ACTIVE ->
-        "The selected app should be intercepted while this session is active."
+        "The selected apps should be intercepted while this session is active."
 
     Gate0Truth.RECOVERY_REQUIRED ->
         "The app cannot prove enforcement is alive. Open setup to recover safely."

@@ -1,6 +1,6 @@
 # Mobile architecture
 
-Status: target architecture, version 1.0.15
+Status: target architecture, version 1.0.16
 
 ## Decision
 
@@ -14,6 +14,14 @@ single-app local beta is only a foundation step, not MVP completion. These four
 features remain local-first; authentication/cloud sync, widgets and Capture/Signal
 are not prerequisites. The current dependency order and evidence are in
 `docs/ANDROID_PREDEVICE_READINESS.md`.
+
+Android MVP implementation update, 2026-09-02: the existing development sources now
+support one saved multi-app selection and a fixed active-session target snapshot.
+Native Save/Cancel selection cannot change an active session; the legacy single
+target and Zap pairing are retained. Updated plural Accessibility disclosure requires
+fresh consent. This is an Android adapter extension of the existing shared selection
+rule, not a new cross-platform framework or iOS change. It is not yet A16 multi-app
+acceptance; stable session identity, persisted History and schedules remain unfinished.
 
 ## Readiness checkpoint
 

@@ -5,11 +5,16 @@ import org.junit.Test
 
 class OverlayEventRulesTest {
     @Test
-    fun `selected eligible app shows overlay`() {
-        assertEquals(
-            OverlayEventDecision.SHOW,
-            decide(foregroundPackage = TARGET_PACKAGE),
-        )
+    fun `every selected eligible app shows overlay including target to target transitions`() {
+        for (target in TARGET_PACKAGES) {
+            for (overlayIsShowing in listOf(false, true)) {
+                assertEquals(
+                    "$target, overlayIsShowing=$overlayIsShowing",
+                    OverlayEventDecision.SHOW,
+                    decide(foregroundPackage = target, overlayIsShowing = overlayIsShowing),
+                )
+            }
+        }
     }
 
     @Test
@@ -29,6 +34,18 @@ class OverlayEventRulesTest {
             OverlayEventDecision.HIDE,
             decide(foregroundPackage = "fixture.other"),
         )
+        assertEquals(
+            OverlayEventDecision.HIDE,
+            decide(foregroundPackage = "$TARGET_PACKAGE.other"),
+        )
+    }
+
+    @Test
+    fun `empty selection cannot show an overlay`() {
+        assertEquals(
+            OverlayEventDecision.HIDE,
+            decide(foregroundPackage = TARGET_PACKAGE, selectedPackages = emptySet()),
+        )
     }
 
     @Test
@@ -41,14 +58,20 @@ class OverlayEventRulesTest {
             OverlayEventDecision.IGNORE,
             decide(foregroundPackage = null),
         )
+        assertEquals(
+            OverlayEventDecision.IGNORE,
+            decide(foregroundPackage = " "),
+        )
     }
 
     @Test
     fun `ineligible enforcement never shows`() {
-        assertEquals(
-            OverlayEventDecision.HIDE,
-            decide(foregroundPackage = TARGET_PACKAGE, enforcementEligible = false),
-        )
+        for (target in TARGET_PACKAGES) {
+            assertEquals(
+                OverlayEventDecision.HIDE,
+                decide(foregroundPackage = target, enforcementEligible = false),
+            )
+        }
     }
 
     private fun decide(
@@ -56,11 +79,12 @@ class OverlayEventRulesTest {
         isWindowStateChange: Boolean = true,
         enforcementEligible: Boolean = true,
         overlayIsShowing: Boolean = false,
+        selectedPackages: Set<String> = TARGET_PACKAGES,
     ): OverlayEventDecision = OverlayEventRules.decide(
         isWindowStateChange = isWindowStateChange,
         foregroundPackage = foregroundPackage,
         justnoisePackage = JUSTNOISE_PACKAGE,
-        selectedPackage = TARGET_PACKAGE,
+        selectedPackages = selectedPackages,
         enforcementEligible = enforcementEligible,
         overlayIsShowing = overlayIsShowing,
     )
@@ -68,5 +92,6 @@ class OverlayEventRulesTest {
     companion object {
         private const val JUSTNOISE_PACKAGE = "fixture.justnoise"
         private const val TARGET_PACKAGE = "fixture.target"
+        private val TARGET_PACKAGES = setOf(TARGET_PACKAGE, "fixture.second.target")
     }
 }
