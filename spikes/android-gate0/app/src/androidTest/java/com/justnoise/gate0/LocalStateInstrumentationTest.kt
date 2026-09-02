@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.platform.discovery.LauncherAppRepository
+import com.justnoise.gate0.platform.discovery.ProtectedPackageResolver
 import com.justnoise.gate0.platform.restriction.Gate0AccessibilityService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -187,6 +188,33 @@ class LocalStateInstrumentationTest {
             assertEquals(before, preferences.snapshot())
             for (invalidPackage in listOf("synthetic.missing.target", context.packageName, " ")) {
                 assertFalse(controller.selectTargets(targets + invalidPackage))
+                assertEquals(before, preferences.snapshot())
+                assertTrue(recordingContext.broadcasts.isEmpty())
+            }
+        } finally {
+            preferences.clearForWithdrawal()
+        }
+    }
+
+    @Test
+    fun googleSafetyAppIsProtectedExcludedFromPickerAndRejectedByController() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val safetyPackage = "com.google.android.apps.safetyhub"
+        assertTrue(safetyPackage in ProtectedPackageResolver(context).resolve())
+        val pickerApps = LauncherAppRepository(context).load()
+        assertFalse(pickerApps.any { it.packageName == safetyPackage })
+
+        val preferences = Gate0Preferences(context)
+        val recordingContext = BroadcastRecordingContext(context)
+        preferences.clearForWithdrawal()
+        try {
+            val existingSelection = setOf(pickerApps.first().packageName)
+            assertTrue(preferences.setSelectedPackages(existingSelection))
+            val before = preferences.snapshot()
+            val controller = Gate0Controller(recordingContext, preferences)
+
+            for (selection in listOf(setOf(safetyPackage), existingSelection + safetyPackage)) {
+                assertFalse(controller.selectTargets(selection))
                 assertEquals(before, preferences.snapshot())
                 assertTrue(recordingContext.broadcasts.isEmpty())
             }

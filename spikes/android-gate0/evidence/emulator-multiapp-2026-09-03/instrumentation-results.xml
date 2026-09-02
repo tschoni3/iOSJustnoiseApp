@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="24" failures="0" errors="0" skipped="0" time="34.283" timestamp="2026-09-02T22:11:28" hostname="localhost">
+  <testsuite name="com.justnoise.gate0.AppSelectionUiInstrumentationTest" tests="4" failures="0" errors="0" skipped="0" time="9.676" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="activeRecoveryIntentPreventsEditingWithoutStoppingSession" classname="com.justnoise.gate0.AppSelectionUiInstrumentationTest" time="1.753" />
+    <testcase name="unavailableSelectedAppRemainsVisibleAndIsNotSilentlyDropped" classname="com.justnoise.gate0.AppSelectionUiInstrumentationTest" time="2.305" />
+    <testcase name="cancelDiscardsDraftWithoutChangingStoredState" classname="com.justnoise.gate0.AppSelectionUiInstrumentationTest" time="2.402" />
+    <testcase name="explicitSavePersistsMultipleAppsAndRestoresAfterRecreation" classname="com.justnoise.gate0.AppSelectionUiInstrumentationTest" time="3.216" />
+  </testsuite>
+  <testsuite name="com.justnoise.gate0.ConsentUiInstrumentationTest" tests="4" failures="0" errors="0" skipped="0" time="8.512" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="acceptedDisclosureStaysCheckedUntilExplicitWithdrawal" classname="com.justnoise.gate0.ConsentUiInstrumentationTest" time="1.793" />
+    <testcase name="withdrawButtonClearsPairingAndStateAndRequiresFreshConsentAfterRecreation" classname="com.justnoise.gate0.ConsentUiInstrumentationTest" time="1.835" />
+    <testcase name="disclosureRequiresUncheckedAffirmativeControlBeforeSettingsButton" classname="com.justnoise.gate0.ConsentUiInstrumentationTest" time="1.748" />
+    <testcase name="openingRefreshingAndRecreatingSetupPreservesActiveSelection" classname="com.justnoise.gate0.ConsentUiInstrumentationTest" time="3.136" />
+  </testsuite>
+  <testsuite name="com.justnoise.gate0.DirectNfcActivityInstrumentationTest" tests="1" failures="0" errors="0" skipped="0" time="0.182" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="copiedAuthorizedMessageWithoutLiveTagCannotStopSession" classname="com.justnoise.gate0.DirectNfcActivityInstrumentationTest" time="0.182" />
+  </testsuite>
+  <testsuite name="com.justnoise.gate0.HmacZapStoreInstrumentationTest" tests="1" failures="0" errors="0" skipped="0" time="0.028" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="pairAndAuthorize_persistsOnlyDigestAndClearsKey" classname="com.justnoise.gate0.HmacZapStoreInstrumentationTest" time="0.028" />
+  </testsuite>
+  <testsuite name="com.justnoise.gate0.LocalStateInstrumentationTest" tests="10" failures="0" errors="0" skipped="0" time="0.481" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="legacySingleTargetRestoresActiveSnapshotWithoutUpgradingConsentOrLosingPairing" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.0" />
+    <testcase name="explicitNewSelectionsAndActiveSnapshotsTakePrecedenceOverLegacyTarget" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.031" />
+    <testcase name="invalidOrProtectedMemberRejectsEntireSelectionWithoutMutation" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.086" />
+    <testcase name="sameControllerTargetsDoNotClearStateOrBroadcast" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.085" />
+    <testcase name="sameStoredTargetsPreserveActiveAndRecoveryState" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.031" />
+    <testcase name="googleSafetyAppIsProtectedExcludedFromPickerAndRejectedByController" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.054" />
+    <testcase name="emptySelectionCanBeSavedWhileIdleWithoutLosingPairing" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.054" />
+    <testcase name="idleMultiTargetChangePersistsAndBroadcastsWithoutErasingPairing" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.056" />
+    <testcase name="startCapturesTargetsAndStopClearsSnapshotWithDurableMonotonicRevision" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.03" />
+    <testcase name="changingOrClearingTargetsWhileActiveIsRejectedWithoutBroadcast" classname="com.justnoise.gate0.LocalStateInstrumentationTest" time="0.054" />
+  </testsuite>
+  <testsuite name="com.justnoise.gate0.NdefInstrumentationTest" tests="3" failures="0" errors="0" skipped="0" time="0.002" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="AndroidNdefMessage_acceptsOneStrictTextRecordWithAuxiliaryRecord" classname="com.justnoise.gate0.NdefInstrumentationTest" time="0.001" />
+    <testcase name="AndroidNdefMessage_rejectsMalformedTextBeforeValidTextAsAmbiguous" classname="com.justnoise.gate0.NdefInstrumentationTest" time="0.0" />
+    <testcase name="AndroidNdefMessage_rejectsNoTextAndAmbiguousTextMessages" classname="com.justnoise.gate0.NdefInstrumentationTest" time="0.001" />
+  </testsuite>
+  <testsuite name="com.justnoise.gate0.OverlayMessageInstrumentationTest" tests="1" failures="0" errors="0" skipped="0" time="1.898" timestamp="2026-09-02T22:11:28" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="selectedAppChangeUpdatesExistingMessageWithoutReplacingWindowOrRebindingSameText" classname="com.justnoise.gate0.OverlayMessageInstrumentationTest" time="1.898" />
+  </testsuite>
+</testsuites>

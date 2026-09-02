@@ -99,7 +99,7 @@ local-first on the existing A16; no account system or framework rewrite is requi
 
 | Required feature | Current evidence | Completion needed |
 | --- | --- | --- |
-| Select apps to block | Development source now persists a set of selected apps with explicit Save/Cancel and an immutable active-session snapshot; full local build/JVM/lint checks pass; A16 still has the earlier single-target build | Run storage/picker instrumentation after freeing Mac disk space, then sample multiple eligible targets on the A16 while preserving protected-system exclusions |
+| Select apps to block | Development source persists a set with explicit Save/Cancel and an immutable active-session snapshot; all 24 API-36 emulator instrumentation tests pass, including migration/picker and the exact Google Personal Safety exclusion; refreshed full local verification after that fix also passed | Sample multiple eligible targets on the A16 while preserving protected-system exclusions; A16 still has the earlier single-target build |
 | Tap Zap for sessions | Real pairing, foreground/direct start-stop and Chrome blocking sampled on A16; development source now uses the multi-app snapshot | Add a stable session identity for durable History; physically verify the new multi-app candidate and preserve safe stop/recovery |
 | Schedules | Separate preview list/editor and pure eligibility rules only | Persist/edit/enable/delete schedules, calculate occurrences, deliver real background starts and reconcile missed/duplicate delivery |
 | History | Shared summary/duration rules; UI displays fixed preview data | Save real session records and show their dates/durations/totals, including manual and scheduled sessions exactly once |
@@ -140,9 +140,20 @@ new runtime dependency or production module. Device acceptance and stable sessio
 identity/real History remain separate work.
 
 Local verification for this slice is recorded in `spikes/android-gate0/README.md`.
-The 86 JVM tests and full verifier pass do not substitute for the new instrumentation
-tests, whose emulator execution is currently blocked by insufficient Mac disk space.
-Do not install the new candidate over the paired A16 merely to bypass that test limit.
+The Mac disk-space block is cleared and all 24 instrumentation tests passed on the
+API-36 `medium_phone` emulator (`emulator-5554`), with no failures or skips. Two
+initial picker-test failures were corrected by waiting for queued button work and
+list layout; the production picker was unchanged for those failures. A separate
+emulator discovery led to explicit protection of `com.google.android.apps.safetyhub`,
+whose exclusion regression also passed. Log:
+`/private/tmp/justnoise-multiapp-instrumentation-recheck.log`.
+The initial `d80c4ce` result remains historical. The refreshed full verifier after
+the Safety fix passed all 86 JVM tests, lint/builds, 10 release-checker tests and the
+packaged release boundary; log: `/private/tmp/justnoise-multiapp-verified-release.log`.
+The final combined debug APK checksum is recorded in the README; it was installed
+only on the emulator, with no visual acceptance claim from that installation alone.
+The paired A16 was not changed, and emulator results do not establish physical
+multi-app acceptance or promote any Gate 0 cell.
 
 One material schedule choice remains: scheduled **start only, ending on Zap**, or a
 scheduled **start/end window**. The observed iOS 20-minute monitor is not an approved

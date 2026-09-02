@@ -66,6 +66,7 @@ class ProtectedPackageResolver(
             "com.sec.android.app.samsungapps",
             "com.android.emergency",
             "com.google.android.emergency",
+            "com.google.android.apps.safetyhub",
         )
     }
 }

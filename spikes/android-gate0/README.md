@@ -34,25 +34,45 @@ features or capabilities delivered by preview screens.
 
 ## Multi-app source verification — 2026-09-03
 
-The complete `scripts/verify-android-predevice-readiness.sh` passed for this multi-app
-change (base `a97b054`): 86 JVM tests across the three projects, product/static
+The complete `scripts/verify-android-predevice-readiness.sh` passed for the initial
+multi-app commit `d80c4ce` (base `a97b054`): 86 JVM tests across the three projects, product/static
 contracts, debug lint/builds, instrumentation APK compilation, integrated release
 lint/APK/App Bundle builds, 10 release-checker tests, and the packaged release boundary.
 Local log: `/private/tmp/justnoise-multiapp-final-verification.log`.
 
-Storage/migration, picker Save/Cancel, setup restoration/withdrawal, and blocker-label
-instrumentation tests compile but **have not run for this change**. Both the existing
-API-36 emulator and a separate smaller temporary emulator refused to start because
-the Mac lacked disk space. Do not convert compilation into a migration/UI pass.
-After freeing space, run instrumentation only on a disposable emulator with an
-explicit `ANDROID_SERIAL`, never against the owner's paired A16 installation.
+The earlier Mac disk-space block is cleared. The first executed instrumentation run
+had two picker-test failures caused by test synchronization with queued button work
+and list layout. The tests now wait for those UI operations; the production picker
+was unchanged for those failures. A separate emulator picker check found Google
+Personal Safety selectable, so `com.google.android.apps.safetyhub` was explicitly
+protected and a regression was added.
 
-Integrated debug APK SHA-256:
+The rerun passed **all 24 instrumentation tests, with zero failures or skips**, on
+the API-36 `medium_phone` emulator (`emulator-5554`). This includes storage/migration,
+picker Save/Cancel, setup restoration/withdrawal, blocker labels and the exact Safety
+package exclusion. Local log:
+`/private/tmp/justnoise-multiapp-instrumentation-recheck.log`.
+Instrumentation ran only on the disposable emulator, not the owner's paired A16.
+The [JUnit report](evidence/emulator-multiapp-2026-09-03/instrumentation-results.xml)
+is retained with this change (line endings normalized; report contents unchanged).
+
+Initial `d80c4ce` integrated debug APK SHA-256 (historical, before the Safety fix):
 `c00bcd112cfb18b4eeb6676bdfbc6be2482e5dcae226d8ef86c674c249e3947a`.
-It was not installed on the A16. No phone permission, pairing, app data, session or
-tag was changed during this multi-app work; no artifact was signed for upload or
-sent to Play. New physical multi-target checks and the v2 consent upgrade remain
-pending, and no device-matrix cell is promoted by this local verification.
+The refreshed full verifier after the Safety fix also passed: all 86 JVM tests,
+lint/builds, 10 release-checker tests and the packaged release boundary. Local log:
+`/private/tmp/justnoise-multiapp-verified-release.log`.
+Final integrated debug APK SHA-256:
+`6bdb339817d24284a40415488cc2e9c11cf158326d8759d634a41723c425bd6d`.
+The final debug build was installed only on the emulator, not the A16. A bounded
+combined-app visual smoke check confirmed that Calendar and Chrome selected through
+the picker remained saved after the APK update: the [Zap surface shows two apps](evidence/emulator-multiapp-2026-09-03/hero-two-apps.png),
+and the [reopened picker restores both checks](evidence/emulator-multiapp-2026-09-03/picker-two-apps.png)
+without offering Personal Safety. Consent remained unchecked and the service was
+not enabled. This is not full visual, NFC or physical restriction acceptance.
+No A16 permission, pairing, app data, session or
+tag was changed during this multi-app work; no artifact was signed for upload or sent to Play.
+New physical multi-target checks and the v2 consent upgrade remain pending, and no
+device-matrix cell is promoted by this local verification.
 
 ## Verified pre-device baseline
 

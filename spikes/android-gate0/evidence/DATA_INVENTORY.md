@@ -30,6 +30,20 @@ features will need their own inventory and retention update when implemented.
 | Window layout | Current WindowMetrics bounds, visible system-bar insets, stable display-cutout insets, and calculated overlay rectangle | Keep the actual touch-blocking window outside visible system bars and cutouts | Transient local geometry on show/inset/configuration updates; no view-tree or other-app content access | Current rectangle exists in window layout parameters only; not persisted or logged | None |
 | Overlay | Justnoise copy template, matched foreground app display label, and buttons | Interrupt a matching active-session target and expose escape routes | In memory while visible | No overlay content is retained | None |
 
+## Explicit emergency-app protection
+
+The fixed protected-package list now explicitly includes Google Personal Safety,
+`com.google.android.apps.safetyhub`, after an emulator picker check found it
+selectable. Its [official Google Play listing](https://play.google.com/store/apps/details?id=com.google.android.apps.safetyhub)
+describes emergency SOS, emergency sharing and medical-information functionality,
+so it must be excluded from selection and enforcement. Its exclusion regression
+passed in the 24-test API-36 emulator rerun, with zero failures or skips; see
+[`../README.md`](../README.md#multi-app-source-verification--2026-09-03) for the run
+and earlier test-synchronization failures. This source-level safety correction adds
+no event fields, retention or network destination. It is not Google Play approval
+or proof that all emergency surfaces on every OEM device are protected. The dated
+A16 evidence remains unchanged.
+
 ## Selection migration and disclosure
 
 When the set-based selection key is absent, the legacy single package is read as a
