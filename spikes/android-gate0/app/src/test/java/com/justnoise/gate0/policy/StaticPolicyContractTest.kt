@@ -147,6 +147,47 @@ class StaticPolicyContractTest {
     }
 
     @Test
+    fun `feedback interruption suspends enforcement without disconnecting recovery channels`() {
+        val source = file(
+            "app/src/main/java/com/justnoise/gate0/platform/restriction/" +
+                "Gate0AccessibilityService.kt",
+        ).readText()
+        val interruption = source.substringAfter("override fun onInterrupt() {", "")
+            .substringBefore("\n    }")
+
+        assertTrue(
+            "Interrupt must dismiss the blocker",
+            interruption.contains("overlayController.hide()"),
+        )
+        assertTrue(
+            "Interrupt must prevent re-enforcement",
+            interruption.contains("preferences.markRecoveryRequired()"),
+        )
+        listOf(
+            "shutdownServiceState()",
+            "markServiceDisconnected()",
+            "removeCallbacks(",
+            "unregisterReceiver(",
+            "disableSelf()",
+        ).forEach { teardown ->
+            assertFalse("Interrupt is not unbind: $teardown", interruption.contains(teardown))
+        }
+
+        val eventHandler = source.substringAfter("override fun onAccessibilityEvent(", "")
+            .substringBefore("private fun resolveAppLabel")
+        assertTrue(
+            "Recovery must suppress later target events",
+            eventHandler.contains("!stored.recoveryRequired"),
+        )
+        assertTrue(
+            source.contains(
+                "override fun onUnbind(intent: Intent?): Boolean {\n        shutdownServiceState()",
+            ),
+        )
+        assertTrue(source.contains("override fun onDestroy() {\n        shutdownServiceState()"))
+    }
+
+    @Test
     fun `withdrawal feedback uses the cleanup result`() {
         val source = file(
             "app/src/main/java/com/justnoise/gate0/app/MainActivity.kt",

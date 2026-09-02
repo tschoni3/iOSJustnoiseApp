@@ -36,6 +36,27 @@ class Gate0StateReconcilerTest {
     }
 
     @Test
+    fun `fresh heartbeat cannot clear interruption recovery while service stays connected`() {
+        for (desiredActive in listOf(false, true)) {
+            val interrupted = readyState().copy(
+                desiredActive = desiredActive,
+                recoveryRequired = true,
+            )
+            for (heartbeat in listOf(4_000L, 6_000L)) {
+                assertEquals(
+                    "desiredActive=$desiredActive, heartbeat=$heartbeat",
+                    Gate0Truth.RECOVERY_REQUIRED,
+                    Gate0StateReconciler.reconcile(
+                        interrupted.copy(serviceHeartbeatElapsedMilliseconds = heartbeat),
+                        accessibilityEnabled = true,
+                        nowElapsedMilliseconds = heartbeat,
+                    ),
+                )
+            }
+        }
+    }
+
+    @Test
     fun `temporary disconnect recovers idle and active truth from a fresh heartbeat`() {
         for (desiredActive in listOf(false, true)) {
             val disconnected = readyState().copy(

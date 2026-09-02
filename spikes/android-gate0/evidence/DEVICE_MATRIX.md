@@ -1,6 +1,6 @@
 # Android Gate 0 device evidence matrix
 
-Status: **PARTIAL — A16 navigation visibility, synthetic native-Home/re-entry, and owner-confirmed post-stop Chrome samples recorded; safety coverage incomplete; required A16 `BLOCKED` cells count as `FAIL`**
+Status: **PARTIAL — A16 native Home/Back, escape-control and phone reachability recorded; Keep going reset fixed and retested; safety coverage incomplete; required A16 `BLOCKED` cells count as `FAIL`**
 
 The exact criteria and interpretation are normative in [`../../../docs/ANDROID_GATE_0.md`](../../../docs/ANDROID_GATE_0.md). Never change a cell to `PASS` without attaching the requested recording/log notes and the device/run metadata below.
 
@@ -41,13 +41,24 @@ Scope decision, 2026-09-02: A16 is required; A17 is deferred/unverified and excl
 | G0-12 | No crash, ANR, persistent overlay, loop, lockout, or visibly usable target flash | BLOCKED | BLOCKED | Owner confirmed no flicker on September 2 after `02f6e7c`/`dbb3ba6`; short video and before/after touch screenshots preserved. Full safety and repeated sustained-interaction coverage still pending |
 | G0-13 | Manifest, disclosure, data handling, and Play declaration policy review | BLOCKED | BLOCKED | September 2 internal source/merged-manifest/APK review recorded in PLAY_DECLARATION_DRAFT.md; current narrow metadata/permissions confirmed. Inventory gaps corrected and false withdrawal-success feedback fixed locally. Physical consent/refusal/re-entry and cleanup-failure evidence, final release package, and product/policy acceptance remain missing |
 | G0-14 | Justnoise, Home, Settings, System UI, permission/package, phone/emergency surfaces never covered | BLOCKED | BLOCKED | Prior `d93ae01` failure: missing normal navigation controls and overlay overlapping navigation region. Installed `d09833d`: owner reports controls visible; screenshots confirm overlay bottom 2205 leaving the 135-pixel navigation region uncovered. Two ADB-injected touches at native Home coordinate (546,2275) each returned to Home without the blocker, with active/revision 16 unchanged; Chrome re-entry between them was blocked. This is synthetic native-control routing evidence, not owner-operated Home/Back or remaining protected-surface coverage. App GO HOME is not normal system-Home evidence. Use emergency test route only. See A16_PARTIAL_RUN_2026-09-02.md |
-| G0-15 | Disable, Force Stop, and uninstall escape via launcher and Settings; reinstall unchecked | BLOCKED | BLOCKED | Not run; no ADB rescue allowed |
+| G0-15 | Disable, Force Stop, and uninstall escape via launcher and Settings; reinstall unchecked | BLOCKED | BLOCKED | On `dbe2469`, overlay buttons and ordinary Settings taps reached the enabled Accessibility toggle and visible App info Force Stop/uninstall controls without an overlay. None was activated; actual disable/Force Stop/uninstall and reinstall remain untested. No ADB rescue was used. See the bounded safety sequence in A16_PARTIAL_RUN_2026-09-02.md |
 | G0-16 | Service crash/restart, process death, OEM reclaim, and Force Stop recover truthfully | BLOCKED | BLOCKED | Not run |
 | G0-17 | Natural Doze and eight-hour overnight pass in both default and unrestricted battery modes | BLOCKED | BLOCKED | Not run; unrestricted-only pass fails gate |
 | G0-18 | Minimal metadata plus local-only inventory match reviewed logs/network observation | BLOCKED | BLOCKED | September 2 packaged metadata and app-source review match the updated inventory, including non-content platform metadata. Redacted runtime logs, dependency review, network observation, and withdrawal fault/restore cases remain unverified |
 | G0-19 | Unlocked Home direct legacy-Zap start/stop needs no app-open, Scan button, chooser, or second confirmation | BLOCKED | BLOCKED | September 2: initial warm Home start revealed the app; after task-isolation update, one owner-confirmed physical start/stop cycle kept Home foreground without Justnoise or chooser: idle/revision 11 to active/revision 12 to idle/revision 13. Synthetic no-tag rejection passed while idle and active. Repetitions, cold process, lock, competing-handler, remaining negatives, and Force Stop evidence remain pending. Earlier idle/revision 11 has no confirmed cause and is not counted as direct-stop evidence |
 
 ## Decision arithmetic
+
+Additional bounded `dbe2469` evidence for G0-06/G0-14: a coordinate touch of native
+Back `(850,2275)` returned from blocked Chrome to Home without ending active/revision
+`20`. Chrome was blocked again on re-entry; Accessibility settings and App info
+were reachable. Keep going then opened setup but unexpectedly cleared the session
+to idle/revision `21` when the existing target selection was restored. This was
+not a verified Zap stop. The corrected APK `9fe99b7232a135cd6e6e16d4ad105faa3200cd87e516a5101a08bda60c7c4739`
+is installed: one Keep going/Chrome re-entry sequence preserved active/revision `22`,
+and the empty Samsung dialer remained reachable without an overlay. Dedicated
+emergency access and actual recovery remain unverified. No full-matrix cell is
+promoted by these partial results; see the build-scoped record for all artifact hashes.
 
 - Required cells: 19.
 - Passing cells: 0.

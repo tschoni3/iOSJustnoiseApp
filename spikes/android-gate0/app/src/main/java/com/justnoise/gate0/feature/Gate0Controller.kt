@@ -38,6 +38,10 @@ class Gate0Controller(
     )
 
     fun selectTarget(packageName: String): Boolean {
+        // Spinner restoration can deliver a delayed selection callback after binding ends.
+        // Restoring the existing target is not a session change or a broadcast event.
+        if (preferences.snapshot().selectedPackage == packageName) return true
+
         val eligible = launchableApps.load().any { it.packageName == packageName }
         if (!eligible || ProtectedPackagePolicy.isProtected(packageName, protectedPackages.resolve())) {
             return false

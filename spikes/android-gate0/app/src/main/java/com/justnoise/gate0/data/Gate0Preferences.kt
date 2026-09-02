@@ -52,15 +52,18 @@ class Gate0Preferences(context: Context) : SessionStateWriter {
 
     @Synchronized
     fun setSelectedPackage(packageName: String?): Boolean {
+        val selectedPackage = packageName?.takeUnless { it.isBlank() }
+        if (preferences.getString(KEY_SELECTED_PACKAGE, null) == selectedPackage) return true
+
         val editor = preferences.edit()
             .putBoolean(KEY_DESIRED_ACTIVE, false)
             .remove(KEY_ACTIVE_SINCE_EPOCH_MILLIS)
             .remove(KEY_RECOVERY_REQUIRED)
             .putLong(KEY_SESSION_REVISION, nextSessionRevision())
-        if (packageName.isNullOrBlank()) {
+        if (selectedPackage == null) {
             editor.remove(KEY_SELECTED_PACKAGE)
         } else {
-            editor.putString(KEY_SELECTED_PACKAGE, packageName)
+            editor.putString(KEY_SELECTED_PACKAGE, selectedPackage)
         }
         return editor.commit()
     }

@@ -119,7 +119,10 @@ class Gate0AccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {
-        shutdownServiceState()
+        // Feedback interruption does not unbind the service. Keep stop/withdrawal delivery
+        // and heartbeat reconciliation alive, but suspend enforcement until recovery.
+        if (::overlayController.isInitialized) overlayController.hide()
+        if (::preferences.isInitialized) preferences.markRecoveryRequired()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

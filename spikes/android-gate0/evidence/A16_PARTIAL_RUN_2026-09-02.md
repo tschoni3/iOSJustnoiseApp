@@ -297,6 +297,125 @@ service sample, not a new physical NFC cycle or fault-injected cleanup test.
 The earlier owner-confirmed stop/unblock result remains recorded on `d09833d`;
 do not ask the owner to repeat that same confirmation merely for bookkeeping.
 
+### Native Back and escape-route check; unexpected setup stop
+
+At approximately 23:15–23:19 device-local time, the installed `dbe2469` APK was
+rechecked against SHA-256
+`c0d7d926630ed1c0cd40a76515ca7f09d9b7ea94d09c8725bb75050f6cacbc5d`.
+The owner replied **“ok done”** after a request for one Zap start specifically to
+check system escape routes, not repeat the completed stop/unblock question.
+Scoped state changed from idle/revision `19` to active/revision `20`, service
+connected. Home was visible; chooser behavior was not separately credited.
+
+Chrome was opened with its normal launcher intent. An immediate capture contained
+its launch animation; the settled capture showed the blocker at
+`[0,100][1080,2205]`. This is not launch-time or zero-flash proof.
+
+- An ADB coordinate touch at `(850,2275)` pressed visible native **Back**. Samsung
+  Home became foreground without a blocker; state remained active/revision `20`,
+  service connected. This is a physical-screen synthetic touch, not a key event
+  or app-provided escape button.
+- After Chrome re-entry, **Disable Accessibility** opened Samsung Accessibility
+  settings. Normal taps through **Installed apps** and **Justnoise Android Dev app
+  blocking** reached its enabled toggle without an overlay. No toggle was changed.
+- After Chrome re-entry, **App info / Force Stop** opened the app's system page.
+  **Uninstall** and **Force Stop** were visible and unobstructed. Neither was
+  activated: this proves reachability, not completed disable/uninstall/recovery.
+- After Chrome re-entry, **Keep going** opened setup without an overlay but
+  unexpectedly showed idle. The next read confirmed idle/revision `21`, service
+  connected. No scan or intentional target change was performed. This unintended
+  session end is **not** another successful Zap-stop result.
+
+Source inspection found a matching cause: the spinner's asynchronous restoration
+callback reselected Chrome after its synchronous binding guard reset;
+`selectTarget` wrote the same package, cleared the session and broadcast the change.
+The run stopped here and the idle phone returned to Home. Pairing, consent and
+Accessibility were not cleared or changed. Phone/emergency and actual revocation
+remain untested. The beta stays HOLD pending the fix and relevant verification.
+Existing synthetic native Home evidence remains valid; a finger-only repetition
+is not an additional prerequisite for the smaller beta checkpoint.
+
+| Artifact, installed source `dbe2469` | SHA-256 |
+| --- | --- |
+| [Blocker before native Back](a16-2026-09-02/safety-blocked-before-back.png) | `95d3b3c44aaebe2319e0db2490204d5ea24b3b0bac76245710071a04b026fe19` |
+| [Reachable Accessibility toggle, unchanged](a16-2026-09-02/safety-accessibility-control.png) | `bb00a94f9a8047b56946eaff596aa07050bf0a83d4b2fd592be68b6d561187b9` |
+| [Reachable App info controls](a16-2026-09-02/safety-app-info-controls.png) | `1b9e765e3ce00f039f732c904e678069f00eeeb284aff2b943f04446a57369c7` |
+| [Unexpected idle after Keep going](a16-2026-09-02/keep-going-unexpected-idle.png) | `df2a791589b52912ca0c186ce120d3db2ef5f7750b29d11a15b7bf0644ebbc3c` |
+
+Only app-specific settings and neutral blocker/setup captures are retained. Home
+and launch-animation captures with launcher/location/profile details are excluded.
+No `uiautomator dump`, instrumentation, permission grant, live call, or ADB state
+injection was used on the paired phone.
+
+### Corrected restoration and interruption handling
+
+The correction makes reselecting the existing package a no-op in both the
+controller and persistence boundary. It preserves session/recovery/start/revision
+and sends no state-change broadcast. Real target changes still validate eligibility
+and deliberately clear the old session. No spinner timing workaround or UI/layout
+change was introduced.
+
+A separate source review found that `onInterrupt()` treated feedback interruption
+as service teardown, dropping the stop/withdraw receiver and heartbeat while later
+package events could still render the overlay. The correction hides the overlay and
+sets recovery required while keeping those recovery channels alive; actual unbind
+and destruction still tear down the service. This follows Android's
+[`onInterrupt` feedback contract](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService#onInterrupt()).
+The recovery latch updates process-local preferences immediately, but asynchronous
+durability and actual OEM interruption behavior are not proved by these tests.
+
+Verification in this change:
+
+- Seven existing/new storage and consent/setup instrumentation tests ran only on
+  the API-36 `medium_phone` emulator. Before the target fix, three regressions
+  failed for same-target persistence, controller state/broadcast behavior, and
+  Activity creation. After correction all seven passed, including app-list refresh,
+  recreation and retained recovery state. Synthetic emulator sessions are not NFC
+  or physical-device restriction evidence.
+- The new interruption callback wiring regression failed before its fix. All 81
+  JVM tests across the three Android projects passed afterward; the pure recovery
+  test confirms a fresh heartbeat does not clear the recovery latch.
+- The full pre-device verifier passed: product/static contracts, JVM checks, lint,
+  debug/instrumentation APK builds, integrated unsigned release APK/AAB and ten
+  packaged-boundary verifier regressions. Packaged release checks passed for
+  `com.justnoise.androiddev`, not the future `com.justnoise.app` identity.
+
+After a fresh idle/revision `21` read, `adb install -r` installed the corrected
+integrated APK without clearing data. Installed SHA-256 matches
+`9fe99b7232a135cd6e6e16d4ad105faa3200cd87e516a5101a08bda60c7c4739`.
+Quiet checks confirmed the pairing record and Chrome selection remain present;
+state stayed idle/revision `21`, service connected, with heartbeat advancing from
+`174346911` to `174387168`. The declared integrated main Activity opened and showed
+**Ready to Zap** for Chrome; the phone then returned to Home. An initial implicit
+ADB launcher intent did not resolve, so no launcher-icon test is claimed here.
+No iOS source, permissions, signing identity, pairing or Play state was changed.
+Installation alone did not establish the active Keep going behavior; the separate
+physical regression below does.
+
+### Corrected Keep going verified on the A16
+
+After the owner acknowledged a new, explicitly defect-specific Zap start request,
+scoped state was active/revision `22`, service connected, on the corrected
+`9fe99b…c4739` APK. Chrome's blocker was visually confirmed. An ADB touch at
+`(540,1520)` pressed **Keep going**; setup opened without an overlay, displayed
+**Active**, and the state remained active/revision `22` with a fresh heartbeat.
+Reopening Chrome displayed the blocker again. This verifies one corrected
+Keep going/re-entry sequence on the phone, not a new stop/unblock campaign.
+
+Native Home was then tapped and the ordinary empty `ACTION_DIAL` route opened
+Samsung's `com.samsung.android.dialer/.DialtactsActivity`. Its empty keypad was
+visible without a blocker and state remained active/revision `22`. No number was
+entered and no call was placed. The dedicated emergency route, lock-screen access,
+actual revocation, Force Stop, withdrawal and uninstall/reinstall remain untested.
+The phone was finally returned to Home with the same active/revision `22` state;
+the owner can stop normally, without repeating the already-confirmed browsing check.
+
+| Artifact, corrected APK `9fe99b…c4739` | SHA-256 |
+| --- | --- |
+| [Keep going preserves active session](a16-2026-09-02/keep-going-preserves-active.png) | `0f776b816cb4ccf69f743ecf6e031584680b7cd48baa0c7389ccf09fa5a68d51` |
+| [Chrome remains blocked after Keep going](a16-2026-09-02/chrome-blocked-after-keep-going.png) | `96c779fcdf8dc000e246f988243f9947c2de540ef3218bbe12444c2a19588473` |
+| [Empty phone keypad reachable while active](a16-2026-09-02/phone-reachable-while-active.png) | `1f69ff25d4a32e28aae2b80c3d4cbb317f49250e00dc87ec61d83296d7dee3bc` |
+
 ## Preserved foreground-cycle artifacts
 
 Artifacts below contain the test UI, not Zap payloads/digests. Checksums are SHA-256.

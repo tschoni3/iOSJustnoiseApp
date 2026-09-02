@@ -4,6 +4,17 @@ Decision: **HOLD / NO-GO for the full Android port**
 
 Internal beta decision: **HOLD — smaller A16 safety checkpoint incomplete**
 
+Latest bounded safety run: native Back returned to Home while the session stayed
+active; Accessibility's toggle and App info's Force Stop/uninstall controls were
+reachable without a blocker. No permission was changed. **Keep going** unexpectedly
+ended the session when setup restored the already-selected app. The source cause
+is corrected; seven emulator regressions and a defect-specific A16 Keep going /
+Chrome re-entry check now pass. The corrected APK is installed with pairing intact;
+active/revision `22` survives Keep going and the empty Samsung phone dialer is
+reachable. Do not credit the earlier unintended end as a Zap stop. Dedicated
+emergency access, physical negative input and actual revocation/cleanup remain open;
+prior stop/unblock and native Home results stand. See the September 2 record.
+
 Date opened: 2026-07-22
 
 Last updated: 2026-09-02
