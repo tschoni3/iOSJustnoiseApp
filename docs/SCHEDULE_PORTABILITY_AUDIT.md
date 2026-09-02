@@ -49,3 +49,8 @@ Swift and Kotlin pure rules consume the same cases. These rules do not calculate
 9. Define whether notifications are derived from the same selected occurrence or are independent reminders.
 
 Each decision needs portable fixtures plus native domain tests. Background delivery, restriction ownership, reboot, time-zone change, daylight-saving behavior, and cleanup still require physical evidence on the existing required A16. A17 validation is deferred and non-blocking; schedule behavior on untested variants must not be described as verified.
+
+The [Android MVP schedule plan](ANDROID_SCHEDULE_PLAN.md) proposes one cohesive set
+of defaults and three implementation slices. It is **awaiting owner approval**,
+particularly scheduled start/Zap stop versus a start/end window. It does not freeze
+these decisions or authorize a guessed scheduling runtime.

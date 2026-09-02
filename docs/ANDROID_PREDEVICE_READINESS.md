@@ -208,6 +208,24 @@ duration. Time-zone/DST, active-session collision and missed-fire rules also nee
 explicit fixtures from `SCHEDULE_PORTABILITY_AUDIT.md`; propose cohesive defaults
 rather than nine separate setup questions. This need not block apps/History work.
 
+The [proposed schedule plan](ANDROID_SCHEDULE_PLAN.md) now sets out those defaults,
+the native alarm candidate and three focused delivery slices. It is pending owner
+approval, not implemented scheduling or a change to the shipped iOS behavior.
+
+### Rejected-Zap notification safety fix — 2026-09-03
+
+The Android controller no longer broadcasts a state change for an unchanged
+rejected/no-op session decision. This matters because that signal dismisses the
+service's current overlay. Real starts/stops and persistence-failure recovery still
+publish. The portable reducer, authorization, UI and iOS behavior are unchanged.
+
+All **40 emulator instrumentation tests** passed, including four new notification/
+History regressions. The full local verifier also passed its 92 JVM tests,
+lint/builds, 10 release-checker tests and packaged-release boundary.
+[Scoped evidence and artifact hashes](../spikes/android-gate0/evidence/emulator-noop-zap-2026-09-03/README.md)
+record the exact results. This update is not installed on the paired A16 and does
+not claim physical timing, schedule delivery or Play readiness.
+
 Still outside this MVP: accounts/cloud sync, purchases, widgets, Capture/Signal,
 weekly Noise Rewind, advanced reports/polish, A17 hardware acquisition, component
 libraries and architecture rewrites. Keep essential permission/privacy controls,

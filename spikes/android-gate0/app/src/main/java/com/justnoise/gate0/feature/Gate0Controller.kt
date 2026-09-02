@@ -6,6 +6,7 @@ import android.os.SystemClock
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.data.HmacZapStore
 import com.justnoise.gate0.domain.PayloadClassification
+import com.justnoise.gate0.domain.RestrictionAction
 import com.justnoise.gate0.domain.RestrictionCapability
 import com.justnoise.gate0.domain.SessionDecision
 import com.justnoise.gate0.domain.SessionDecisionPersistence
@@ -99,7 +100,13 @@ class Gate0Controller(
             writer = preferences,
             expectedSessionId = stored.activeSessionId,
         )
-        publishStateChange()
+        // The service dismisses its overlay on this signal. Rejected/no-op reads
+        // must leave it in place; failed writes still notify for safe recovery.
+        if (persistedDecision.restrictionAction != RestrictionAction.NONE ||
+            persistedDecision != sessionDecision
+        ) {
+            publishStateChange()
+        }
         return ZapInteraction(readDecision, persistedDecision, persistedDecision != sessionDecision)
     }
 
