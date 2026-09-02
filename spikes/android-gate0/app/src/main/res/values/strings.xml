@@ -47,6 +47,7 @@
     <string name="status_stop_guard">Wait at least three seconds before stopping.</string>
     <string name="status_no_change">Scan caused no state change.</string>
     <string name="status_withdrawn">Consent and all Gate 0 configuration were cleared.</string>
+    <string name="status_withdrawal_failed">Could not confirm all local data was cleared. Tap Withdraw to retry. If this keeps failing, use App info to clear storage or uninstall.</string>
     <string name="accessibility_service_label">Justnoise Gate 0 foreground-package check</string>
     <string name="accessibility_service_description">Compares window-state package identifiers with one locally selected app and shows a Justnoise-owned interruption overlay. It cannot retrieve window content.</string>
     <string name="shield_title">THIS IS JUSTNOISE</string>

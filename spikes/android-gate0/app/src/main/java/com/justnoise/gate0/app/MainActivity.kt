@@ -269,12 +269,19 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.withdrawButton).setOnClickListener {
             cancelReaderMode()
-            controller.withdrawAndClear()
+            val cleared = controller.withdrawAndClear()
             consentCheckbox.isChecked = false
             consentCheckbox.isEnabled = true
             accessibilitySettingsButton.isEnabled = false
             loadApps()
-            showTransientStatus(R.string.status_withdrawn)
+            showTransientStatus(
+                getString(withdrawalStatusMessage(cleared)),
+                durationMilliseconds = if (cleared) {
+                    TRANSIENT_STATUS_MILLISECONDS
+                } else {
+                    WITHDRAWAL_FAILURE_STATUS_MILLISECONDS
+                },
+            )
         }
     }
 
@@ -393,5 +400,12 @@ class MainActivity : Activity() {
         private const val STATUS_REFRESH_INTERVAL_MILLISECONDS = 2_500L
         private const val TRANSIENT_STATUS_MILLISECONDS = 3_500L
         private const val SCAN_DIAGNOSTIC_STATUS_MILLISECONDS = 15_000L
+        private const val WITHDRAWAL_FAILURE_STATUS_MILLISECONDS = 15_000L
     }
+}
+
+internal fun withdrawalStatusMessage(cleared: Boolean): Int = if (cleared) {
+    R.string.status_withdrawn
+} else {
+    R.string.status_withdrawal_failed
 }

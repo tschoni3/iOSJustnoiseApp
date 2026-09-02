@@ -147,6 +147,17 @@ class StaticPolicyContractTest {
     }
 
     @Test
+    fun `withdrawal feedback uses the cleanup result`() {
+        val source = file(
+            "app/src/main/java/com/justnoise/gate0/app/MainActivity.kt",
+        ).readText()
+
+        assertTrue(source.contains("val cleared = controller.withdrawAndClear()"))
+        assertTrue(source.contains("withdrawalStatusMessage(cleared)"))
+        assertFalse(source.contains("showTransientStatus(R.string.status_withdrawn)"))
+    }
+
+    @Test
     fun `spike stays one Views module without cross-platform or network runtimes`() {
         val settings = file("settings.gradle.kts").readText()
         val appBuild = file("app/build.gradle.kts").readText()
