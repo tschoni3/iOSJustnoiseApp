@@ -7,6 +7,7 @@ REPOSITORY_ROOT="$(cd "$SCRIPT_DIRECTORY/.." && pwd)"
 GATE_ROOT="$REPOSITORY_ROOT/spikes/android-gate0"
 UI_ROOT="$REPOSITORY_ROOT/spikes/android-ui"
 INTEGRATED_ROOT="$REPOSITORY_ROOT/spikes/android-integrated"
+SHARED_SOURCE="$REPOSITORY_ROOT/spikes/android-shared/src/main/kotlin"
 GRADLE_WRAPPER="$GATE_ROOT/gradlew"
 UI_MANIFEST="$UI_ROOT/app/src/main/AndroidManifest.xml"
 UI_SOURCE="$UI_ROOT/app/src/main"
@@ -23,20 +24,21 @@ fail() {
 [[ -x "$GRADLE_WRAPPER" ]] || fail "the pinned Gate 0 Gradle wrapper is unavailable"
 [[ -f "$UI_MANIFEST" ]] || fail "the permission-free UI prototype manifest is missing"
 [[ -f "$INTEGRATED_MANIFEST" ]] || fail "the integrated Android development manifest is missing"
+[[ -d "$SHARED_SOURCE" ]] || fail "the shared Android product mapping is missing"
 
 if command -v rg >/dev/null 2>&1; then
     rg --quiet '<uses-permission|<service' "$UI_MANIFEST" \
         && fail "the UI prototype must not declare a permission or service"
     rg --quiet \
         'AccessibilityService|TYPE_ACCESSIBILITY_OVERLAY|NfcAdapter|UsageStatsManager|DevicePolicyManager|VpnService' \
-        "$UI_SOURCE" \
+        "$UI_SOURCE" "$SHARED_SOURCE" \
         && fail "the UI prototype crossed into a restricted platform capability"
 else
     grep -E -q '<uses-permission|<service' "$UI_MANIFEST" \
         && fail "the UI prototype must not declare a permission or service"
     grep -E -R -q \
         'AccessibilityService|TYPE_ACCESSIBILITY_OVERLAY|NfcAdapter|UsageStatsManager|DevicePolicyManager|VpnService' \
-        "$UI_SOURCE" \
+        "$UI_SOURCE" "$SHARED_SOURCE" \
         && fail "the UI prototype crossed into a restricted platform capability"
 fi
 
@@ -74,6 +76,7 @@ bash "$GATE_ROOT/scripts/verify-static-policy.sh"
     assembleDebug
 
 "$GRADLE_WRAPPER" --no-daemon -p "$INTEGRATED_ROOT" \
+    testDebugUnitTest \
     lintDebug \
     assembleDebug
 

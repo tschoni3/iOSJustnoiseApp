@@ -48,6 +48,9 @@ android {
             kotlin.directories.add(
                 rootProject.projectDir.resolve("../android-gate0/app/src/main/java").path,
             )
+            kotlin.directories.add(
+                rootProject.projectDir.resolve("../android-shared/src/main/kotlin").path,
+            )
             res.directories.add(
                 rootProject.projectDir.resolve("../android-gate0/app/src/main/res").path,
             )
@@ -93,4 +96,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.core:core:1.16.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    testImplementation("junit:junit:4.13.2")
 }

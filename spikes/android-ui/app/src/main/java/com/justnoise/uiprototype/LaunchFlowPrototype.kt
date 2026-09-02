@@ -1,5 +1,7 @@
 package com.justnoise.uiprototype
 
+import com.justnoise.androidcontract.JustnoiseContract
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Matrix

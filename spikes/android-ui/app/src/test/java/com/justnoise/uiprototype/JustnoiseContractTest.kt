@@ -1,5 +1,9 @@
 package com.justnoise.uiprototype
 
+import com.justnoise.androidcontract.JustnoiseContract
+import com.justnoise.androidcontract.ShieldTargetKind
+import com.justnoise.androidcontract.parseContractColor
+import com.justnoise.androidcontract.renderShieldMessage
 import java.io.File
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -46,6 +50,22 @@ class JustnoiseContractTest {
         assertThrows(IllegalArgumentException::class.java) {
             parseContractColor("#ABC")
         }
+    }
+
+    @Test
+    fun nativeColorComponentsPreserveZapStopAlphaAndDistinctNoiseAccent() {
+        val surface = JustnoiseContract.color("surface.zap.idle")
+        assertEquals(21f / 255f, surface.red, 0.000_001f)
+        assertEquals(21f / 255f, surface.green, 0.000_001f)
+        assertEquals(21f / 255f, surface.blue, 0.000_001f)
+        assertEquals(1f, surface.alpha, 0.000_001f)
+
+        val stop = JustnoiseContract.color("action.zap.stop.background")
+        assertEquals(1f, stop.red, 0.000_001f)
+        assertEquals(1f, stop.green, 0.000_001f)
+        assertEquals(0f, stop.blue, 0.000_001f)
+        assertEquals(230f / 255f, stop.alpha, 0.000_001f)
+        assertFalse(stop == JustnoiseContract.color("accent.noiseRewind"))
     }
 
     @Test

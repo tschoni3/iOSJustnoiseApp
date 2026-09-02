@@ -8,7 +8,8 @@ This is a user-permission-free Jetpack Compose prototype for the Android present
 - The published Release launch order is represented as two onboarding pages, Zap activation, signed-out authentication, and Zap home; Capture remains absent.
 - The remaining Release surfaces reachable from Zap home—Modes, History, Schedules, and Settings—are represented with native Android navigation, scrolling, sheets, and controls.
 - The existing onboarding videos and app icon are reused through generated build resources rather than copied into Android source.
-- Idle and active presentation states use the shared copy and semantic color contracts.
+- Idle and active presentation states use the shared copy and semantic color contracts;
+  their native mapping is source-reused with the integrated shell from `../android-shared/`.
 - Stopping an active preview returns to idle and presents the Capture-disabled Release Session Complete sheet.
 - The conditional Noise Rewind ready card and its seven-page weekly reflection sequence have deterministic Compose states and native swipe navigation.
 - The shared blocked-surface copy, app-name fallback behavior, semantic colors, and white action render in a static Compose preview, including a long-name state.
@@ -41,7 +42,7 @@ The prototype omits the iOS-only Sign in with Apple button. Production Android a
 
 ## Run
 
-To verify the complete repository pre-device baseline (shared contracts, both Android spikes, lint, tests, APKs, and the production-module boundary), run from the repository root:
+To verify the complete repository pre-device baseline (shared contracts, all three disposable Android apps, lint, tests, APKs, and the production-module boundary), run from the repository root:
 
 ```sh
 bash scripts/verify-android-predevice-readiness.sh

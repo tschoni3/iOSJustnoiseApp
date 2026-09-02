@@ -67,6 +67,8 @@ required_contract_paths = (
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
+    "spikes/android-shared/src/main/kotlin/com/justnoise/androidcontract/JustnoiseContract.kt",
+    "spikes/android-integrated/app/src/test/java/com/justnoise/integrated/IntegratedZapStateTest.kt",
     "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt",
     "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt",
 )
@@ -843,7 +845,8 @@ required_document_fragments = {
         "Force Stop",
     ),
     "docs/ANDROID_NFC_ACTIVATION.md": (
-        "PROPOSED GATE 0 EXTENSION",
+        "GATE 0 CANDIDATE IMPLEMENTED",
+        "PHYSICAL EVIDENCE AND PRODUCTION HOLD",
         "Routing only; it does not authorize the Zap",
         "Foreground reader mode",
         "Direct system tag dispatch",
@@ -855,7 +858,7 @@ required_document_fragments = {
         "Force Stop",
     ),
     "docs/ANDROID_PREDEVICE_READINESS.md": (
-        "READY TO RUN PHYSICAL GATE 0",
+        "PHYSICAL GATE 0 IN PROGRESS",
         "PRODUCTION IMPLEMENTATION HOLD",
         "scripts/verify-android-predevice-readiness.sh",
         "Do not create `android-app/`",
@@ -1038,6 +1041,8 @@ for required_path_filter in (
     '"scripts/verify-android-predevice-readiness.sh"',
     '"scripts/verify-product-contracts.sh"',
     '"spikes/android-gate0/**"',
+    '"spikes/android-integrated/**"',
+    '"spikes/android-shared/**"',
     '"spikes/android-ui/**"',
 ):
     if android_workflow_text.count(required_path_filter) < 2:
@@ -1047,6 +1052,7 @@ if "run: bash scripts/verify-android-predevice-readiness.sh" not in android_work
 for report_marker in (
     "spikes/android-gate0/app/build/test-results",
     "spikes/android-ui/app/build/test-results",
+    "spikes/android-integrated/app/build/test-results",
 ):
     if report_marker not in android_workflow_text:
         fail(f"Android Gate 0 workflow must preserve report collection for {report_marker}")
@@ -1075,6 +1081,8 @@ contract_scopes = [
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/ManagementFlowPrototype.kt",
     "spikes/android-ui/app/src/main/java/com/justnoise/uiprototype/HistoryPresentationRules.kt",
     "spikes/android-ui/app/src/test/java/com/justnoise/uiprototype/JustnoiseContractTest.kt",
+    "spikes/android-shared/src/main/kotlin/com/justnoise/androidcontract/JustnoiseContract.kt",
+    "spikes/android-integrated/app/src/test/java/com/justnoise/integrated/IntegratedZapStateTest.kt",
     "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/domain/PortableRules.kt",
     "spikes/android-gate0/app/src/test/java/com/justnoise/gate0/domain/PortableFixtureContractTest.kt",
 ]

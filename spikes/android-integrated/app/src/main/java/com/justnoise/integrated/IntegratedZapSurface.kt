@@ -42,12 +42,20 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.justnoise.androidcontract.JustnoiseContract
 import com.justnoise.gate0.R
 import com.justnoise.gate0.feature.Gate0Truth
 import kotlin.math.max
+
+enum class IntegratedZapAction {
+    START_SCAN,
+    STOP_SCAN,
+    OPEN_SETUP,
+}
 
 data class IntegratedZapState(
     val truth: Gate0Truth = Gate0Truth.CONSENT_REQUIRED,
@@ -60,19 +68,40 @@ data class IntegratedZapState(
     val isActive: Boolean
         get() = truth == Gate0Truth.ACTIVE
 
+    val primaryAction: IntegratedZapAction
+        get() = when (truth) {
+            Gate0Truth.IDLE -> IntegratedZapAction.START_SCAN
+            Gate0Truth.ACTIVE -> IntegratedZapAction.STOP_SCAN
+            Gate0Truth.RECOVERY_REQUIRED -> if (desiredActive) {
+                IntegratedZapAction.STOP_SCAN
+            } else {
+                IntegratedZapAction.OPEN_SETUP
+            }
+            else -> IntegratedZapAction.OPEN_SETUP
+        }
+
     val canScan: Boolean
-        get() = truth == Gate0Truth.IDLE ||
-            truth == Gate0Truth.ACTIVE ||
-            (truth == Gate0Truth.RECOVERY_REQUIRED && desiredActive)
+        get() = primaryAction != IntegratedZapAction.OPEN_SETUP
+
+    val actionLabel: String
+        get() = if (isScanning) {
+            "Hold Zap near phone"
+        } else {
+            when (primaryAction) {
+                IntegratedZapAction.START_SCAN -> "Scan Zap to start"
+                IntegratedZapAction.STOP_SCAN -> "Scan Zap to stop"
+                IntegratedZapAction.OPEN_SETUP -> "Open setup"
+            }
+        }
 }
 
 @Composable
 fun JustnoiseIntegratedTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = NoiseLime,
-            surface = IdleSurface,
-            onSurface = Color.White,
+            primary = JustnoiseContract.color("accent.noiseRewind"),
+            surface = JustnoiseContract.color("surface.zap.idle"),
+            onSurface = JustnoiseContract.color("text.zap.idle.primary"),
         ),
         content = content,
     )
@@ -85,11 +114,15 @@ fun IntegratedZapSurface(
     onOpenSetup: () -> Unit,
 ) {
     val background by animateColorAsState(
-        targetValue = if (state.isActive) Color.White else IdleSurface,
+        targetValue = JustnoiseContract.color(
+            if (state.isActive) "surface.zap.active" else "surface.zap.idle",
+        ),
         label = "integrated-zap-background",
     )
     val foreground by animateColorAsState(
-        targetValue = if (state.isActive) Color.Black else Color.White,
+        targetValue = JustnoiseContract.color(
+            if (state.isActive) "text.zap.active.primary" else "text.zap.idle.primary",
+        ),
         label = "integrated-zap-foreground",
     )
     val activity = androidx.activity.compose.LocalActivity.current
@@ -144,7 +177,7 @@ fun IntegratedZapSurface(
                         .offset(y = buttonTop)
                         .size(buttonSlot)
                         .semantics {
-                            contentDescription = zapActionLabel(state)
+                            contentDescription = state.actionLabel
                             role = Role.Button
                         }
                         .clickable(enabled = !state.isScanning, onClick = onZap)
@@ -190,7 +223,7 @@ private fun DevelopmentToolbar(
         Spacer(modifier = Modifier.size(56.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "JUSTNOISE",
+                text = JustnoiseContract.text("brand.displayName").uppercase(),
                 color = foreground,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Black,
@@ -236,17 +269,30 @@ private fun HeroHeader(
         verticalArrangement = Arrangement.spacedBy((-8).dp),
     ) {
         Text(
-            text = if (state.isActive) "Phone Zapped" else "Zap to Block",
-            color = if (state.isActive) Color.Black else Color.White,
+            text = JustnoiseContract.text(
+                if (state.isActive) "zap.active.title" else "zap.idle.title",
+            ),
+            color = JustnoiseContract.color(
+                if (state.isActive) "text.zap.active.primary" else "text.zap.idle.primary",
+            ),
             fontSize = 50.sp,
             fontWeight = FontWeight.Black,
             lineHeight = 56.sp,
             maxLines = 1,
         )
         Text(
-            text = if (state.isActive) state.elapsedText else "Distractions",
-            color = if (state.isActive) Color.Black.copy(alpha = 0.16f)
-            else Color.White.copy(alpha = 0.12f),
+            text = if (state.isActive) {
+                state.elapsedText
+            } else {
+                JustnoiseContract.text("zap.idle.subtitle")
+            },
+            color = JustnoiseContract.color(
+                if (state.isActive) {
+                    "text.zap.active.secondary"
+                } else {
+                    "text.zap.idle.secondary"
+                },
+            ),
             fontSize = 48.sp,
             fontWeight = FontWeight.Black,
             lineHeight = 54.sp,
@@ -320,25 +366,22 @@ private fun CapabilityCard(
                     .height(52.dp),
                 shape = RoundedCornerShape(26.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (active) NoiseLime else Color.White,
-                    contentColor = Color.Black,
+                    containerColor = if (active) {
+                        JustnoiseContract.color("action.zap.stop.background")
+                    } else {
+                        Color.White
+                    },
+                    contentColor = JustnoiseContract.color("action.zap.stop.label"),
                 ),
             ) {
                 Text(
-                    text = zapActionLabel(state),
+                    text = state.actionLabel,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
         }
     }
-}
-
-private fun zapActionLabel(state: IntegratedZapState): String = when {
-    state.isScanning -> "Hold Zap near phone"
-    state.desiredActive -> "Scan Zap to stop"
-    state.truth == Gate0Truth.IDLE -> "Scan Zap to start"
-    else -> "Open setup"
 }
 
 private fun statusTitle(truth: Gate0Truth): String = when (truth) {
@@ -374,5 +417,40 @@ private fun statusDetail(truth: Gate0Truth): String = when (truth) {
         "The app cannot prove enforcement is alive. Open setup to recover safely."
 }
 
-private val IdleSurface = Color(0xFF151515)
-private val NoiseLime = Color(0xFFDDFF00)
+@Preview(name = "A16 Zap idle", widthDp = 384, heightDp = 832)
+@Composable
+private fun IntegratedZapIdlePreview() {
+    IntegratedZapPreview(IntegratedZapState(truth = Gate0Truth.IDLE, selectedAppName = "Chrome"))
+}
+
+@Preview(name = "A16 Zap active", widthDp = 384, heightDp = 832)
+@Composable
+private fun IntegratedZapActivePreview() {
+    IntegratedZapPreview(
+        IntegratedZapState(
+            truth = Gate0Truth.ACTIVE,
+            selectedAppName = "Chrome",
+            elapsedText = "00:25:00",
+            desiredActive = true,
+        ),
+    )
+}
+
+@Preview(name = "A16 Zap recovery", widthDp = 384, heightDp = 832)
+@Composable
+private fun IntegratedZapRecoveryPreview() {
+    IntegratedZapPreview(
+        IntegratedZapState(
+            truth = Gate0Truth.RECOVERY_REQUIRED,
+            selectedAppName = "Chrome",
+            desiredActive = true,
+        ),
+    )
+}
+
+@Composable
+private fun IntegratedZapPreview(state: IntegratedZapState) {
+    JustnoiseIntegratedTheme {
+        IntegratedZapSurface(state = state, onZap = {}, onOpenSetup = {})
+    }
+}

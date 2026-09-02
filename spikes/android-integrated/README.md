@@ -19,11 +19,18 @@ a stale callback cannot mutate session state. The foreground path reserves the s
 three-second process claim before reader mode restores direct dispatch, preventing one
 physical tap from being applied once by each Android NFC route.
 
+The Zap hero copy and semantic colors use the same native mapping as the permission-free
+UI proof, compiled from `../android-shared/`. Contract tests reject copy/color drift,
+and the active scan action uses the shared Zap-stop yellow rather than the separate
+Noise Rewind lime. Idle, active, and recovery Compose previews are available without
+changing real session state. Local state tests keep the primary action and its label
+aligned when setup or service recovery is required.
+
 Build with the pinned Gate 0 wrapper:
 
 ```sh
 JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
-  ../android-gate0/gradlew -p . assembleDebug
+  ../android-gate0/gradlew -p . testDebugUnitTest lintDebug assembleDebug
 ```
 
 The APK is generated at `app/build/outputs/apk/debug/app-debug.apk` with the

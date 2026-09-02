@@ -1,5 +1,7 @@
 package com.justnoise.uiprototype
 
+import com.justnoise.androidcontract.JustnoiseContract
+
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

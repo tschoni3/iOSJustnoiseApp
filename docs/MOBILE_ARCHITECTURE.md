@@ -22,7 +22,7 @@ The separate `spikes/android-ui/` project now proves the Release presentation se
 
 It does not authorize a production Android application. All 38 required Galaxy A16/A17 launch-family Gate 0 cells are still `BLOCKED`, policy review is incomplete, and `spikes/android-gate0/evidence/DECISION_RECORD.md` remains `HOLD / NO-GO`. Do not create `android-app/` until that record is changed to `PASS` using the evidence rules in `docs/ANDROID_GATE_0.md`.
 
-`docs/ANDROID_PREDEVICE_READINESS.md` is the operational handoff. `scripts/verify-android-predevice-readiness.sh` validates both disposable Android projects, the shared/static boundaries, and the absence of `android-app/` in one command; the **Android Gate 0** workflow runs that same command for Gate 0, UI-prototype, architecture, and contract changes. A green run proves only the pre-device baseline described there.
+`docs/ANDROID_PREDEVICE_READINESS.md` is the operational handoff. `scripts/verify-android-predevice-readiness.sh` validates all three disposable Android projects, their shared/static boundaries, and the absence of `android-app/` in one command; the **Android Gate 0** workflow runs that same command for Gate 0, UI-prototype, integrated-shell, shared-mapping, architecture, and contract changes. A green run proves only the pre-device baseline described there.
 
 The iOS `ACCOUNT-01` ordinary-sign-out storage gap remains visible in `docs/MOBILE_BEHAVIOR_V1.md`. Per-account namespacing is legitimate product hardening, but it is not an Android feasibility prerequisite and must not be used to justify a broad startup/runtime rewrite. Address it later as a separate, measured change with an explicit migration policy and cross-account device evidence.
 
@@ -57,7 +57,8 @@ The existing iOS project remains at the repository root to avoid a high-churn mo
 ├── spikes/
 │   ├── android-gate0/           # disposable capability candidate
 │   ├── android-ui/              # permission-free Compose presentation proof
-│   └── android-integrated/      # disposable real-capability + polished Zap shell
+│   ├── android-integrated/      # disposable real-capability + polished Zap shell
+│   └── android-shared/          # native copy/color mapping; no Gradle module or app
 ├── android-app/                 # future Gradle root
 │   └── app/                     # one module initially
 ├── justnoise.xcodeproj          # existing iOS project
@@ -82,6 +83,12 @@ Gradle and Xcode create legitimate nested directories. Nesting is useful when ea
 | System capabilities | Platform adapter | Report capability and failure honestly |
 
 The JSON files are the product source of truth, not a requirement to parse JSON at application startup. Build-time generation or reviewed native mappings are both acceptable. Runtime UI must not depend on a repository file that is absent from the application bundle.
+
+The Compose UI proof and integrated development shell compile the same native mapping
+from `spikes/android-shared/`. Full key/value drift and color-component tests compare it
+with the JSON contracts. Parsed native colors are cached once; presentation does not
+parse JSON or reparse hex colors per frame. This is source reuse inside disposable
+Android apps, not a new Gradle module or a cross-platform UI runtime.
 
 The backend source file `contracts/signal/v1/openapi.yaml` is released at OpenAPI version `1.0.0` and returns `contractVersion: 1`. `product/api/signal/v1/` is a byte-for-byte copy pinned to backend `main` merge commit `d445e7a45025b59ced388465cff3c84dd9ee86fd`; its machine-readable `provenance.json` records a SHA-256 for the schema and all six canonical fixtures. Product-contract CI recomputes every checksum so both native clients can be tested against the same immutable input. This pin does not mean a client was generated: the current Swift DTOs and transport remain hand-written, and Android may use generated or reviewed hand-written mappings later.
 

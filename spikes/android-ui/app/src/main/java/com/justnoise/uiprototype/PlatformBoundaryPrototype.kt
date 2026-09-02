@@ -1,5 +1,9 @@
 package com.justnoise.uiprototype
 
+import com.justnoise.androidcontract.JustnoiseContract
+import com.justnoise.androidcontract.ShieldTargetKind
+import com.justnoise.androidcontract.renderShieldMessage
+
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image

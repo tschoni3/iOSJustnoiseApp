@@ -41,9 +41,14 @@ android {
     }
 
     sourceSets {
-        getByName("main").res.directories.add(
-            layout.buildDirectory.dir("generated/prototypeResources").get().asFile.path,
-        )
+        getByName("main") {
+            kotlin.directories.add(
+                rootProject.projectDir.resolve("../android-shared/src/main/kotlin").path,
+            )
+            res.directories.add(
+                layout.buildDirectory.dir("generated/prototypeResources").get().asFile.path,
+            )
+        }
     }
 }
 

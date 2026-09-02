@@ -17,10 +17,11 @@ The command fails unless all of the following remain true:
 - the versioned behavior, copy, design, and pinned API contracts validate;
 - the disposable Gate 0 project passes its static policy boundary, JVM tests, lint, debug APK build, and instrumentation APK build;
 - the Compose UI prototype passes its contract/reducer tests, lint, and debug APK build;
-- the integrated development shell compiles the reviewed Gate 0 capability sources,
+- the integrated development shell passes its truthful-action state tests and compiles the reviewed Gate 0 capability sources,
   real foreground NFC reader, direct NDEF entry candidate, and polished truth-driven
   Zap surface into one disposable APK;
-- the UI prototype declares no permission or service and imports no restricted Android capability API; and
+- the UI prototype declares no permission or service and neither its source nor the
+  shared native copy/color mapping imports a restricted Android capability API; and
 - no production `android-app/` exists before Gate 0 is recorded as `PASS`.
 
 GitHub's **Android Gate 0** workflow runs the same command whenever either Android spike, the mobile architecture/gate documents, shared product contracts, or the verifier itself changes.
@@ -42,7 +43,8 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 
 - Maintain the shared contracts and native mappings.
 - Improve permission-free Compose presentation states and previews.
-- Build and install the two disposable spike APKs on emulators or test phones.
+- Build and install the disposable APKs on emulators or test phones; use the integrated
+  shell for the combined real-NFC and blocked-surface physical test.
 - Exercise and harden the existing direct-dispatch Activity under G0-19 without
   promoting it into production code.
 - Prepare policy language, privacy inventory, Play account decisions, and test logistics.

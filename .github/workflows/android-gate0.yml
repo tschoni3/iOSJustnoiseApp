@@ -16,6 +16,7 @@ on:
       - "scripts/verify-product-contracts.sh"
       - "spikes/android-gate0/**"
       - "spikes/android-integrated/**"
+      - "spikes/android-shared/**"
       - "spikes/android-ui/**"
   push:
     branches:
@@ -34,6 +35,7 @@ on:
       - "scripts/verify-product-contracts.sh"
       - "spikes/android-gate0/**"
       - "spikes/android-integrated/**"
+      - "spikes/android-shared/**"
       - "spikes/android-ui/**"
   workflow_dispatch:
 
@@ -133,6 +135,7 @@ jobs:
             spikes/android-ui/app/build/test-results
             spikes/android-ui/app/build/intermediates/lint*
             spikes/android-integrated/app/build/reports
+            spikes/android-integrated/app/build/test-results
             spikes/android-integrated/app/build/intermediates/lint*
           if-no-files-found: ignore
           retention-days: 14
