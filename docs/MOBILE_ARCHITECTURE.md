@@ -45,7 +45,9 @@ checks, and an authorized stop followed by responsive Chrome. The owner confirme
 that flickering was resolved in this sample. A later task-isolation update completed
 one direct Home start/stop cycle without app UI or a chooser. A subsequent direct
 start and Chrome check exposed missing normal Android navigation controls; the
-window-bounds fix still needs a device retest. The exact builds, recording limits,
+installed window-bounds candidate `d09833d` restores navigation visibility and
+correct portrait bounds in one sample, with native Home/Back touch routing still
+unverified. The exact builds, recording limits,
 screenshots, and remaining checks are in
 `spikes/android-gate0/evidence/A16_PARTIAL_RUN_2026-09-02.md`; repetitions,
 multi-target, lifecycle/safety, and A17 evidence still prevent a full Gate 0 pass.

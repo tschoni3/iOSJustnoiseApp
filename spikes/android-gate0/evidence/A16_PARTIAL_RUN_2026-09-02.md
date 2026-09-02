@@ -156,8 +156,11 @@ does not measure time-to-interception or pre-overlay input, and does not establi
 Home, the owner reported using the prototype's **Go Home** button and not seeing any
 other controls. The supplied phone photo corroborates missing normal navigation
 buttons. The app's escape action must not be credited as a normal system-Home pass.
-Direct stop and post-stop normal Chrome interaction for this second cycle remain
-pending; the last observed state is active/revision `14` with Chrome foreground.
+After being asked to return Home and stop with the physical Zap before an update,
+the owner reported **“stopped.”** A passive check confirmed idle/revision `15`, a
+connected service, and unlocked Samsung Home. This corroborates the second stop,
+but the owner did not separately confirm chooser-free navigation for it. Post-stop
+normal Chrome interaction was not checked for this second cycle.
 
 The following artifact belongs to the updated build, unlike the original foreground
 artifacts below. It contains only the interruption UI and generic device status icons.
@@ -168,11 +171,11 @@ artifacts below. It contains only the interruption UI and generic device status 
 
 ### Navigation-controls defect and candidate fix
 
-On the installed `d93ae01` build, passive window diagnostics placed the opaque
+On the previously installed `d93ae01` build, passive window diagnostics placed the opaque
 accessibility overlay at `[0,100][1080,2340]`, above a shown 135-pixel navigation-bar
 window. Together with the screenshot and owner report, this establishes a visible
-system-navigation defect. G0-14 remains blocked by this known failure, not merely
-an unperformed check.
+system-navigation defect on that build, not merely an unperformed G0-14 check.
+The newer visibility sample below does not complete the remaining G0-14 coverage.
 
 The new candidate sizes the actual overlay window using `currentWindowMetrics`,
 visible system-bar insets, and the per-edge maximum of stable display-cutout insets.
@@ -191,13 +194,50 @@ Six pure geometry tests cover measured A16 portrait dimensions, side navigation,
 zero visible navigation inset, offset bounds, and invalid sizes. A source-wiring
 regression failed before the controller change. The full Android pre-device verifier
 passed afterward, including all six geometry and eight static-policy tests. The
-pre-install integrated candidate APK SHA-256 is
+integrated candidate APK SHA-256 is
 `6487e3f462328b9a78d8bc767c36b4c7ee1e0fdaf483e93235725e35a1fb3d77`.
 These tests do not establish actual
 Home/Back touch routing. Configuration and inset callbacks refresh changed bounds
 without polling; immersive/transient bar changes may not reach an overlay above
-the bars and remain explicitly unverified. The candidate has not been installed
-or physically retested; the owner was asked to stop the active session first.
+the bars and remain explicitly unverified.
+
+After the confirmed stop to idle/revision `15`, source
+`d09833de0ebbe5652bde590b2e3418942ed3db36` was installed using `adb install -r`.
+The installed `base.apk` matched the candidate checksum above. No app-data clearing,
+uninstall, re-pairing, or permission toggle was performed. Accessibility remained
+enabled; sanitized state retained idle/revision `15`, `service_connected=true`,
+and an advancing heartbeat. The resumed app showed **Ready to Zap** with Chrome
+selected and normal Android navigation controls visible on the main app screen.
+That main-screen observation does not verify navigation under the blocker.
+
+### Installed window-bounds candidate: navigation visibility retest
+
+The phone was returned to Home. Following a request to tap the Zap once to start,
+open Chrome, and inspect the bottom navigation buttons, the owner replied
+**“yes its visible now.”** Sanitized state changed from idle/revision `15` to
+active/revision `16`, with the service connected and a fresh heartbeat. This is
+one post-install start and owner-reported navigation-visibility sample; chooser
+behavior was not separately reconfirmed for this start.
+
+The first subsequent screenshot/window read found Samsung Home, not the blocker.
+The action that returned Home was not established and is not credited as a normal
+Home-button test. With state still active/revision `16`, Chrome was relaunched by
+ADB using its normal Activity. The next screenshot showed the Chrome-specific
+blocker and visible native Recents, Home, Back, and Accessibility controls.
+Passive window diagnostics measured the actual overlay at `[0,100][1080,2205]`
+(`1080 x 2105`), leaving the navigation window's `[0,2205][1080,2340]` region
+uncovered. The old failing build's overlay extended to `2340`.
+
+| Artifact, source `d09833d` | SHA-256 |
+| --- | --- |
+| [Chrome blocker with restored navigation controls](a16-2026-09-02/navigation-controls-restored.png) | `85560b8ccc16a2458bc5190d565071e40b3bd79c240821ae4478e155e777daae` |
+
+The artifact contains the blocked UI and generic status icons only. It follows
+the synthetic warm Chrome relaunch, not a recorded manual-launch sequence.
+Visibility and portrait bounds are confirmed in this sample; actual normal
+Home/Back touch routing, sustained touch blocking, and rotation/immersive behavior
+remain unverified on `d09833d`. The owner was asked to use the small native Home
+button, not the app's large **Go Home** escape action, while keeping the session active.
 
 ## Preserved foreground-cycle artifacts
 

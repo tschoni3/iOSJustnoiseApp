@@ -1,6 +1,6 @@
 # Android Gate 0 device evidence matrix
 
-Status: **PARTIAL — known A16 system-navigation defect; all `BLOCKED` cells count as `FAIL`**
+Status: **PARTIAL — A16 navigation visibility restored in one sample; safety coverage incomplete; all `BLOCKED` cells count as `FAIL`**
 
 The exact criteria and interpretation are normative in [`../../../docs/ANDROID_GATE_0.md`](../../../docs/ANDROID_GATE_0.md). Never change a cell to `PASS` without attaching the requested recording/log notes and the device/run metadata below.
 
@@ -14,7 +14,7 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | Sales region / CSC | NOT RECORDED | NOT RECORDED |
 | RAM tier | NOT RECORDED | NOT RECORDED |
 | One UI version | Device property `80500` (record the user-visible One UI label before a gate decision) | NOT RECORDED |
-| Prototype commit and APK SHA-256 | Foreground cycle: `dbb3ba6` / `f9a2c63cdb1cf3481d5007939bd0b96d02a126c1af6a2f1f709467aacf72b077`. Later installed navigation candidate: `d93ae01` / `d2de157599fc77a59fb153f0fde1776bab6c0e26cfa10b9d48e0b4f1abe8ebc0`; see the build-scoped September 2 record | NOT RECORDED |
+| Prototype commit and APK SHA-256 | Foreground cycle: `dbb3ba6` / `f9a2c63cdb1cf3481d5007939bd0b96d02a126c1af6a2f1f709467aacf72b077`. Task-isolation cycle: `d93ae01` / `d2de157599fc77a59fb153f0fde1776bab6c0e26cfa10b9d48e0b4f1abe8ebc0`. Latest installed window-bounds candidate: `d09833d` / `6487e3f462328b9a78d8bc767c36b4c7ee1e0fdaf483e93235725e35a1fb3d77`; see the build-scoped September 2 record | NOT RECORDED |
 | Install profile | Must be unmanaged personal | Must be unmanaged personal |
 | Default battery run | NOT RUN | NOT RUN |
 | Unrestricted battery run | NOT RUN | NOT RUN |
@@ -33,12 +33,12 @@ The exact criteria and interpretation are normative in [`../../../docs/ANDROID_G
 | G0-06 | Back, Home, Recents, rotation, split screen, and rapid launch do not bypass | BLOCKED | BLOCKED | Not run |
 | G0-07 | Screen-off 30-minute durability in default and unrestricted battery modes | BLOCKED | BLOCKED | Not run |
 | G0-08 | Reboot restores enforcement or truthfully requires recovery; five launches pass after restore | BLOCKED | BLOCKED | Not run |
-| G0-09 | Authorized real Zap stops 10/10; canceled/malformed/unauthorized do not stop | BLOCKED | BLOCKED | September 2: one owner-confirmed foreground stop, active/revision 8 to idle/revision 9, Ready to Zap, and neutral Chrome with responsive menu. Later, one owner-confirmed direct Home stop on `d93ae01`, active/revision 12 to idle/revision 13, without app UI or chooser. Repetitions and canceled/malformed/unauthorized cases remain missing |
+| G0-09 | Authorized real Zap stops 10/10; canceled/malformed/unauthorized do not stop | BLOCKED | BLOCKED | September 2: one owner-confirmed foreground stop, active/revision 8 to idle/revision 9, Ready to Zap, and neutral Chrome with responsive menu. Later, one owner-confirmed direct Home stop on `d93ae01`, active/revision 12 to idle/revision 13, without app UI or chooser. A further owner-reported stop changed active/revision 14 to idle/revision 15 before installing `d09833d`; chooser behavior and post-stop Chrome interaction were not separately checked for that sample. Required repetitions and canceled/malformed/unauthorized cases remain missing |
 | G0-10 | Revocation reports unavailable/recovery and preserves non-destructive escape | BLOCKED | BLOCKED | Not run |
 | G0-11 | Thirty-minute, ten-app false-positive/privacy script | BLOCKED | BLOCKED | Not run |
 | G0-12 | No crash, ANR, persistent overlay, loop, lockout, or visibly usable target flash | BLOCKED | BLOCKED | Owner confirmed no flicker on September 2 after `02f6e7c`/`dbb3ba6`; short video and before/after touch screenshots preserved. Full safety and repeated sustained-interaction coverage still pending |
 | G0-13 | Manifest, disclosure, data handling, and Play declaration policy review | BLOCKED | BLOCKED | Not reviewed |
-| G0-14 | Justnoise, Home, Settings, System UI, permission/package, phone/emergency surfaces never covered | BLOCKED | BLOCKED | Known failure on installed `d93ae01`: owner and screenshot confirm missing normal Android navigation controls under the Chrome blocker; overlay geometry overlaps the navigation region. App GO HOME works per owner but does not establish normal system-Home usability. Metrics-derived window-bounds fix is pending installation/retest; remaining protected-surface coverage is missing. Use emergency test route only |
+| G0-14 | Justnoise, Home, Settings, System UI, permission/package, phone/emergency surfaces never covered | BLOCKED | BLOCKED | Prior `d93ae01` failure: missing normal navigation controls and overlay overlapping navigation region. Installed `d09833d`: owner reports controls visible; screenshot after synthetic Chrome relaunch confirms this, with overlay bottom 2205 leaving the 135-pixel navigation region uncovered. Actual native Home/Back touch routing and remaining protected-surface coverage are unverified. App GO HOME is not normal system-Home evidence. Use emergency test route only |
 | G0-15 | Disable, Force Stop, and uninstall escape via launcher and Settings; reinstall unchecked | BLOCKED | BLOCKED | Not run; no ADB rescue allowed |
 | G0-16 | Service crash/restart, process death, OEM reclaim, and Force Stop recover truthfully | BLOCKED | BLOCKED | Not run |
 | G0-17 | Natural Doze and eight-hour overnight pass in both default and unrestricted battery modes | BLOCKED | BLOCKED | Not run; unrestricted-only pass fails gate |

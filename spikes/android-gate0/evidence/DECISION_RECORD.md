@@ -10,8 +10,11 @@ The repository now contains a reviewable candidate and CI design, but the requir
 
 The September 2 A16 follow-up records one foreground cycle and one warm direct
 Home start/stop cycle. A further direct-start/Chrome-blocking check exposed missing
-normal Android navigation controls on `d93ae01`. A window-bounds fix is being
-verified; the app's own Go Home button is not a substitute for system navigation.
+normal Android navigation controls on `d93ae01`. The window-bounds candidate
+`d09833d` passed the local verifier and is installed. One portrait retest confirms
+visible navigation controls and corrected window bounds; native Home/Back touch
+routing and remaining safety coverage are still unverified. The app's own Go Home
+button is not a substitute for system navigation.
 See [the build-scoped evidence](A16_PARTIAL_RUN_2026-09-02.md). No safety PASS is implied.
 
 ## Pre-device evidence now recorded
