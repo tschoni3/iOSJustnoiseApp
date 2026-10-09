@@ -934,7 +934,7 @@ required_document_fragments = {
         "PHYSICAL GATE 0 IN PROGRESS",
         "PRODUCTION IMPLEMENTATION HOLD",
         "scripts/verify-android-predevice-readiness.sh",
-        "Do not create `android-app/`",
+        "old directory-absence guard is replaced by layout verification",
         "Complete all 19 required A16 cells",
         "A17 validation is deferred and non-blocking",
         "History density and duration-label rules",
