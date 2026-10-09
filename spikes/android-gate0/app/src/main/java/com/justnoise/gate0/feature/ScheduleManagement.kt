@@ -1,11 +1,11 @@
 package com.justnoise.gate0.feature
 
 import android.content.Context
-import com.justnoise.gate0.data.DEFAULT_SCHEDULE_MODE_REFERENCE
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.data.ScheduleDraft
 import com.justnoise.gate0.data.ScheduleExecution
 import com.justnoise.gate0.data.StoredGate0State
+import com.justnoise.gate0.data.StoredMode
 import com.justnoise.gate0.data.StoredSchedule
 import com.justnoise.gate0.platform.restriction.AccessibilityServiceStatus
 import com.justnoise.gate0.platform.schedule.ScheduleAlarmScheduler
@@ -18,14 +18,23 @@ data class ScheduleManagementSnapshot(
     val consentAccepted: Boolean = false,
     val consentEpochMilliseconds: Long = 0L,
     val zapPaired: Boolean = false,
-    val selectedAppCount: Int = 0,
     val accessibilityEnabled: Boolean = false,
     val recoveryRequired: Boolean = false,
     val suspended: Boolean = false,
     val error: Boolean = false,
-)
+    val modes: List<StoredMode> = emptyList(),
+    val recentModeId: String? = null,
+) {
+    fun modeForReference(reference: String?): StoredMode? = modes.find { it.id == reference }
 
-enum class ScheduleMutationFailure { CONSENT_REQUIRED, CONFLICT, INVALID_OR_FAILED_WRITE, REARM_FAILED }
+    fun hasSetupGap(modeReference: String?): Boolean = error || !consentAccepted || !exactAlarmAccess ||
+        !zapPaired || !accessibilityEnabled || recoveryRequired || suspended ||
+        modeForReference(modeReference)?.selectedPackages.isNullOrEmpty()
+}
+
+enum class ScheduleMutationFailure {
+    CONSENT_REQUIRED, CONFLICT, MODE_UNAVAILABLE, EMPTY_SELECTION, INVALID_OR_FAILED_WRITE, REARM_FAILED,
+}
 
 data class ScheduleMutationResult(
     val saved: Boolean,
@@ -41,12 +50,17 @@ class ScheduleManagement(
     private val rearm: () -> Unit = { ScheduleRuntime(context).onConfigurationChanged() },
 ) {
     private val appContext = context.applicationContext
+    // This bridge belongs to one UI/account lifetime. A queued create has no schedule ID
+    // yet, so consent+schedule revision alone cannot prevent writing it into another account.
+    private val workspace = preferences.workspaceReadToken()
 
     fun load(): ScheduleManagementSnapshot = try {
         preferences.withScheduleLock {
+            if (!preferences.isWorkspaceCurrent(workspace)) return@withScheduleLock ScheduleManagementSnapshot(error = true)
             val schedules = preferences.loadSchedules()
             val executions = preferences.loadScheduleExecutions()
             val state = preferences.snapshot()
+            val modes = preferences.loadModes()
             ScheduleManagementSnapshot(
                 schedules = schedules.schedules,
                 executions = executions.entries,
@@ -54,11 +68,12 @@ class ScheduleManagement(
                 consentAccepted = state.hasCurrentConsent(),
                 consentEpochMilliseconds = state.acceptedDisclosureEpochMilliseconds,
                 zapPaired = !state.zapDigest.isNullOrBlank(),
-                selectedAppCount = state.selectedPackages.size,
                 accessibilityEnabled = AccessibilityServiceStatus.isEnabled(appContext),
                 recoveryRequired = state.recoveryRequired,
                 suspended = ScheduleStartupGuard.needsForegroundRecovery(preferences),
-                error = schedules.error || executions.error,
+                error = schedules.error || executions.error || modes.error,
+                modes = modes.modes,
+                recentModeId = modes.recentModeId,
             )
         }
     } catch (_: Exception) {
@@ -78,13 +93,16 @@ class ScheduleManagement(
         id: String? = null,
         expectedRevision: Long? = null,
         expectedConsentEpochMilliseconds: Long? = null,
-    ): ScheduleMutationResult = mutate(id, expectedRevision, expectedConsentEpochMilliseconds, creating = id == null) {
+    ): ScheduleMutationResult = mutate(
+        id, expectedRevision, expectedConsentEpochMilliseconds, creating = id == null,
+        validateMode = true, requestedModeReference = draft.modeReference,
+    ) {
         preferences.saveSchedule(draft, id, expectedRevision)
     }
 
     fun setEnabled(
         id: String, revision: Long, enabled: Boolean, expectedConsentEpochMilliseconds: Long? = null,
-    ): ScheduleMutationResult = mutate(id, revision, expectedConsentEpochMilliseconds) {
+    ): ScheduleMutationResult = mutate(id, revision, expectedConsentEpochMilliseconds, validateMode = enabled) {
         preferences.setScheduleEnabled(id, revision, enabled)
     }
 
@@ -99,6 +117,8 @@ class ScheduleManagement(
         expectedRevision: Long?,
         expectedConsentEpochMilliseconds: Long?,
         creating: Boolean = false,
+        validateMode: Boolean = false,
+        requestedModeReference: String? = null,
         write: () -> Boolean,
     ): ScheduleMutationResult {
         // UI callers freeze this when accepting the action, before queueing worker-thread work.
@@ -109,6 +129,9 @@ class ScheduleManagement(
         }
         val committed = try {
             preferences.withScheduleLock {
+                if (!preferences.isWorkspaceCurrent(workspace)) {
+                    return@withScheduleLock failed(ScheduleMutationFailure.CONFLICT)
+                }
                 // Validate consent inside the same lock as the CAS write, including cleanup retries.
                 val schedules = preferences.loadSchedules()
                 val executions = preferences.loadScheduleExecutions()
@@ -123,6 +146,16 @@ class ScheduleManagement(
                 if ((creating && expectedRevision != null) ||
                     (!creating && (current == null || current.revision != expectedRevision))
                 ) return@withScheduleLock failed(ScheduleMutationFailure.CONFLICT)
+                if (validateMode) {
+                    val modes = preferences.loadModes()
+                    if (modes.error) return@withScheduleLock failed(ScheduleMutationFailure.INVALID_OR_FAILED_WRITE)
+                    val reference = requestedModeReference ?: current?.modeReference ?: modes.recentModeId
+                    val mode = modes.modes.find { it.id == reference }
+                        ?: return@withScheduleLock failed(ScheduleMutationFailure.MODE_UNAVAILABLE)
+                    if (mode.selectedPackages.isEmpty()) {
+                        return@withScheduleLock failed(ScheduleMutationFailure.EMPTY_SELECTION)
+                    }
+                }
                 if (write()) ScheduleMutationResult(saved = true)
                 else failed(ScheduleMutationFailure.INVALID_OR_FAILED_WRITE)
             }
@@ -146,9 +179,7 @@ class ScheduleManagement(
             acceptedDisclosureEpochMilliseconds > 0L
 
     private fun ScheduleManagementSnapshot.hasSetupGap(): Boolean = error ||
-        (schedules.any { it.enabled } && (!exactAlarmAccess || !consentAccepted || !zapPaired ||
-            selectedAppCount == 0 || !accessibilityEnabled || recoveryRequired || suspended ||
-            schedules.any { it.enabled && it.modeReference != DEFAULT_SCHEDULE_MODE_REFERENCE }))
+        schedules.any { it.enabled && hasSetupGap(it.modeReference) }
 
     private fun failed(reason: ScheduleMutationFailure) = ScheduleMutationResult(saved = false, failure = reason)
 }

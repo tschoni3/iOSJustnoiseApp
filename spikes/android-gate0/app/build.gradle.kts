@@ -60,8 +60,18 @@ android {
 tasks.withType<Test>().configureEach {
     inputs.files(
         rootProject.projectDir.resolve("app/src/main/AndroidManifest.xml"),
+        rootProject.projectDir.resolve("app/src/debug/AndroidManifest.xml"),
+        rootProject.projectDir.resolve("app/src/release/AndroidManifest.xml"),
         rootProject.projectDir.resolve("../android-integrated/app/src/main/AndroidManifest.xml"),
-    ).withPropertyName("nfcEntryManifests").withPathSensitivity(PathSensitivity.RELATIVE)
+        rootProject.projectDir.resolve("../android-integrated/app/src/debug/AndroidManifest.xml"),
+        rootProject.projectDir.resolve("../android-integrated/app/src/release/AndroidManifest.xml"),
+    ).withPropertyName("policyManifests").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(
+        rootProject.projectDir.resolve("../android-integrated/app/src/main/res/values/privacy_draft.xml"),
+        rootProject.projectDir.resolve("../android-integrated/app/src/main/res/values/settings.xml"),
+        rootProject.projectDir.resolve("../android-integrated/app/src/main/res/values/strings.xml"),
+        rootProject.projectDir.resolve("evidence/PLAY_DECLARATION_DRAFT.md"),
+    ).withPropertyName("privacyDraftMaterials").withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty(
         "justnoise.repositoryRoot",
         rootProject.projectDir.resolve("../..").canonicalPath,
@@ -69,7 +79,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-    implementation("androidx.core:core:1.16.0")
+    implementation("androidx.core:core:1.18.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

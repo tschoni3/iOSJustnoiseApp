@@ -6,6 +6,11 @@ xcuserdata/
 DerivedData/
 .build/
 
+# Local IDE and script caches
+.idea/
+**/__pycache__/
+*.pyc
+
 # Disposable Android Gate 0 build state
 spikes/android-gate0/.gradle/
 spikes/android-gate0/.kotlin/

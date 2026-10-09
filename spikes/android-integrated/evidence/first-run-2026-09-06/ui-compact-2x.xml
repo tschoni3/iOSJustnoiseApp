@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="5" failures="0" errors="0" skipped="0" time="11.277" timestamp="2026-09-06T10:52:48" hostname="localhost">
+  <testsuite name="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" tests="5" failures="0" errors="0" skipped="0" time="10.589" timestamp="2026-09-06T10:52:48" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="rotatingSecondPageKeepsPageAndDoesNotCompleteTutorial" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="3.569" />
+    <testcase name="twoPagesReachActivationWithoutGrantingConsentPairingOrStartingSession" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="1.329" />
+    <testcase name="existingLegacyPairSkipsEducationWithoutReplacingPairOrGrantingConsent" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="1.044" />
+    <testcase name="pairedConfirmationRequiresExplicitContinueBeforeOpeningUncheckedSetup" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="2.674" />
+    <testcase name="completedTutorialSurvivesFreshActivityLaunchWithoutSavedState" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="1.973" />
+  </testsuite>
+</testsuites>

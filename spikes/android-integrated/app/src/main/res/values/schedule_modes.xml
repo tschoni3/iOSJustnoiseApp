@@ -1,0 +1,16 @@
+<resources>
+    <string name="integrated_schedule_mode_label">Mode</string>
+    <string name="integrated_schedule_mode_choose">Choose a mode</string>
+    <string name="integrated_schedule_mode_required">Choose a mode for this schedule.</string>
+    <string name="integrated_schedule_mode_unavailable">This schedule’s mode is unavailable. Choose another mode.</string>
+    <string name="integrated_schedule_mode_empty">This mode has no apps selected. Edit its apps in Modes or choose another mode.</string>
+    <string name="integrated_schedule_modes_empty">No modes yet. Create a mode with apps to block from Zap, then return to this schedule.</string>
+    <string name="integrated_schedule_mode_missing_label">Mode unavailable</string>
+    <string name="integrated_schedule_mode_no_apps">No apps selected</string>
+    <plurals name="integrated_schedule_mode_app_count">
+        <item quantity="one">%1$d app selected</item>
+        <item quantity="other">%1$d apps selected</item>
+    </plurals>
+    <string name="integrated_schedule_mode_start_help">Each start uses this schedule’s mode and its apps saved at that time. An already-started session keeps its own app selection.</string>
+    <string name="integrated_schedule_mode_explanation">Start automatically. Tap Zap to stop. Each schedule uses its own selected mode. Start times may vary with Android settings.</string>
+</resources>

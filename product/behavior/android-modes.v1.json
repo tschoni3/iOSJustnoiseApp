@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetVersion": "1.0.0",
+  "scope": "android-native-extension",
+  "approvedOn": "2026-09-07",
+  "description": "Framework-neutral Android named-mode examples. These extend the existing last-explicit-mode and schedule safety intent without changing the shipped iOS app or its existing conformance gaps. Fixture packages and identifiers are synthetic; no NFC payloads appear here.",
+  "iosConformance": "Existing iOS mode UI is unchanged. These Android storage/migration/deletion fixtures are not iOS conformance or physical-device evidence; MODE-01 remains an explicitly documented iOS gap.",
+  "limits": { "modes": 30, "nameCharacters": 60, "targetsPerMode": 500 },
+  "catalogs": {
+    "work-selected": {
+      "schemaVersion": 1,
+      "recentModeId": "11111111-1111-4111-8111-111111111111",
+      "modes": [
+        { "id": "22222222-2222-4222-8222-222222222222", "revision": 3, "name": "Rest", "selectedPackages": ["example.rest"] },
+        { "id": "11111111-1111-4111-8111-111111111111", "revision": 2, "name": "Work", "selectedPackages": ["example.work", "example.browser"] }
+      ]
+    },
+    "recent-missing": {
+      "schemaVersion": 1,
+      "recentModeId": "33333333-3333-4333-8333-333333333333",
+      "modes": [
+        { "id": "22222222-2222-4222-8222-222222222222", "revision": 3, "name": "Rest", "selectedPackages": ["example.rest"] }
+      ]
+    },
+    "no-recent-selection": {
+      "schemaVersion": 1,
+      "recentModeId": null,
+      "modes": [
+        { "id": "22222222-2222-4222-8222-222222222222", "revision": 3, "name": "Rest", "selectedPackages": ["example.rest"] }
+      ]
+    },
+    "legacy-empty": {
+      "schemaVersion": 1,
+      "recentModeId": "local-default",
+      "modes": [
+        { "id": "local-default", "revision": 1, "name": "Noise", "selectedPackages": [] }
+      ]
+    },
+    "empty": { "schemaVersion": 1, "recentModeId": null, "modes": [] }
+  },
+  "entryCases": [
+    { "id": "manual-uses-explicit-work-not-first-mode", "catalog": "work-selected", "sessionActive": false, "expectedAction": "startRecentMode", "expectedModeId": "11111111-1111-4111-8111-111111111111", "expectedTargets": ["example.browser", "example.work"] },
+    { "id": "missing-recent-never-falls-back-to-rest", "catalog": "recent-missing", "sessionActive": false, "expectedAction": "modeUnavailable", "expectedModeId": null, "expectedTargets": [] },
+    { "id": "no-explicit-selection-never-picks-first", "catalog": "no-recent-selection", "sessionActive": false, "expectedAction": "modeUnavailable", "expectedModeId": null, "expectedTargets": [] },
+    { "id": "empty-legacy-mode-cannot-start", "catalog": "legacy-empty", "sessionActive": false, "expectedAction": "modeUnavailable", "expectedModeId": null, "expectedTargets": [] },
+    { "id": "deleted-last-mode-stays-empty", "catalog": "empty", "sessionActive": false, "expectedAction": "modeUnavailable", "expectedModeId": null, "expectedTargets": [] },
+    { "id": "stop-does-not-require-remembered-mode", "catalog": "recent-missing", "sessionActive": true, "expectedAction": "stopActiveSession", "expectedModeId": null, "expectedTargets": [] },
+    { "id": "stop-does-not-require-any-mode", "catalog": "empty", "sessionActive": true, "expectedAction": "stopActiveSession", "expectedModeId": null, "expectedTargets": [] }
+  ],
+  "scheduleResolutionCases": [
+    { "id": "schedule-resolves-own-rest-not-recent-work", "catalog": "work-selected", "modeId": "22222222-2222-4222-8222-222222222222", "expectedModeId": "22222222-2222-4222-8222-222222222222", "expectedTargets": ["example.rest"] },
+    { "id": "missing-schedule-mode-never-falls-back", "catalog": "work-selected", "modeId": "33333333-3333-4333-8333-333333333333", "expectedModeId": null, "expectedTargets": [] },
+    { "id": "valid-schedule-mode-does-not-need-recent-selection", "catalog": "no-recent-selection", "modeId": "22222222-2222-4222-8222-222222222222", "expectedModeId": "22222222-2222-4222-8222-222222222222", "expectedTargets": ["example.rest"] },
+    { "id": "empty-scheduled-mode-is-unavailable", "catalog": "legacy-empty", "modeId": "local-default", "expectedModeId": null, "expectedTargets": [] }
+  ],
+  "deletionCases": [
+    { "id": "unreferenced-mode-can-delete", "modeId": "11111111-1111-4111-8111-111111111111", "scheduleReferences": [], "expectedAllowed": true },
+    { "id": "enabled-schedule-blocks-delete", "modeId": "11111111-1111-4111-8111-111111111111", "scheduleReferences": [{ "modeId": "11111111-1111-4111-8111-111111111111", "enabled": true }], "expectedAllowed": false },
+    { "id": "disabled-schedule-also-blocks-delete", "modeId": "11111111-1111-4111-8111-111111111111", "scheduleReferences": [{ "modeId": "11111111-1111-4111-8111-111111111111", "enabled": false }], "expectedAllowed": false },
+    { "id": "other-mode-schedule-does-not-block-delete", "modeId": "11111111-1111-4111-8111-111111111111", "scheduleReferences": [{ "modeId": "22222222-2222-4222-8222-222222222222", "enabled": true }], "expectedAllowed": true },
+    { "id": "legacy-reference-keeps-migrated-mode", "modeId": "local-default", "scheduleReferences": [{ "modeId": "local-default", "enabled": false }], "expectedAllowed": false }
+  ],
+  "migrationCases": [
+    { "id": "no-legacy-key-means-empty-catalog", "legacyPackages": null, "expectedRecentModeId": null, "expectedModes": [] },
+    { "id": "legacy-empty-is-preserved-not-invented-targets", "legacyPackages": [], "expectedRecentModeId": "local-default", "expectedModes": [{ "id": "local-default", "revision": 1, "name": "Noise", "selectedPackages": [] }] },
+    { "id": "legacy-targets-retain-local-default-schedule-reference", "legacyPackages": ["example.browser", "example.social"], "expectedRecentModeId": "local-default", "expectedModes": [{ "id": "local-default", "revision": 1, "name": "Noise", "selectedPackages": ["example.browser", "example.social"] }] }
+  ],
+  "nameCases": [
+    { "id": "plain-name", "name": "Work", "expectedValid": true },
+    { "id": "trim-before-name-validation", "name": "  Work  ", "expectedValid": true },
+    { "id": "blank-name", "name": "   ", "expectedValid": false },
+    { "id": "empty-name", "name": "", "expectedValid": false },
+    { "id": "embedded-control-rejected", "name": "Work\nMode", "expectedValid": false },
+    { "id": "name-at-bound", "repeatCharacter": "x", "repeatCount": 60, "expectedValid": true },
+    { "id": "name-over-bound", "repeatCharacter": "x", "repeatCount": 61, "expectedValid": false }
+  ],
+  "targetCases": [
+    { "id": "nonempty-supported-adapter-reference", "packages": ["example.browser"], "allowEmpty": false, "expectedValid": true },
+    { "id": "empty-create-rejected", "packages": [], "allowEmpty": false, "expectedValid": false },
+    { "id": "empty-legacy-storage-preserved", "packages": [], "allowEmpty": true, "expectedValid": true },
+    { "id": "blank-target-rejected", "packages": [""], "allowEmpty": false, "expectedValid": false },
+    { "id": "padded-target-rejected", "packages": [" example.browser "], "allowEmpty": false, "expectedValid": false },
+    { "id": "target-bound", "generatedTargetCount": 500, "allowEmpty": false, "expectedValid": true },
+    { "id": "target-over-bound", "generatedTargetCount": 501, "allowEmpty": false, "expectedValid": false }
+  ],
+  "adapterObligations": [
+    "All mode changes and explicit selection reject requested-active or recovery state.",
+    "Create/edit validate currently eligible Android launchable apps; pure target syntax is not installed-app safety evidence.",
+    "Saving a mode does not change the most recent explicit selection. A schedule resolves its own mode and never changes that selection.",
+    "Deleting the recent mode clears the remembered ID and never selects another. Zero modes remain zero; deleted defaults are not recreated.",
+    "Migrate legacy data only when no mode catalog exists; empty or dangling saved catalogs never invoke legacy migration.",
+    "An active session keeps its fixed target snapshot; stopping remains independent of mode lookup.",
+    "Revalidate mode identity/revision, consent and schedule references under the existing shared state lock before commit.",
+    "History schema and generic notification content remain unchanged; mode names and target sets are not added to them."
+  ]
+}

@@ -12,11 +12,24 @@ import javax.crypto.SecretKey
 class HmacZapStore(
     private val preferences: Gate0Preferences,
 ) {
-    fun pair(transientCanonicalRecord: ByteArray): Boolean {
-        if (transientCanonicalRecord.isEmpty()) return false
+    /** Unconfirmed compatibility calls may provision an initial Zap, never replace one. */
+    fun pair(transientCanonicalRecord: ByteArray): Boolean = pairInitial(transientCanonicalRecord)
+
+    fun pairInitial(transientCanonicalRecord: ByteArray): Boolean = synchronized(KEY_LOCK) {
+        if (transientCanonicalRecord.isEmpty() || !preferences.canPairInitialZap()) return false
+        writeDigest(transientCanonicalRecord, preferences::setInitialZapDigest)
+    }
+
+    fun pair(transientCanonicalRecord: ByteArray, expectedToken: ZapPairingToken): Boolean = synchronized(KEY_LOCK) {
+        if (transientCanonicalRecord.isEmpty() || !preferences.canPairZap(expectedToken)) return false
+        writeDigest(transientCanonicalRecord) { preferences.commitZapPairing(expectedToken, it) }
+    }
+
+    private fun writeDigest(transientCanonicalRecord: ByteArray, commit: (String) -> Boolean): Boolean {
         val digest = computeDigest(transientCanonicalRecord)
         return try {
-            preferences.setZapDigest(Base64.encodeToString(digest, Base64.NO_WRAP))
+            val encodedDigest = Base64.encodeToString(digest, Base64.NO_WRAP)
+            commit(encodedDigest)
         } finally {
             digest.fill(0)
         }
@@ -38,7 +51,7 @@ class HmacZapStore(
         }
     }
 
-    fun clear(): Boolean {
+    fun clear(): Boolean = synchronized(KEY_LOCK) {
         val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) {
             keyStore.deleteEntry(KEY_ALIAS)
@@ -46,7 +59,7 @@ class HmacZapStore(
         return preferences.clearZapDigest()
     }
 
-    private fun computeDigest(transientCanonicalRecord: ByteArray): ByteArray {
+    private fun computeDigest(transientCanonicalRecord: ByteArray): ByteArray = synchronized(KEY_LOCK) {
         val mac = Mac.getInstance(HMAC_ALGORITHM)
         mac.init(loadOrCreateKey())
         return mac.doFinal(transientCanonicalRecord)
@@ -69,6 +82,9 @@ class HmacZapStore(
     }
 
     companion object {
+        // Always take this lock before any preference operation. Withdrawal releases STATE_LOCK
+        // before clearing the key. Concurrent first pairs cannot rotate one another's fresh key.
+        private val KEY_LOCK = Any()
         private const val ANDROID_KEY_STORE = "AndroidKeyStore"
         private const val HMAC_ALGORITHM = KeyProperties.KEY_ALGORITHM_HMAC_SHA256
         private const val KEY_ALIAS = "justnoise_gate0_zap_hmac_v1"

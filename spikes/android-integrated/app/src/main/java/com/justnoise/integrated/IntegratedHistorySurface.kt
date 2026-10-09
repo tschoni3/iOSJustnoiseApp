@@ -1,65 +1,106 @@
 package com.justnoise.integrated
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
-import com.justnoise.gate0.data.SessionHistoryEntry
-import com.justnoise.gate0.data.SessionHistorySnapshot
+import com.justnoise.androidcontract.JustnoiseContract
+import com.justnoise.gate0.R
+import com.justnoise.gate0.data.SessionHistoryTimelineSnapshot
+import com.justnoise.gate0.domain.HistoryDaySummary
+import com.justnoise.gate0.domain.HistoryWindow
 import com.justnoise.uiprototype.PortableHistoryDurationStyle
 import com.justnoise.uiprototype.PortableHistoryRules
-import java.time.Instant
-import java.time.ZoneId
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.math.cos
+import kotlin.math.sin
 
-data class IntegratedHistoryState(
-    val snapshot: SessionHistorySnapshot? = null,
-    val loading: Boolean = false,
-)
+private val HistoryDark = Color(0xFF0E0E0D)
+private val HistoryOrange = Color(0xFFFF9500)
+private val HistoryBody = Color(0xFF555555)
 
+/** Real read-only calendar state. This surface never creates records or calls an adapter. */
 @Composable
 fun IntegratedHistorySurface(
     state: IntegratedHistoryState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    onLoadMore: () -> Unit,
+    onSelectWindow: (HistoryWindow) -> Unit,
+    onSelectDay: (LocalDate) -> Unit,
+    onDismissDay: () -> Unit,
+    onOpenSettings: () -> Unit = {},
 ) {
     val activity = LocalActivity.current
-    LaunchedEffect(Unit) {
+    LaunchedEffect(activity) {
         activity?.window?.let { window ->
             WindowCompat.getInsetsController(window, window.decorView).apply {
                 isAppearanceLightStatusBars = false
@@ -67,205 +108,250 @@ fun IntegratedHistorySurface(
             }
         }
     }
-    val locale = LocalLocale.current.platformLocale
-    val zone = ZoneId.systemDefault()
-    val dateFormatter = remember(locale, zone) {
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-            .withLocale(locale)
-            .withZone(zone)
+    Surface(Modifier.fillMaxSize().testTag("history-main"), color = Color.White, contentColor = Color.Black) {
+        Box(Modifier.background(HistoryDark).windowInsetsPadding(WindowInsets.safeDrawing)) {
+            BoxWithConstraints(Modifier.fillMaxSize().background(Color.White)) {
+                val scrollingHeader = maxHeight < 680.dp || LocalDensity.current.fontScale >= 1.5f
+                Column(Modifier.fillMaxSize()) {
+                    HistoryToolbar(state.window, onBack, onSelectWindow, onOpenSettings)
+                    if (!scrollingHeader) HistorySummary(state)
+                    HistoryCalendar(state, scrollingHeader, onRetry, onSelectDay,
+                        Modifier.fillMaxWidth().weight(1f))
+                }
+            }
+        }
+        state.selectedDay?.let { HistoryDayDialog(it, state.today, onDismissDay) }
     }
-    val snapshot = state.snapshot
+}
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text(
-                    text = "History",
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp).semantics { heading() },
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                TextButton(onClick = onRetry, enabled = !state.loading) { Text("Refresh") }
+@Composable
+private fun HistoryToolbar(window: HistoryWindow, onBack: () -> Unit,
+                           onSelectWindow: (HistoryWindow) -> Unit, onOpenSettings: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentWindow = windowLabel(window)
+    Row(Modifier.fillMaxWidth().background(HistoryDark).heightIn(min = 52.dp).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        HistoryIconButton(stringResource(R.string.history_back), onBack) { color ->
+            val middle = size.height / 2
+            drawLine(color, Offset(size.width * .85f, middle), Offset(size.width * .15f, middle), 2.dp.toPx(), StrokeCap.Round)
+            drawLine(color, Offset(size.width * .15f, middle), Offset(size.width * .45f, size.height * .2f), 2.dp.toPx(), StrokeCap.Round)
+            drawLine(color, Offset(size.width * .15f, middle), Offset(size.width * .45f, size.height * .8f), 2.dp.toPx(), StrokeCap.Round)
+        }
+        Box(Modifier.weight(1f)) {
+            Row(Modifier.heightIn(min = 48.dp).clickable(role = Role.Button) { expanded = true }
+                .padding(horizontal = 8.dp).testTag("history-window-menu")
+                .semantics { stateDescription = currentWindow },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.history_title), color = Color.White, fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.semantics { heading() })
+                Text("⌄", color = Color.White.copy(alpha = .8f), fontSize = 16.sp)
             }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                item {
-                    Text(
-                        text = "Completed sessions saved on this phone. Session time is elapsed " +
-                            "duration, not a guarantee of continuous blocking. Active sessions appear after they end.",
-                        color = Color.White.copy(alpha = 0.68f),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                    )
-                }
-
-                when {
-                    snapshot == null || (state.loading && snapshot.error) -> item {
-                        HistoryLoading()
-                    }
-                    snapshot.error -> item {
-                        HistoryNotice(
-                            title = "History couldn’t load",
-                            body = "We couldn’t read or save your sessions. Check that your phone has free storage, then retry.",
-                            action = onRetry,
-                        )
-                    }
-                    else -> {
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                HistoryTotal(
-                                    label = "Sessions",
-                                    value = snapshot.totalCount.toString(),
-                                    modifier = Modifier.weight(1f),
-                                )
-                                HistoryTotal(
-                                    label = "Session time",
-                                    value = PortableHistoryRules.formatDuration(
-                                        snapshot.totalDurationMilliseconds / 1_000.0,
-                                        PortableHistoryDurationStyle.SUMMARY,
-                                    ),
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                        if (snapshot.interruptedCount > 0) {
-                            item {
-                                Text(
-                                    text = "${snapshot.interruptedCount} " +
-                                        if (snapshot.interruptedCount == 1) {
-                                            "session includes a known or uncertain interruption."
-                                        } else {
-                                            "sessions include known or uncertain interruptions."
-                                        },
-                                    color = Color.White.copy(alpha = 0.68f),
-                                    fontSize = 13.sp,
-                                )
-                            }
-                        }
-                        if (snapshot.entries.isEmpty()) {
-                            item {
-                                HistoryNotice(
-                                    title = "No completed sessions yet",
-                                    body = "Start a session with your paired Zap, then tap it again to finish. " +
-                                        "New completed sessions will appear here.",
-                                )
-                            }
-                        } else {
-                            items(snapshot.entries, key = { it.id }) { entry ->
-                                HistoryEntry(entry, dateFormatter)
-                            }
-                        }
-                        if (state.loading) {
-                            item { HistoryLoading() }
-                        } else if (snapshot.hasMore) {
-                            item {
-                                Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Load earlier sessions")
-                                }
-                            }
-                        }
-                    }
+            DropdownMenu(expanded, { expanded = false }) {
+                HistoryWindow.entries.forEach { choice ->
+                    DropdownMenuItem(text = { Text(windowLabel(choice)) },
+                        modifier = Modifier.semantics { selected = choice == window }.testTag("history-window-${choice.name}"),
+                        onClick = { expanded = false; onSelectWindow(choice) })
                 }
             }
+        }
+        HistoryIconButton(stringResource(R.string.history_settings), onOpenSettings) { color ->
+            val radius = size.minDimension * .29f
+            drawCircle(color, radius, style = Stroke(2.dp.toPx()))
+            drawCircle(color, size.minDimension * .10f, style = Stroke(2.dp.toPx()))
+            repeat(8) { tooth ->
+                val angle = Math.PI * tooth / 4
+                drawLine(color,
+                    center + Offset((cos(angle) * radius).toFloat(), (sin(angle) * radius).toFloat()),
+                    center + Offset((cos(angle) * radius * 1.5).toFloat(), (sin(angle) * radius * 1.5).toFloat()),
+                    3.dp.toPx(), StrokeCap.Round)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryIconButton(description: String, onClick: () -> Unit,
+                              draw: androidx.compose.ui.graphics.drawscope.DrawScope.(Color) -> Unit) {
+    Box(Modifier.size(48.dp).clickable(role = Role.Button, onClick = onClick)
+        .semantics { contentDescription = description }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(24.dp)) { draw(Color.White) }
+    }
+}
+
+@Composable
+private fun HistorySummary(state: IntegratedHistoryState) {
+    val snapshot = state.snapshot?.takeUnless { it.error }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp))
+        .background(HistoryDark).padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HistoryTotal(stringResource(R.string.history_zaps), snapshot?.totalCount?.toString() ?: "—", Modifier.weight(1f))
+            HistoryTotal(stringResource(R.string.history_session_time), snapshot?.let {
+                duration(it.totalDurationMilliseconds, PortableHistoryDurationStyle.SUMMARY)
+            } ?: "—", Modifier.weight(1f))
         }
     }
 }
 
 @Composable
 private fun HistoryTotal(label: String, value: String, modifier: Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White.copy(alpha = 0.07f),
-    ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(label, color = Color.White.copy(alpha = 0.68f), fontSize = 13.sp)
-            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+    Surface(modifier.heightIn(min = 128.dp), shape = RoundedCornerShape(10.dp),
+        color = Color(0xFF131312), shadowElevation = 4.dp) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(label, color = HistoryOrange.copy(alpha = .92f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(24.dp))
+            Text(value, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-private fun HistoryEntry(entry: SessionHistoryEntry, formatter: DateTimeFormatter) {
-    Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White.copy(alpha = 0.07f),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = formatter.format(Instant.ofEpochMilli(entry.startedAtEpochMilliseconds)),
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-            )
-            Text(
-                text = PortableHistoryRules.formatDuration(
-                    entry.durationMilliseconds / 1_000.0,
-                    PortableHistoryDurationStyle.DAY_DETAIL,
-                ) + " · " + if (entry.targetCount == 1) "1 app" else "${entry.targetCount} apps",
-                color = Color.White.copy(alpha = 0.68f),
-                fontSize = 14.sp,
-            )
-            if (entry.interrupted) {
-                Text("Blocking interrupted", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+private fun HistoryCalendar(state: IntegratedHistoryState, scrollingHeader: Boolean, onRetry: () -> Unit,
+                            onSelectDay: (LocalDate) -> Unit, modifier: Modifier) {
+    val locale = LocalLocale.current.platformLocale
+    val dateFormatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
+    BoxWithConstraints(modifier) {
+        val columns = IntegratedHistoryGridRules.columns(state.window, (maxWidth - 32.dp).value)
+        val scroll = rememberLazyGridState()
+        val snapshot = state.snapshot
+        val valid = snapshot != null && !snapshot.error && !state.loading
+        // Standard keeps the summary fixed. Compact/enlarged-text scrolls the header as well.
+        LaunchedEffect(state.range, columns, scrollingHeader, valid) {
+            if (valid && state.window == HistoryWindow.NINETY_DAYS && !scrollingHeader) {
+                scroll.scrollToItem(1 + IntegratedHistoryGridRules.todayContextIndex(state.range, state.today, columns))
+            } else if (valid) scroll.scrollToItem(0)
+        }
+        LazyVerticalGrid(columns = GridCells.Fixed(columns), state = scroll,
+            modifier = Modifier.fillMaxSize().testTag("history-calendar"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (scrollingHeader) item(span = { GridItemSpan(maxLineSpan) }, key = "summary") { HistorySummary(state) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "range") {
+                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(windowLabel(state.window), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text("${dateFormatter.format(state.range.startInclusive)} – ${dateFormatter.format(state.range.endExclusive.minusDays(1))}",
+                            color = HistoryBody, fontSize = 12.sp)
+                    }
+                    TextButton(onRetry, enabled = !state.loading, modifier = Modifier.heightIn(min = 48.dp),
+                        colors = ButtonDefaults.textButtonColors(contentColor = HistoryDark,
+                            disabledContentColor = HistoryBody.copy(alpha = .5f))) {
+                        Text(stringResource(R.string.history_refresh))
+                    }
+                }
+            }
+            when {
+                state.loading || snapshot == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
+                    val description = stringResource(R.string.history_loading)
+                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(32.dp).semantics { contentDescription = description }, color = HistoryDark)
+                    }
+                }
+                snapshot.error -> item(span = { GridItemSpan(maxLineSpan) }, key = "error") {
+                    HistoryNotice(stringResource(R.string.history_error_title), stringResource(R.string.history_error_body), onRetry)
+                }
+                else -> {
+                    items(snapshot.days, key = { it.date.toEpochDay() }) { day ->
+                        HistoryDay(day, state.today, state.selectedDate == day.date, onSelectDay)
+                    }
+                    if (snapshot.totalCount == 0) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
+                        HistoryNotice(stringResource(R.string.history_empty_title), stringResource(R.string.history_empty_body))
+                    }
+                    if (state.window == HistoryWindow.YEAR) item(span = { GridItemSpan(maxLineSpan) }, key = "year-progress") {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (state.window == HistoryWindow.YEAR) {
+                                val (left, percent) = IntegratedHistoryGridRules.yearProgress(state.today)
+                                Text(stringResource(R.string.history_year_progress, left, percent), color = HistoryBody, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun HistoryLoading() {
-    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(32.dp).semantics { contentDescription = "Loading History" },
-        )
+private fun HistoryDay(day: HistoryDaySummary, today: LocalDate, isSelected: Boolean,
+                       onSelect: (LocalDate) -> Unit) {
+    val locale = LocalLocale.current.platformLocale
+    val formatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale) }
+    val label = listOfNotNull(formatter.format(day.date),
+        if (day.date == today) stringResource(R.string.history_today) else null,
+        if (day.date > today) stringResource(R.string.history_future) else null,
+        stringResource(R.string.history_day_duration, duration(day.durationMilliseconds, PortableHistoryDurationStyle.DAY_DETAIL)),
+        pluralStringResource(R.plurals.history_day_sessions, day.sessionCount, day.sessionCount)).joinToString(". ")
+    val density = PortableHistoryRules.density(day.durationMilliseconds / 1_000.0)
+    val fill = if (day.date == today) HistoryOrange else JustnoiseContract.color("history.dot.${density.contractValue}")
+    Box(Modifier.heightIn(min = 48.dp).aspectRatio(1f).testTag("history-day-${day.date}")
+        .clickable(role = Role.Button) { onSelect(day.date) }
+        .semantics { contentDescription = label; selected = isSelected; role = Role.Button },
+        contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().clip(CircleShape).background(fill)
+            .then(if (isSelected) Modifier.border(3.dp, HistoryOrange, CircleShape) else Modifier))
     }
 }
 
 @Composable
-private fun HistoryNotice(title: String, body: String, action: (() -> Unit)? = null) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(title, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-        Text(body, color = Color.White.copy(alpha = 0.68f), fontSize = 14.sp, lineHeight = 20.sp)
-        if (action != null) Button(onClick = action) { Text("Retry") }
+private fun HistoryDayDialog(day: HistoryDaySummary, today: LocalDate, onDismiss: () -> Unit) {
+    val formatter = remember { DateTimeFormatter.ofPattern("dd.MM.uuuu") }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(Modifier.widthIn(max = 340.dp).testTag("history-day-dialog"),
+            shape = RoundedCornerShape(24.dp), color = Color(0xFF141414), contentColor = Color.White) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(formatter.format(day.date), fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.semantics { heading() })
+                Text(stringResource(R.string.history_day_duration,
+                    duration(day.durationMilliseconds, PortableHistoryDurationStyle.DAY_DETAIL)),
+                    fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(pluralStringResource(R.plurals.history_day_sessions, day.sessionCount, day.sessionCount),
+                    color = Color.White.copy(alpha = .72f), fontSize = 17.sp)
+                if (day.date > today) Text(stringResource(R.string.history_future), color = Color.White.copy(alpha = .72f))
+                TextButton(onDismiss, Modifier.align(Alignment.End).heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.history_close), color = Color.White)
+                }
+            }
+        }
     }
 }
+
+@Composable
+private fun HistoryNotice(title: String, body: String, onRetry: (() -> Unit)? = null) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        Text(body, color = HistoryBody, fontSize = 14.sp, lineHeight = 20.sp)
+        if (onRetry != null) Button(onRetry, Modifier.heightIn(min = 48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = HistoryDark, contentColor = Color.White)) {
+            Text(stringResource(R.string.history_retry))
+        }
+    }
+}
+
+@Composable private fun windowLabel(window: HistoryWindow): String = stringResource(
+    if (window == HistoryWindow.NINETY_DAYS) R.string.history_ninety_days else R.string.history_year)
+
+private fun duration(milliseconds: Long, style: PortableHistoryDurationStyle): String =
+    PortableHistoryRules.formatDuration(milliseconds / 1_000.0, style)
 
 @Preview(name = "History empty", widthDp = 384, heightDp = 832)
 @Composable
 private fun HistoryEmptyPreview() {
-    JustnoiseIntegratedTheme {
-        IntegratedHistorySurface(IntegratedHistoryState(SessionHistorySnapshot()), {}, {}, {})
-    }
+    val state = IntegratedHistoryState()
+    val empty = SessionHistoryTimelineSnapshot(state.range,
+        List(state.range.dayCount) { HistoryDaySummary(state.range.startInclusive.plusDays(it.toLong())) })
+    JustnoiseIntegratedTheme { IntegratedHistorySurface(state.copy(snapshot = empty), {}, {}, {}, {}, {}) }
 }
 
-@Preview(name = "History error", widthDp = 384, heightDp = 832)
+@Preview(name = "History error", widthDp = 360, heightDp = 640, fontScale = 2f)
 @Composable
 private fun HistoryErrorPreview() {
-    JustnoiseIntegratedTheme {
-        IntegratedHistorySurface(IntegratedHistoryState(SessionHistorySnapshot(error = true)), {}, {}, {})
-    }
+    val state = IntegratedHistoryState()
+    JustnoiseIntegratedTheme { IntegratedHistorySurface(
+        state.copy(snapshot = SessionHistoryTimelineSnapshot(state.range, error = true)), {}, {}, {}, {}, {}) }
 }
 
 @Preview(name = "History loading", widthDp = 384, heightDp = 832)
 @Composable
 private fun HistoryLoadingPreview() {
-    JustnoiseIntegratedTheme {
-        IntegratedHistorySurface(IntegratedHistoryState(loading = true), {}, {}, {})
-    }
+    JustnoiseIntegratedTheme { IntegratedHistorySurface(IntegratedHistoryState(loading = true), {}, {}, {}, {}, {}) }
 }

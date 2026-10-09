@@ -1,0 +1,4 @@
+<resources>
+    <string name="first_run_replay_done">Done</string>
+    <string name="settings_app_info_unavailable">Android could not open App info. Open Settings → Apps → Justnoise to review permissions, Force Stop or uninstall.</string>
+</resources>

@@ -2,6 +2,12 @@
 
 Status: full reliability/public-launch gate; smaller internal-beta checkpoint permitted
 
+September 8 owner exception, "jetzt bauen": local production-identity packaging
+and signing are now permitted before internal-beta GO. The directory prohibition
+below is superseded for this build-only work. Installation, upload and distribution
+remain blocked; no physical result or safety decision changes. The production root
+must reuse the canonical sources and pass replacement layout/package checks.
+
 ## Decision to make
 
 Prove that Justnoise can provide a reliable, understandable, and Google Play-policy-compatible restriction experience on ordinary personally owned Android phones. The full Android product/public launch remains gated by the complete matrix. Under the owner's 2026-09-02 lean-delivery decision, a constrained internal beta may proceed through the smaller checkpoint below without claiming a full Gate 0 PASS.
@@ -96,9 +102,12 @@ This core safety checkpoint can use the existing local-only single-target candid
 It does not define final MVP scope: the owner's later 2026-09-02 clarification
 requires multiple-app selection, Zap sessions, schedules and history, as recorded
 in `ANDROID_PREDEVICE_READINESS.md`. Do not label the single-app foundation or
-preview screens a completed MVP. Full iOS parity, multiple named modes, A17 coverage,
+preview screens a completed MVP. Full iOS parity, A17 coverage,
 and the full endurance matrix are not prerequisites for this core checkpoint.
 This is not a public-launch waiver; verify the added MVP behavior before distribution.
+The owner approved Android named modes on September 7 as an app-selection extension;
+their migration, selection and schedule-reference behavior require affected acceptance
+without redefining this existing core safety checkpoint.
 
 Before promoting the existing capability into a signed internal-test app, record one end-to-end A16 safety smoke run on the candidate build covering:
 
@@ -115,16 +124,22 @@ The pre-device verifier intentionally continues to reject `android-app/` during 
 
 ## After the appropriate checkpoint
 
-After a recorded internal-beta GO, implement the local four-feature MVP in the
-dependency order in `ANDROID_PREDEVICE_READINESS.md`, including real History and
-schedules after their timing contract is defined. Full Gate 0 remains the later
-reliability/public-release decision. The platform implementation boundaries remain:
+The four-feature MVP is already implemented in the integrated development app;
+schedule timing is covered by the approved contract. After recorded internal-beta
+GO, promote that reviewed implementation rather than rebuilding it. Full Gate 0
+remains the later reliability/public-release decision. The next boundaries are:
 
-1. Scaffold `android-app/` with one `app` module.
-2. Implement modes, Zap state, and recovery around a `RestrictionCapability` port.
-3. Add Compose previews and behavior tests from the shared contract.
-4. Design schedule behavior after the unresolved decisions in `MOBILE_BEHAVIOR_V1.md` are resolved.
-5. Add backend, capture, Signal, and secondary screens incrementally.
+1. Promote to `android-app/` with one canonical `app` module and the approved
+   `com.justnoise.app` identity, subject to Play registration.
+2. Preserve real app selection, Zap sessions, schedules, History and recovery,
+   keeping UI separate from NFC, restrictions, storage and alarm adapters.
+3. Retain the existing contracts and regression tests; replace the phase-specific
+   production-directory absence guard with release verification.
+4. Reconcile production labels, privacy/disclosure and signing, then run the
+   affected signed-release checks without erasing development data.
+5. Keep backend/accounts, Capture, widgets and other excluded features out of this
+   internal-test milestone. Named modes are now separately approved (September 7),
+   not an inferred prerequisite; verify that extension before distributing it.
 
 If Gate 0 does not pass, reconsider the Android promise: offer a lighter intention/interruption experience, restrict distribution to managed devices, or pause Android rather than presenting cosmetic parity as real blocking.
 

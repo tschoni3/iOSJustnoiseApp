@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="target_load_failed">Could not load apps. Tap Refresh apps to try again.</string>
+    <string name="target_removal_only">This app is unavailable or protected. You can remove it, but cannot add it again.</string>
+    <string name="target_selection_conflict">The saved selection or setup changed. Reload to discard this draft and review the current apps.</string>
+    <string name="target_selection_recovery">Selection not saved. Review setup and recovery before editing apps.</string>
+    <string name="target_invalid_selection">Selection not saved. Remove unavailable or protected apps, then try again.</string>
+    <string name="target_reload">Reload</string>
+</resources>

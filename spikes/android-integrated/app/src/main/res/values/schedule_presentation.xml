@@ -1,0 +1,13 @@
+<resources>
+    <string name="integrated_schedule_back">Back</string>
+    <string name="integrated_schedule_add">Add schedule</string>
+    <string name="integrated_schedule_cancel">Cancel</string>
+    <string name="integrated_schedule_save">Save</string>
+    <string name="integrated_schedule_saving">Saving…</string>
+    <string name="integrated_schedule_new_title">New Schedule</string>
+    <string name="integrated_schedule_edit_title">Edit Schedule</string>
+    <string name="integrated_schedule_details">DETAILS</string>
+    <string name="integrated_schedule_repeat">REPEAT</string>
+    <string name="integrated_schedule_repeat_help">Repeats on the selected weekdays at the chosen time.</string>
+    <string name="integrated_schedule_one_time_help">Starts once on the chosen date and time.</string>
+</resources>

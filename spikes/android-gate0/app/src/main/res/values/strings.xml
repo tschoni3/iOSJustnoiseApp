@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Justnoise Gate 0</string>
-    <string name="gate_title">Android restriction feasibility</string>
+    <string name="gate_title">Blocking &amp; Zap setup</string>
     <string name="gate_status_unknown">Checking capability…</string>
     <string name="target_label">Apps to block</string>
     <string name="target_placeholder">No apps selected. Select at least one app before starting.</string>
@@ -16,23 +16,23 @@
     </plurals>
     <string name="refresh_apps">Refresh app list</string>
     <string name="disclosure_title">Accessibility disclosure</string>
-    <string name="accessibility_disclosure">Justnoise Gate 0 uses Android Accessibility only while you have explicitly enabled this prototype. It reads window-change event types and the foreground app identifier to compare with the apps you selected. Only the latest app identifier is kept temporarily in service memory; it is cleared when the screen turns off or the service is interrupted or disconnected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes, and does not save a foreground-app history. Nothing is sent off this device. Your selected apps, consent, session state and keyed Zap digest stay in private local storage. For schedules, you choose automatic start times; tap your paired Zap to stop. Schedule settings, replay-prevention markers and the latest outcome stay local until that schedule is deleted, you withdraw, clear storage, or uninstall. Android exact-alarm access is requested separately when you enable schedules. Delivery can be delayed or missed; Force Stop requires explicit app recovery and never catches up old starts. For History, the app saves a random session ID, start/end times, duration, selected-app count and whether the session was interrupted. History contains no app names or event log. Session time does not prove continuous blocking. History stays local until withdrawal, clearing storage or uninstall. You can withdraw below, disable Accessibility, Force Stop, or uninstall at any time.</string>
-    <string name="consent_checkbox">I understand this disclosure and choose to test the Accessibility capability.</string>
+    <string name="accessibility_disclosure">Justnoise uses Android Accessibility only while you have explicitly enabled its app-blocking service. It reads window-change event types and the foreground app identifier to compare with the apps you selected. Only the latest app identifier is kept temporarily in service memory; it is cleared when the screen turns off or the service is interrupted or disconnected. It does not read screen content, typed text, passwords, notifications, or accessibility nodes, and does not save a foreground-app history. Nothing is sent off this device. Your selected apps, consent, session state and keyed Zap digest stay in private local storage. For schedules, you choose automatic start times; tap your paired Zap to stop. Schedule settings, replay-prevention markers and the latest outcome stay local until that schedule is deleted, you withdraw, clear storage, or uninstall. Android exact-alarm access is requested separately when you enable schedules. Delivery can be delayed or missed; Force Stop requires explicit app recovery and never catches up old starts. For History, the app saves a random session ID, start/end times, duration, selected-app count and whether the session was interrupted. History contains no app names or event log. Session time does not prove continuous blocking. History stays local until withdrawal, clearing storage or uninstall. You can withdraw below, disable Accessibility, Force Stop, or uninstall at any time.</string>
+    <string name="consent_checkbox">I understand this disclosure and choose to enable Justnoise app blocking with Accessibility.</string>
     <string name="open_accessibility_settings">Continue to Accessibility settings</string>
-    <string name="zap_title">Local Zap pairing</string>
-    <string name="zap_explanation">Pairing stores only an Android Keystore HMAC digest. Raw NDEF text and the NFC tag identifier are never stored or logged.</string>
-    <string name="pair_zap">Pair or replace test Zap</string>
+    <string name="zap_title">Pair your Zap</string>
+    <string name="zap_explanation">Your Zap is paired securely on this phone. Its raw NFC text and tag identifier are not stored or logged.</string>
+    <string name="pair_zap">Pair or replace Zap</string>
     <string name="scan_zap">Scan Zap to start or stop</string>
-    <string name="withdraw">Withdraw consent and clear Gate 0 data</string>
+    <string name="withdraw">Withdraw consent and clear local data</string>
     <string name="open_app_info">Open App info / Force Stop</string>
-    <string name="status_consent_required">Consent required. The service will refuse to run.</string>
+    <string name="status_consent_required">Review the Accessibility disclosure to set up app blocking. Nothing is blocked until setup is complete and a session starts.</string>
     <string name="status_target_required">Select at least one available app to block. System and safety apps cannot be selected.</string>
-    <string name="status_zap_required">Pair a real NDEF text Zap.</string>
+    <string name="status_zap_required">Pair your Zap to continue setup.</string>
     <string name="status_permission_required">Accessibility is unavailable or disabled.</string>
-    <string name="status_idle">Idle. Enforcement is available but not active.</string>
-    <string name="status_active">Active. The selected apps should be intercepted.</string>
-    <string name="status_recovery_required">Recovery required. Justnoise is not claiming active enforcement.</string>
-    <string name="status_pairing">Hold a real NDEF text Zap near the phone to pair it.</string>
+    <string name="status_idle">Ready for your next session. App blocking is currently off.</string>
+    <string name="status_active">Session active. Blocking is enabled for your selected apps.</string>
+    <string name="status_recovery_required">Blocking needs attention. Review setup before relying on app blocking.</string>
+    <string name="status_pairing">Hold your Zap near the back of your phone to pair it.</string>
     <string name="status_scanning">Hold the paired Zap near the phone. This scan handles one tag only.</string>
     <string name="status_nfc_unavailable">NFC is unavailable or disabled.</string>
     <string name="status_pair_success">Zap paired locally. No raw payload was retained.</string>
@@ -56,7 +56,7 @@
     <string name="status_stopped">Session stopped and the overlay was cleared.</string>
     <string name="status_stop_guard">Wait at least three seconds before stopping.</string>
     <string name="status_no_change">Scan caused no state change.</string>
-    <string name="status_withdrawn">Consent and all Gate 0 configuration were cleared.</string>
+    <string name="status_withdrawn">Consent and local app data were cleared.</string>
     <string name="status_withdrawal_failed">Could not confirm all local data was cleared. Tap Withdraw to retry. If this keeps failing, use App info to clear storage or uninstall.</string>
     <string name="accessibility_service_label">Justnoise Gate 0 foreground-package check</string>
     <string name="accessibility_service_description">Compares window-state package identifiers with locally selected apps and shows a Justnoise-owned interruption overlay. It cannot retrieve window content.</string>

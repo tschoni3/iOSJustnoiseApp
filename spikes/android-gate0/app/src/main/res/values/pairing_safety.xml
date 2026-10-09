@@ -1,0 +1,7 @@
+<resources>
+    <string name="pair_replace_title">Replace your paired Zap?</string>
+    <string name="pair_replace_message">The Zap you scan next will replace your current pairing on this phone. Your old Zap will no longer start or stop sessions here. Cancel keeps your current pairing.</string>
+    <string name="pair_replace_confirm">Replace and scan</string>
+    <string name="status_pair_unavailable">Pairing is unavailable during a session or recovery. Stop the session and resolve recovery before trying again.</string>
+    <string name="status_pair_not_saved">This scan did not replace your pairing. Setup may have changed or secure storage failed. Check current setup and recovery, then try again.</string>
+</resources>

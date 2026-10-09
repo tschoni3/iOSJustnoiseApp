@@ -19,8 +19,7 @@ fail() {
     exit 1
 }
 
-[[ ! -e "$REPOSITORY_ROOT/android-app" ]] \
-    || fail "android-app/ exists in the pre-device phase; after recorded internal-beta GO, explicitly replace this absence guard with release-app verification"
+python3 -B "$REPOSITORY_ROOT/android-app/verify-layout.py"
 [[ -x "$GRADLE_WRAPPER" ]] || fail "the pinned Gate 0 Gradle wrapper is unavailable"
 [[ -f "$UI_MANIFEST" ]] || fail "the permission-free UI prototype manifest is missing"
 [[ -f "$INTEGRATED_MANIFEST" ]] || fail "the integrated Android development manifest is missing"

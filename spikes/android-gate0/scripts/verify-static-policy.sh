@@ -91,18 +91,22 @@ for permission in \
     android.permission.USE_EXACT_ALARM \
     android.permission.QUERY_ALL_PACKAGES \
     android.permission.SYSTEM_ALERT_WINDOW \
+    android.permission.POST_PROMOTED_NOTIFICATIONS \
+    android.permission.FOREGROUND_SERVICE \
     android.permission.PACKAGE_USAGE_STATS; do
     reject_literal "$permission" "$MANIFEST"
 done
 
 python3 - "$MANIFEST" "$INTEGRATED_MANIFEST" <<'PY'
 from pathlib import Path
+import io
 import sys
 import xml.etree.ElementTree as ET
 
 android = "{http://schemas.android.com/apk/res/android}"
 permissions = {
     "android.permission.NFC",
+    "android.permission.POST_NOTIFICATIONS",
     "android.permission.SCHEDULE_EXACT_ALARM",
     "android.permission.RECEIVE_BOOT_COMPLETED",
     "android.permission.WAKE_LOCK",
@@ -129,17 +133,18 @@ for filename in sys.argv[1:]:
                 and len(node) == 0 for node in requested_nodes), "Unexpected permission shape")
     requested = [node.get(android + "name") for node in requested_nodes]
     require(len(requested) == len(permissions) and set(requested) == permissions,
-            "Permissions must be exactly NFC and the three explicit scheduling permissions")
+            "Permissions must be exactly NFC, optional notifications and the three explicit scheduling permissions")
     applications = root.findall("application")
     require(len(applications) == 1, "Expected one application")
     application = applications[0]
     receivers = application.findall("receiver")
-    require(len(receivers) == 1, "Expected only the schedule receiver in source")
-    receiver = receivers[0]
-    require(receiver.get(android + "name") in {
+    require(len(receivers) == 2, "Expected only schedule and notification dismissal receivers in source")
+    schedule_receivers = [node for node in receivers if node.get(android + "name") in {
         ".platform.schedule.ScheduleAlarmReceiver",
         "com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver",
-    }, "Unexpected receiver class")
+    }]
+    require(len(schedule_receivers) == 1, "Expected exactly one reviewed schedule receiver")
+    receiver = schedule_receivers[0]
     require(set(receiver.attrib) <= {android + name for name in ("name", "exported", "directBootAware", "enabled")},
             "Unexpected receiver attribute or process override")
     require(receiver.get(android + "exported") == "false", "Schedule receiver must explicitly be non-exported")
@@ -154,6 +159,45 @@ for filename in sys.argv[1:]:
     received_actions = [node.get(android + "name") for node in entries]
     require(len(received_actions) == len(actions) and set(received_actions) == actions,
             "Schedule receiver actions differ from the exact allowlist")
+
+    dismissals = [node for node in receivers if node.get(android + "name") ==
+                  "com.justnoise.gate0.platform.notification.SessionNotificationDismissReceiver"]
+    require(len(dismissals) == 1, "Expected exactly one reviewed notification dismissal receiver")
+    dismissal = dismissals[0]
+    require(set(dismissal.attrib) <= {android + name for name in ("name", "exported", "enabled")},
+            "Unexpected notification dismissal attribute, permission or execution override")
+    require(dismissal.get(android + "exported") == "false",
+            "Notification dismissal receiver must explicitly be non-exported")
+    require(dismissal.get(android + "enabled", "true") == "true", "Notification dismissal receiver is disabled")
+    require(len(dismissal) == 0, "Notification dismissal receiver must not have filters or other children")
+
+    # The compatibility experiment is a debug source-set overlay, never a new
+    # shipping permission or component. Release package checks remain unchanged.
+    sources = Path(filename).parent.parent
+    debug_manifest = sources / "debug" / "AndroidManifest.xml"
+    require(debug_manifest.is_file(), f"Missing debug experiment overlay: {debug_manifest}")
+    debug_contents = debug_manifest.read_text()
+    require("<!DOCTYPE" not in debug_contents and "<!ENTITY" not in debug_contents,
+            "Unexpected debug overlay XML declarations")
+    debug = ET.fromstring(debug_contents)
+    namespaces = [binding for _, binding in ET.iterparse(io.StringIO(debug_contents), events=("start-ns",))]
+    require(namespaces == [("android", android[1:-1])], "Debug overlay must declare only the Android namespace")
+    require(debug.tag == "manifest" and not debug.attrib and len(debug) == 1,
+            "Debug overlay must contain only its one reviewed permission and no manifest overrides")
+    permission = debug[0]
+    promotion_permission = "android.permission.POST_PROMOTED_NOTIFICATIONS"
+    require(permission.tag == "uses-permission" and permission.attrib == {android + "name": promotion_permission}
+            and len(permission) == 0, "Debug overlay is not the exact promoted-notification permission")
+    release_manifest = sources / "release" / "AndroidManifest.xml"
+    if release_manifest.exists():
+        release_contents = release_manifest.read_text()
+        require("<!DOCTYPE" not in release_contents and "<!ENTITY" not in release_contents,
+                "Unexpected release overlay XML declarations")
+        release = ET.fromstring(release_contents)
+        require(release.tag == "manifest", "Expected release manifest overlay")
+        require(not any(node.tag.startswith("uses-permission") and
+                        node.get(android + "name") == promotion_permission for node in release),
+                "Release overlay must not request promoted notifications")
 PY
 
 require_literal 'android:accessibilityEventTypes="typeWindowStateChanged"' "$ACCESSIBILITY_METADATA"

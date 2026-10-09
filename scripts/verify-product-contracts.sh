@@ -353,6 +353,30 @@ if colors["action.shield.background"] != "#FFFFFF":
 fixtures = require_mapping(load_json(fixture_path), "fixtures")
 require_v1_version(fixtures, "fixtureSetVersion", "fixtures")
 
+# Android-only correction of optional login; published iOS fixtures stay untouched.
+local_import = require_mapping(load_json(root / "product/behavior/android-local-import.v1.json"), "local import")
+if local_import.get("schemaVersion") != 1 or set(local_import.get("cases", [])) != {
+    "empty", "defer", "merge", "id-collision", "repeat", "other-account", "history-conflict",
+    "interrupted-retry", "active-session", "stale-consent", "schedule-disabled", "capacity",
+}:
+    fail("Android local import safety contract coverage drifted")
+
+account_access = require_mapping(load_json(root / "product/behavior/android-account-access.v1.json"), "account access")
+require_v1_version(account_access, "fixtureSetVersion", "account access")
+access_cases = require_list(account_access.get("cases"), "account access cases")
+if {case.get("id") for case in access_cases} != {
+    "cold-production", "signed-out-account-workspace", "restored-same-account-offline",
+    "wrong-workspace", "local-is-not-account", "offline-development",
+}:
+    fail("Android account access fixture coverage drifted")
+for case in access_cases:
+    if type(case.get("required")) is not bool or type(case.get("canStart")) is not bool:
+        fail("Android account access requires explicit boolean input/output")
+    owner = case.get("authorizedOwner")
+    expected = not case["required"] or (owner not in (None, "local") and owner == case.get("workspace"))
+    if case["canStart"] != expected:
+        fail("Android account access fixture contradicts required sign-in")
+
 selection_cases = require_list(
     fixtures.get("targetSelectionValidity"),
     "fixtures.targetSelectionValidity",
@@ -1034,7 +1058,7 @@ required_document_fragments = {
         'message: "Plan automatic focus sessions. Set start times and modes, and we’ll block for you."',
     ),
     "scripts/verify-android-predevice-readiness.sh": (
-        '[[ ! -e "$REPOSITORY_ROOT/android-app" ]]',
+        '"$REPOSITORY_ROOT/android-app/verify-layout.py"',
         "verify-static-policy.sh",
         "testDebugUnitTest",
         "lintDebug",

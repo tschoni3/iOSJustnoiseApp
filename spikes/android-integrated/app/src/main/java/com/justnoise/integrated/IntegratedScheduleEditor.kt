@@ -2,6 +2,7 @@ package com.justnoise.integrated
 
 import com.justnoise.gate0.data.ScheduleDraft
 import com.justnoise.gate0.data.StoredSchedule
+import com.justnoise.gate0.data.StoredMode
 import com.justnoise.gate0.domain.PortableScheduleTimingRules
 import com.justnoise.gate0.domain.PortableWeekday
 import com.justnoise.gate0.domain.ScheduleTiming
@@ -23,11 +24,19 @@ data class IntegratedScheduleEditor(
     val zoneId: String,
     val originalOneTimeEpochMilliseconds: Long? = null,
     val originalOneTimeZoneId: String? = null,
+    val modeReference: String? = null,
 ) {
+    fun modeProblem(modes: List<StoredMode>): IntegratedScheduleModeProblem? {
+        if (modeReference.isNullOrBlank()) return IntegratedScheduleModeProblem.REQUIRED
+        val mode = modes.find { it.id == modeReference } ?: return IntegratedScheduleModeProblem.UNAVAILABLE
+        return if (mode.selectedPackages.isEmpty()) IntegratedScheduleModeProblem.EMPTY else null
+    }
+
     fun toDraft(nowEpochMilliseconds: Long, deviceZoneId: String): IntegratedScheduleEditorResult {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) return invalid("Enter a schedule name.")
         if (trimmedName.length > 80) return invalid("Use a name with 80 characters or fewer.")
+        if (modeReference.isNullOrBlank()) return invalid("Choose a mode for this schedule.")
         if (nowEpochMilliseconds !in supportedEpochs) {
             return invalid("The current date is outside the supported range.")
         }
@@ -61,7 +70,7 @@ data class IntegratedScheduleEditor(
             ScheduleTiming(oneTimeEpochMilliseconds = epoch)
         }
         return IntegratedScheduleEditorResult.Valid(
-            ScheduleDraft(trimmedName, enabled, timing, savedZoneId),
+            ScheduleDraft(trimmedName, enabled, timing, savedZoneId, modeReference),
         )
     }
 
@@ -70,7 +79,7 @@ data class IntegratedScheduleEditor(
         private val supportedEpochs = 0L..PortableScheduleTimingRules.MAXIMUM_EPOCH_MILLISECONDS
         private val namedZoneIds = ZoneId.getAvailableZoneIds() + "UTC"
 
-        fun new(nowEpochMilliseconds: Long, zoneId: String): IntegratedScheduleEditor {
+        fun new(nowEpochMilliseconds: Long, zoneId: String, recentModeReference: String? = null): IntegratedScheduleEditor {
             val local = defaultLocalTime(nowEpochMilliseconds, zoneId)
             return IntegratedScheduleEditor(
                 name = "",
@@ -81,6 +90,7 @@ data class IntegratedScheduleEditor(
                 weekdays = emptySet(),
                 enabled = true,
                 zoneId = zoneId,
+                modeReference = recentModeReference,
             )
         }
 
@@ -110,6 +120,7 @@ data class IntegratedScheduleEditor(
                 zoneId = zoneId,
                 originalOneTimeEpochMilliseconds = epoch,
                 originalOneTimeZoneId = if (epoch != null) schedule.creationZoneId else null,
+                modeReference = schedule.modeReference,
             )
         }
 
@@ -136,6 +147,8 @@ data class IntegratedScheduleEditor(
         private fun invalid(message: String) = IntegratedScheduleEditorResult.Invalid(message)
     }
 }
+
+enum class IntegratedScheduleModeProblem { REQUIRED, UNAVAILABLE, EMPTY }
 
 sealed interface IntegratedScheduleEditorResult {
     data class Valid(val draft: ScheduleDraft) : IntegratedScheduleEditorResult

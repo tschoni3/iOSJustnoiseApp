@@ -1,6 +1,35 @@
 # Android Release UI parity
 
+September 19 later owner clarification ("please remove entirely"): remove
+permanent helper paragraphs and historical interruption/timing-warning copy from
+normal Android History, day details, completion, modes, selection, schedules and
+Settings. This supersedes the earlier requirement below to display those History
+warnings. Preserve records/flags and the truthful Session time label; do not call
+elapsed duration verified protection. Keep action failures, permission recovery,
+essential state labels, empty states and consent/destructive-action explanations.
+Successful schedule saves/toggles/deletions and successful local-data imports
+must not leave permanent confirmation/helper cards. The updated visible list or
+account state confirms success; action failures and setup-required states remain.
+No iOS changes.
+
+September 19 owner-requested Android copy cleanup: normal product screens must
+not show execution diagnostics or implementation terminology. Remove successful
+schedule receipt text and healthy-state revalidation commentary from schedule
+cards. Keep next planned starts, actionable setup/failure states, and History
+interruption/uncertain-duration warnings. Keep the truthful Session time label
+and its detailed explanation; do not relabel elapsed time as protected time.
+Live Update settings use consumer-facing wording without claiming Samsung
+placement or visibility is under app control. Storage, engine behavior, consent
+and published iOS copy remain unchanged.
+
 Status: **PRESENTATION ROUTE/STATE COVERAGE COMPLETE — PHYSICAL VISUAL ACCEPTANCE PENDING**
+
+Current real-app implementation, 2026-09-06: the integrated development app now has
+source-matched onboarding/Zap/selection, real calendar History and compact schedules,
+grouped Settings and exact-receipt foreground completion. The latest scope/results
+are in [ANDROID_PLAY_IMPLEMENTATION.md](ANDROID_PLAY_IMPLEMENTATION.md). The older
+prototype and September 3 checkpoints below are historical, not the current real
+app's feature inventory. Final iOS rendered/A16/release acceptance remains open.
 
 This audit compares the launch-ready iOS surface (`CAPTURE_ENABLED` absent) with the permission-free Compose project in `spikes/android-ui/`. “Covered” means a native Compose route or deterministic preview state exists and builds; it does not mean Android system integration, stored data, backend behavior, or pixel-perfect device acceptance is complete.
 

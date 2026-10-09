@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="first_run_how_to_use">How to Use</string>
+    <string name="first_run_select_apps">Create a Mode</string>
+    <string name="first_run_select_apps_body">Give your mode a name and choose the apps it blocks.</string>
+    <string name="first_run_stay_focused">Stay Focused</string>
+    <string name="first_run_stay_focused_body">Tap Zap to start your last selected mode, then tap again to stop. Schedules start automatically with their saved mode.</string>
+    <string name="first_run_select_video">App selection illustration</string>
+    <string name="first_run_focus_video">Focus session illustration</string>
+    <string name="first_run_pause_video">Pause illustration</string>
+    <string name="first_run_play_video">Play illustration</string>
+    <string name="first_run_video_unavailable">Illustration unavailable. You can continue setup.</string>
+    <string name="first_run_page">Page %1$d of %2$d</string>
+    <string name="first_run_back">Back</string>
+    <string name="first_run_get_started">Get Started</string>
+    <string name="first_run_start_activating">Start Activating</string>
+    <string name="first_run_activate_zap">Activate Zap</string>
+    <string name="first_run_activation_title">Tap the button on your screen to start.</string>
+    <string name="first_run_activation_body">Then hold your Zap near your phone to connect.</string>
+    <string name="first_run_zap_button">Zap button</string>
+    <string name="first_run_scan_zap">Scan your Zap</string>
+    <string name="first_run_hold_zap">Hold your Zap near your phone.</string>
+    <string name="first_run_scanning_body">Scanning for your Zap. Keep it near the back of your phone.</string>
+    <string name="first_run_cancel_scan">Cancel scan</string>
+    <string name="first_run_zap_connected">Zap connected</string>
+    <string name="first_run_connected_body">Continue to set up blocking and choose a mode. Pairing alone does not enable blocking.</string>
+    <string name="first_run_continue_setup">Continue setup</string>
+    <string name="first_run_setup_later">Set up later</string>
+    <string name="first_run_purchase_zap">Don\'t have a Zap? Purchase one here.</string>
+    <string name="first_run_save_failed">Could not save setup progress. Check available storage and try again.</string>
+    <string name="first_run_save_error_title">Setup progress not saved</string>
+    <string name="first_run_retry">Try again</string>
+    <string name="first_run_open_setup">Open setup</string>
+    <string name="first_run_scan_canceled">Scan canceled. Nothing changed.</string>
+    <string name="first_run_pair_failed">Could not pair this Zap. Try again, or open setup for recovery.</string>
+    <string name="first_run_store_unavailable">No browser is available to open the Zap store.</string>
+    <string name="first_run_pair_success">Zap connected. Continue to set up app blocking.</string>
+    <string name="first_run_pair_scanning">Hold your Zap near the back of your phone.</string>
+</resources>

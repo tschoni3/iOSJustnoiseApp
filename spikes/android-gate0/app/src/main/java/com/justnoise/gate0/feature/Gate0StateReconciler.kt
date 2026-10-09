@@ -16,6 +16,20 @@ enum class Gate0Truth {
 object Gate0StateReconciler {
     const val HEARTBEAT_STALE_AFTER_MILLISECONDS: Long = Gate0Preferences.HEARTBEAT_STALE_AFTER_MILLISECONDS
 
+    internal fun observe(
+        readStored: () -> StoredGate0State,
+        readAccessibilityEnabled: () -> Boolean,
+        readElapsedRealtime: () -> Long,
+        nowElapsedMilliseconds: Long? = null,
+    ): Gate0StateObservation {
+        val stored = readStored()
+        val enabled = readAccessibilityEnabled()
+        // A snapshot can wait for a heartbeat commit. Sample only after it returns,
+        // otherwise that new heartbeat can incorrectly appear to be in the future.
+        val observedAt = nowElapsedMilliseconds ?: readElapsedRealtime()
+        return Gate0StateObservation(stored, enabled, observedAt)
+    }
+
     fun reconcile(
         stored: StoredGate0State,
         accessibilityEnabled: Boolean,
@@ -56,3 +70,9 @@ object Gate0StateReconciler {
             heartbeatAge in 0..HEARTBEAT_STALE_AFTER_MILLISECONDS
     }
 }
+
+internal data class Gate0StateObservation(
+    val stored: StoredGate0State,
+    val accessibilityEnabled: Boolean,
+    val elapsedMilliseconds: Long,
+)

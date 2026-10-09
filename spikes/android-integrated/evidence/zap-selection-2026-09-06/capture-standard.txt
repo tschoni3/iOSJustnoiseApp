@@ -1,0 +1,9 @@
+
+com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest:....
+com.justnoise.integrated.IntegratedZapUiInstrumentationTest:.......
+
+Time: 24.229
+
+OK (11 tests)
+
+

@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature
         android:name="android.hardware.nfc"
@@ -58,6 +59,9 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name="com.justnoise.gate0.platform.notification.SessionNotificationDismissReceiver"
+            android:exported="false" />
         <receiver
             android:name="com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver"
             android:exported="false">

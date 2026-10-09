@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="integrated_selection_title">Selected apps</string>
+    <string name="integrated_selection_prompt">What do you want to make space for?</string>
+    <string name="integrated_selection_body">Choose the apps you want to block. Changes are saved only when you tap Save.</string>
+    <string name="integrated_selection_cancel">Cancel</string>
+    <string name="integrated_selection_save">Save</string>
+    <string name="integrated_selection_saving">Saving…</string>
+    <string name="integrated_selection_loading">Loading apps…</string>
+    <string name="integrated_selection_reload">Reload apps</string>
+    <string name="integrated_selection_reload_title">Discard edits and reload?</string>
+    <string name="integrated_selection_reload_body">Your unsaved choices will be replaced with the latest saved selection.</string>
+    <string name="integrated_selection_keep_editing">Keep editing</string>
+    <string name="integrated_selection_empty">No selectable apps were found. Refresh after installing an app you want to block.</string>
+    <string name="integrated_selection_removal_label">Unavailable or protected · remove only</string>
+    <string name="integrated_selection_removal_help">Unavailable or protected saved apps stay selected until you remove them. They cannot be added again here.</string>
+    <string name="integrated_selection_load_failed">Could not load your apps. Reload to try again. Nothing was changed.</string>
+    <string name="integrated_selection_save_failed">Could not confirm the save. Check available storage, then reload to review what is saved. The change will not be repeated automatically.</string>
+    <string name="integrated_selection_conflict">Your saved selection or setup changed. Reload and review the latest selection before saving. This draft was not saved.</string>
+    <string name="integrated_selection_active">A session is active. Stop it with your Zap before changing selected apps.</string>
+    <string name="integrated_selection_recovery">App selection is unavailable during recovery. Close this sheet and review Setup before trying again.</string>
+    <string name="integrated_selection_invalid">This selection contains an unavailable or protected app. Remove those apps before saving your changes.</string>
+    <string name="integrated_selection_removal_only">This saved app can only be removed, not added again.</string>
+    <plurals name="integrated_selection_count">
+        <item quantity="one">%d app selected</item>
+        <item quantity="other">%d apps selected</item>
+    </plurals>
+</resources>

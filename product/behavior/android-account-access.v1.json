@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetVersion": "1.0.0",
+  "scope": "Production Android required account entry; iOS and offline development apps unchanged",
+  "cases": [
+    { "id": "cold-production", "required": true, "authorizedOwner": null, "workspace": "local", "canStart": false },
+    { "id": "signed-out-account-workspace", "required": true, "authorizedOwner": null, "workspace": "11111111-1111-4111-8111-111111111111", "canStart": false },
+    { "id": "restored-same-account-offline", "required": true, "authorizedOwner": "11111111-1111-4111-8111-111111111111", "workspace": "11111111-1111-4111-8111-111111111111", "canStart": true },
+    { "id": "wrong-workspace", "required": true, "authorizedOwner": "11111111-1111-4111-8111-111111111111", "workspace": "22222222-2222-4222-8222-222222222222", "canStart": false },
+    { "id": "local-is-not-account", "required": true, "authorizedOwner": "local", "workspace": "local", "canStart": false },
+    { "id": "offline-development", "required": false, "authorizedOwner": null, "workspace": "local", "canStart": true }
+  ],
+  "invariants": [
+    "manual-and-scheduled-starts-check-the-permit-inside-the-product-commit-lock",
+    "auth-transitions-close-start-permit-before-journal-mutation",
+    "expired-token-does-not-disable-a-restored-signed-in-offline-workspace",
+    "stop-and-safety-recovery-never-require-auth-or-network",
+    "signed-out-ui-does-not-expose-local-product-data",
+    "local-data-is-preserved-without-silent-account-adoption"
+  ]
+}

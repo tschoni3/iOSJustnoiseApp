@@ -1,5 +1,8 @@
 package com.justnoise.integrated
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.justnoise.androidcontract.JustnoiseContract
 import com.justnoise.gate0.feature.Gate0Truth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,6 +10,45 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IntegratedZapStateTest {
+    @Test
+    fun activeTimerUsesOpaqueReadableGrayWithoutChangingSharedIosToken() {
+        val color = integratedZapSubtitleColor(IntegratedZapState(truth = Gate0Truth.ACTIVE))
+        assertEquals(Color(0xFF595959), color)
+        assertEquals(1f, color.alpha, 0f)
+        assertTrue((Color.White.luminance() + .05f) / (color.luminance() + .05f) >= 7f)
+        assertEquals(Color(0f, 0f, 0f, 41f / 255f), JustnoiseContract.color("text.zap.active.secondary"))
+    }
+
+    @Test
+    fun recoveryWarningIsReadableAndNeverUsesActiveTimerStyling() {
+        val state = IntegratedZapState(truth = Gate0Truth.RECOVERY_REQUIRED, desiredActive = true)
+        assertFalse(state.isActive)
+        assertEquals(Color.White, integratedZapSubtitleColor(state))
+    }
+
+    @Test
+    fun idleDecorativeSubtitleKeepsExistingStyling() {
+        val expected = JustnoiseContract.color("text.zap.idle.secondary")
+        Gate0Truth.entries.filter { it != Gate0Truth.ACTIVE }.forEach { truth ->
+            assertEquals(expected, integratedZapSubtitleColor(IntegratedZapState(truth = truth)))
+        }
+    }
+
+    @Test
+    fun onlyReadyAndConfirmedActiveHideSetupGuidance() {
+        Gate0Truth.entries.forEach { truth ->
+            assertEquals(truth != Gate0Truth.IDLE && truth != Gate0Truth.ACTIVE,
+                IntegratedZapState(truth = truth).needsAttention)
+        }
+    }
+
+    @Test
+    fun standardGeometryKeepsSourceGapsAndClampsFlexibleSpace() {
+        assertEquals(IntegratedZapGeometry(174f, 440f), integratedZapGeometry(600f))
+        assertEquals(IntegratedZapGeometry(184f, 450f), integratedZapGeometry(724f))
+        assertEquals(IntegratedZapGeometry(214f, 480f), integratedZapGeometry(900f))
+    }
+
     @Test
     fun readyAndActiveTruthExposeTheMatchingScanAction() {
         val idle = IntegratedZapState(truth = Gate0Truth.IDLE)

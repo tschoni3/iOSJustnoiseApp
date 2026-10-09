@@ -1,0 +1,9 @@
+
+com.justnoise.integrated.IntegratedHistoryActivityInstrumentationTest:...
+com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest:......
+
+Time: 17.915
+
+OK (9 tests)
+
+

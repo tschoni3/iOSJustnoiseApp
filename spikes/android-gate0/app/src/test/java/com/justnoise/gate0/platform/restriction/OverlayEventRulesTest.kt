@@ -29,6 +29,19 @@ class OverlayEventRulesTest {
     }
 
     @Test
+    fun `real Justnoise activity is never covered by a stale target blocker`() {
+        assertEquals(OverlayEventDecision.HIDE, OverlayEventRules.decide(
+            isWindowStateChange = true,
+            foregroundPackage = JUSTNOISE_PACKAGE,
+            justnoisePackage = JUSTNOISE_PACKAGE,
+            selectedPackages = TARGET_PACKAGES + JUSTNOISE_PACKAGE,
+            enforcementEligible = true,
+            overlayIsShowing = true,
+            isOwnActivityWindow = true,
+        ))
+    }
+
+    @Test
     fun `definitive other app transition hides overlay`() {
         assertEquals(
             OverlayEventDecision.HIDE,

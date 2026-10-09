@@ -57,17 +57,57 @@ class ScheduleRuntimeInstrumentationTest {
     @Test
     fun readinessRequiresMainThreadAcknowledgmentAndAnUnchangedBoundGeneration() {
         assertNull(ScheduledEnforcement.prepareStart())
+        assertEquals(ScheduledEnforcement.ReadinessStatus.NO_BOUND_SERVICE, ScheduledEnforcement.lastReadinessStatus)
         val fake = TestEndpoint().also { endpoint = it }
         ScheduledEnforcement.connected(fake)
         val ready = requireNotNull(ScheduledEnforcement.prepareStart())
         assertTrue(fake.checkedOnMain)
         assertTrue(ready.isStillReady())
+        assertEquals(ScheduledEnforcement.ReadinessStatus.READY, ScheduledEnforcement.lastReadinessStatus)
+        val expired = ScheduledEnforcement.PreparedStart(fake, fake.generation, 0L)
+        assertFalse(expired.isStillReady())
+        assertEquals(ScheduledEnforcement.ReadinessStatus.LEASE_EXPIRED, ScheduledEnforcement.lastReadinessStatus)
         fake.generation += 1L
         assertFalse(ready.isStillReady())
+        assertEquals(ScheduledEnforcement.ReadinessStatus.FOREGROUND_CHANGED, ScheduledEnforcement.lastReadinessStatus)
         fake.known = false
         assertNull(ScheduledEnforcement.prepareStart())
+        assertEquals(ScheduledEnforcement.ReadinessStatus.FOREGROUND_UNKNOWN, ScheduledEnforcement.lastReadinessStatus)
         ScheduledEnforcement.disconnected(fake)
         assertNull(ScheduledEnforcement.prepareStart())
+    }
+
+    @Test
+    fun slowPackageDiscoveryFinishesBeforeTheMainThreadReadinessLeaseStarts() {
+        val now = System.currentTimeMillis()
+        assertTrue(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION, now))
+        assertTrue(preferences.setSelectedPackages(setOf("synthetic.schedule.target")))
+        assertTrue(preferences.setZapDigest("synthetic-order-test-digest"))
+        assertTrue(preferences.saveSchedule(
+            ScheduleDraft("Discovery order", true,
+                ScheduleTiming(oneTimeEpochMilliseconds = now + 60_000L), "UTC"),
+            nowEpochMilliseconds = now,
+        ))
+        val plan = preferences.reconcileSchedulePlan(now, "UTC")
+        assertFalse(plan.error)
+        val occurrence = requireNotNull(plan.entries.single().pending)
+        val fake = TestEndpoint().also { endpoint = it }
+        ScheduledEnforcement.connected(fake)
+        var discoveryFinishedAt = 0L
+        val controller = Gate0Controller(context, preferences, loadLaunchablePackages = {
+            // Longer than the one-second lease, representing slow package-manager work.
+            SystemClock.sleep(1_100L)
+            discoveryFinishedAt = SystemClock.elapsedRealtime()
+            setOf("synthetic.schedule.target")
+        })
+        val result = controller.startScheduled(occurrence)
+        assertTrue(discoveryFinishedAt > 0L)
+        assertTrue(fake.preparedAt >= discoveryFinishedAt)
+        assertTrue(fake.checkedOnMain)
+        // Early delivery only: this ordering regression never creates a session.
+        assertFalse(result.started)
+        assertFalse(preferences.snapshot().desiredActive)
+        assertEquals(occurrence, preferences.loadScheduleExecutions().entries.single().pending)
     }
 
     @Test
@@ -144,9 +184,12 @@ class ScheduleRuntimeInstrumentationTest {
         @Volatile var generation = 1L
         @Volatile var known = true
         @Volatile var checkedOnMain = false
-        override fun prepareScheduleStart(): Long? {
+        @Volatile var preparedAt = 0L
+        override fun prepareScheduleStart(): ScheduledEnforcement.Preparation {
             checkedOnMain = Looper.myLooper() == Looper.getMainLooper()
-            return if (known) generation else null
+            preparedAt = SystemClock.elapsedRealtime()
+            return if (known) ScheduledEnforcement.Preparation.Ready(generation)
+                else ScheduledEnforcement.Preparation.Rejected(ScheduledEnforcement.ReadinessStatus.FOREGROUND_UNKNOWN)
         }
         override fun isScheduleReadinessCurrent(generation: Long): Boolean = known && generation == this.generation
         override fun onScheduledStateChanged() = Unit

@@ -1,5 +1,22 @@
 # Android local session History
 
+**Current scope update — 2026-09-06:** the owner-approved
+[Play implementation plan](ANDROID_PLAY_IMPLEMENTATION.md) now includes the real
+90-day/year calendar and read-only local-midnight allocation. The earlier scope
+exclusions below describe the September 3 persistence slice, not the current UI
+plan. Existing records/UUIDs, truthful interruption labels and v4 runtime consent
+remain authoritative; this update does not claim physical or release acceptance.
+
+**Foreground completion update — 2026-09-06:** a newly successful stop now returns
+the exact committed outbox entry alongside its success result. The existing Boolean
+writer remains compatible. Failed, stale, idempotent and legacy-ineligible stops
+return no completion receipt. The integrated foreground scan alone may show that
+record after the unchanged iOS source threshold of 20 minutes. No latest-row lookup,
+background popup, replay on resume, extra History write or schema change is added.
+The sheet says Session time and keeps interruption/timing uncertainty visible.
+Its record is cleared on dismissal/background/new session; withdrawal also clears
+transient UUID suppression. SQLite delivery remains independent of successful stop.
+
 Status: implemented in development source, 2026-09-03; emulator instrumentation
 and full local verification passed. A16 History/visual acceptance remains pending.
 This does not claim Gate 0 PASS or release readiness.

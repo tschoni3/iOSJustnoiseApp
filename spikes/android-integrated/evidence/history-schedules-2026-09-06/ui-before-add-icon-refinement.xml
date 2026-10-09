@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="39" failures="0" errors="0" skipped="0" time="61.695" timestamp="2026-09-06T14:55:42" hostname="localhost">
+  <testsuite name="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" tests="5" failures="0" errors="0" skipped="0" time="10.964" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="rotatingSecondPageKeepsPageAndDoesNotCompleteTutorial" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="4.005" />
+    <testcase name="twoPagesReachActivationWithoutGrantingConsentPairingOrStartingSession" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="1.739" />
+    <testcase name="existingLegacyPairSkipsEducationWithoutReplacingPairOrGrantingConsent" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="0.981" />
+    <testcase name="pairedConfirmationRequiresExplicitContinueBeforeOpeningUncheckedSetup" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="2.052" />
+    <testcase name="completedTutorialSurvivesFreshActivityLaunchWithoutSavedState" classname="com.justnoise.integrated.IntegratedFirstRunInstrumentationTest" time="2.187" />
+  </testsuite>
+  <testsuite name="com.justnoise.integrated.IntegratedHistoryActivityInstrumentationTest" tests="3" failures="0" errors="0" skipped="0" time="10.417" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="backgroundClearsSnapshotAndRecreationReloadsTheSelectedDayWithoutRewritingRows" classname="com.justnoise.integrated.IntegratedHistoryActivityInstrumentationTest" time="4.112" />
+    <testcase name="rangeMenuLoadsYearAndNinetyDaysWithoutChangingCompletedRecords" classname="com.justnoise.integrated.IntegratedHistoryActivityInstrumentationTest" time="3.442" />
+    <testcase name="actualHistoryToolbarLoadsPersistedRowsAndDayDetailsThenNativeBackReturnsToZap" classname="com.justnoise.integrated.IntegratedHistoryActivityInstrumentationTest" time="2.863" />
+  </testsuite>
+  <testsuite name="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" tests="7" failures="0" errors="0" skipped="0" time="1.141" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="selectedDayRestoresOnlyUiIdentityAndReadsFreshDataAfterRecreation" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.203" />
+    <testcase name="foregroundRefreshFindsNewCompletionsAndKeepsUncertaintyIndependent" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.088" />
+    <testcase name="workerReadsEveryRowIndependentlyOfPaginationAndPreservesAllStoredFields" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.553" />
+    <testcase name="failedOrIncompleteReadIsTruthfulAndExplicitRetryLoadsRealData" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.09" />
+    <testcase name="latestWindowWinsWhenAnOlderReadCompletesLate" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.033" />
+    <testcase name="backgroundInvalidatesLateResultAndWithdrawalCannotReappearOnForeground" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.061" />
+    <testcase name="dateAndZoneChangesRecomputeRangesWithoutRewritingRows" classname="com.justnoise.integrated.IntegratedHistoryViewModelInstrumentationTest" time="0.113" />
+  </testsuite>
+  <testsuite name="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" tests="6" failures="0" errors="0" skipped="0" time="15.36" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="missingAlarmAccessRemainsExplicitAndSaveIsOnlyAUserCallback" classname="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" time="2.867" />
+    <testcase name="compactListProvidesSeparateEditToggleAndTrailingAddActions" classname="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" time="1.886" />
+    <testcase name="newSheetChangesOnlyItsDraftAndCancelDoesNotRequestSave" classname="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" time="1.957" />
+    <testcase name="loadingSavingUncertaintyAndMissingConsentPreserveMutationRefusals" classname="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" time="2.445" />
+    <testcase name="enlargedTextKeepsSheetActionsAndEveryCircularWeekdayReachable" classname="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" time="2.469" />
+    <testcase name="staleDraftKeepsExplicitReloadAndDeleteRequiresConfirmationOfTheSameRevision" classname="com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest" time="3.736" />
+  </testsuite>
+  <testsuite name="com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest" tests="4" failures="0" errors="0" skipped="0" time="8.679" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="protectedAndUnavailableRowsBecomeRemovalOnlyAndAreExcludedFromSavedSet" classname="com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest" time="1.962" />
+    <testcase name="recreationClosesUnsavedSheetAndDoesNotRestoreOrSaveDraft" classname="com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest" time="1.915" />
+    <testcase name="openingSelectionCancelsClaimedScanAndRejectsLateResultWithoutMutation" classname="com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest" time="1.773" />
+    <testcase name="cancelLeavesSavedAppsUntouchedAndExplicitSavePersistsMultipleApps" classname="com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest" time="3.029" />
+  </testsuite>
+  <testsuite name="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" tests="7" failures="0" errors="0" skipped="0" time="0.674" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="explicitSavePersistsOnceWithoutConsentPairingOrSessionGrant" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.172" />
+    <testcase name="withdrawalAndReconsentInvalidateFrozenDraftAuthority" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.089" />
+    <testcase name="lateLoadCannotReopenPausedSheetOrRestoreDiscardedDraft" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.027" />
+    <testcase name="draftAndCancelNeverWriteAndFreshOpenReadsSavedSelection" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.082" />
+    <testcase name="confirmedSaveSettlesOnceAfterPauseWithoutReopeningOrReplayingOnNewViewModel" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.113" />
+    <testcase name="changedSavedSelectionRequiresExplicitReloadWithoutReplacingDraftToken" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.105" />
+    <testcase name="activeAndRecoveryStatesRefuseEditingWithoutChangingSessionIntent" classname="com.justnoise.integrated.IntegratedSelectionViewModelInstrumentationTest" time="0.086" />
+  </testsuite>
+  <testsuite name="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" tests="7" failures="0" errors="0" skipped="0" time="13.235" timestamp="2026-09-06T14:55:42" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="idleRecoveryExplainsUncertaintyAndOffersSetupInsteadOfAStart" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="1.598" />
+    <testcase name="compactTwoHundredPercentTextKeepsRecoveryHelpAndScanCancellationReachable" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="1.733" />
+    <testcase name="everySetupGapRetainsItsExplanationAndCannotPresentProtectionWithAnOldDesiredFlag" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="3.341" />
+    <testcase name="scanningDisablesArtworkAndProvidesAnAccessibleCancelWithoutLosingTheResultNotice" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="2.054" />
+    <testcase name="recoveryWithRequestedSessionOffersOnlyStopAndHelpWithoutActivePresentation" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="1.51" />
+    <testcase name="idleExposesNamedNavigationSelectionAndOneScanActionWithoutDevelopmentChrome" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="1.595" />
+    <testcase name="activeShowsElapsedTimeAndStopWithHelpButNoEditableSelectionOrIdleNavigation" classname="com.justnoise.integrated.IntegratedZapUiInstrumentationTest" time="1.404" />
+  </testsuite>
+</testsuites>

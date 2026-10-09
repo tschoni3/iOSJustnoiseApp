@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="13" failures="0" errors="0" skipped="0" time="14.018" timestamp="2026-09-06T09:49:50" hostname="localhost">
+  <testsuite name="com.justnoise.gate0.HistoryInstrumentationTest" tests="13" failures="0" errors="0" skipped="0" time="3.346" timestamp="2026-09-06T09:49:50" hostname="localhost">
+    <properties>
+      <property name="device" value="medium_phone(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="repeatedExpectedIdStopDoesNotDuplicateAndStaleIdCannotStopAnotherSession" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.049" />
+    <testcase name="v3StartGetsImmutableUuidAndTargetsAndOnlyStopProducesCompletedHistory" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.109" />
+    <testcase name="legacyV2ActiveSessionCanStopButLaterConsentDoesNotBackfillHistory" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.163" />
+    <testcase name="coldProcessMarkerUsesFallbackDurationAndRecordsInterruption" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.141" />
+    <testcase name="timelineReadsAllRowsIndependentlyOfPageAndKeepsExistingStorageExactly" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="1.905" />
+    <testcase name="sqliteRetriesAreIdempotentAndPagesHaveStableOrderingWithWholeHistoryTotals" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.17" />
+    <testcase name="missingElapsedMetadataInSameProcessUsesInterruptedWallClockFallback" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.118" />
+    <testcase name="historyConsentIsCapturedAtStartNotGrantedRetroactivelyAtStop" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.089" />
+    <testcase name="failedOutboxAcknowledgementRetriesIdenticalUuidWithoutAddingAnotherRow" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.142" />
+    <testcase name="databaseFailurePreservesSuccessfulStopAndPreventsOverwriteUntilDeliveryRetries" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.143" />
+    <testcase name="failedWithdrawalDeletionBlocksConsentStartAndHistoryUntilClearWithoutResurrection" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.146" />
+    <testcase name="disconnectRecoveryAndUnavailableSignalsStayInterruptedAfterFreshHeartbeat" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.112" />
+    <testcase name="failedStopCommitRestoresActiveStateAndCannotPublishNondurableCompletion" classname="com.justnoise.gate0.HistoryInstrumentationTest" time="0.059" />
+  </testsuite>
+</testsuites>

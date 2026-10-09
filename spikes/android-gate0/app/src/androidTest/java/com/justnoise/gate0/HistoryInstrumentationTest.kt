@@ -7,10 +7,18 @@ import android.os.SystemClock
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.justnoise.gate0.data.Gate0Preferences
+import com.justnoise.gate0.data.LocalWorkspaceId
 import com.justnoise.gate0.data.SessionHistoryEntry
 import com.justnoise.gate0.data.SessionHistorySnapshot
 import com.justnoise.gate0.data.SessionHistoryStorage
+import com.justnoise.gate0.data.SessionHistoryTimelineSnapshot
 import com.justnoise.gate0.data.SqliteSessionHistoryStorage
+import com.justnoise.gate0.domain.HistoryDateRange
+import com.justnoise.gate0.domain.HistoryDayAccumulator
+import com.justnoise.gate0.domain.HistoryInterval
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -39,6 +47,64 @@ class HistoryInstrumentationTest {
     @After
     fun clearAfterTest() {
         assertTrue(Gate0Preferences(context).clearForWithdrawal())
+    }
+
+    @Test
+    fun localHistoryMergeStreamsAllRowsAndRetriesWithoutDuplicates() {
+        val local = SqliteSessionHistoryStorage(context)
+        val account = local.forWorkspace(LocalWorkspaceId.parse(UUID.randomUUID().toString()))
+        try {
+            repeat(125) { index -> local.insert(entry("import-$index", 100_000, 130_000, 500)) }
+            assertTrue(account.canMergeFrom(local))
+            account.mergeFrom(local)
+            account.mergeFrom(local)
+            assertEquals(125, account.load(1).totalCount)
+            assertEquals(62_500L, account.load(1).totalDurationMilliseconds)
+            assertEquals(local.load(200).entries, account.load(200).entries)
+            assertEquals(125, local.load(1).totalCount) // Copy itself never erases source.
+        } finally { account.eraseAccountData() }
+    }
+
+    @Test
+    fun localHistoryMergeConflictRollsBackEarlierRowsAndPreservesBothSources() {
+        val local = SqliteSessionHistoryStorage(context)
+        val account = local.forWorkspace(LocalWorkspaceId.parse(UUID.randomUUID().toString()))
+        val first = entry("a-import", 100_000, 130_000, 30_000)
+        val localConflict = entry("z-import", 100_000, 140_000, 40_000)
+        val accountConflict = localConflict.copy(durationMilliseconds = 20_000)
+        try {
+            local.insert(first); local.insert(localConflict); account.insert(accountConflict)
+            assertFalse(account.canMergeFrom(local))
+            assertThrows(IllegalStateException::class.java) { account.mergeFrom(local) }
+            assertEquals(listOf(accountConflict), account.load(100).entries)
+            assertEquals(2, local.load(1).totalCount)
+        } finally { account.eraseAccountData() }
+    }
+
+    @Test
+    fun accountDatabaseErasureRemovesOnlyItsOwnFilesAndIsRetryable() {
+        val a = LocalWorkspaceId.parse(UUID.randomUUID().toString())
+        val b = LocalWorkspaceId.parse(UUID.randomUUID().toString())
+        val local = SqliteSessionHistoryStorage(context)
+        val accountA = local.forWorkspace(a)
+        val accountB = local.forWorkspace(b)
+        val row = entry("synthetic-account-erasure", 100_000L, 130_000L, 30_000L)
+        try {
+            listOf(local, accountA, accountB).forEach { it.insert(row) }
+            assertTrue(context.getDatabasePath(a.historyDatabaseName).exists())
+            assertThrows(IllegalStateException::class.java) { local.eraseAccountData() }
+            accountA.eraseAccountData()
+            accountA.eraseAccountData()
+            for (suffix in listOf("", "-journal", "-wal", "-shm")) {
+                assertFalse(java.io.File(context.getDatabasePath(a.historyDatabaseName).path + suffix).exists())
+            }
+            assertEquals(listOf(row), local.load(10).entries)
+            assertEquals(listOf(row), accountB.load(10).entries)
+            assertTrue(accountA.load(10).entries.isEmpty())
+        } finally {
+            accountA.eraseAccountData()
+            accountB.eraseAccountData()
+        }
     }
 
     @Test
@@ -71,6 +137,31 @@ class HistoryInstrumentationTest {
     }
 
     @Test
+    fun timelineReadsAllRowsIndependentlyOfPageAndKeepsExistingStorageExactly() {
+        val storage = SqliteSessionHistoryStorage(context)
+        val end = Instant.parse("2026-09-06T00:00:00Z").toEpochMilli()
+        val rows = (1..125).map { number ->
+            entry("session-$number", end - 30_000L, end + 30_000L, 60_000L)
+                .copy(interrupted = number == 125)
+        }
+        rows.forEach(storage::insert)
+        val backwards = entry("clock-change", end + 86_400_000L, end + 1L, 42L)
+        storage.insert(backwards)
+        val original = storage.load(200)
+        assertEquals(100, storage.load(100).entries.size)
+        val range = HistoryDateRange(LocalDate.parse("2026-09-05"), LocalDate.parse("2026-09-07"), ZoneId.of("UTC"))
+        val timeline = Gate0Preferences(context).loadHistoryTimeline(range)
+        assertFalse(timeline.error)
+        assertEquals(126, timeline.totalCount)
+        assertEquals(7_500_042L, timeline.totalDurationMilliseconds)
+        assertEquals(listOf(3_750_000L, 3_750_042L), timeline.days.map { it.durationMilliseconds })
+        assertEquals(1, timeline.interruptedCount)
+        assertEquals(1, timeline.timingUncertainCount)
+        assertEquals(original, SqliteSessionHistoryStorage(context).load(200))
+        assertEquals(timeline, Gate0Preferences(context).loadHistoryTimeline(range))
+    }
+
+    @Test
     fun v3StartGetsImmutableUuidAndTargetsAndOnlyStopProducesCompletedHistory() {
         val storage = RecordingHistoryStorage()
         val preferences = Gate0Preferences(context, storage)
@@ -83,7 +174,9 @@ class HistoryInstrumentationTest {
         assertFalse(preferences.setSelectedPackages(setOf("synthetic.changed")))
         assertEquals(active, preferences.snapshot())
 
-        assertTrue(preferences.stopSession(160_000L, id))
+        val receipt = preferences.stopSessionWithCompletion(160_000L, id)
+        assertTrue(receipt.succeeded)
+        assertEquals(id, receipt.completion?.id)
 
         assertFalse(preferences.snapshot().desiredActive)
         assertNull(preferences.snapshot().activeSessionId)
@@ -92,6 +185,7 @@ class HistoryInstrumentationTest {
         assertFalse(TARGETS.any { it in pending })
         val history = Gate0Preferences(context, storage).loadHistory()
         val completed = history.entries.single()
+        assertEquals(receipt.completion, completed)
         assertEquals(id, completed.id)
         assertEquals(100_000L, completed.startedAtEpochMilliseconds)
         assertEquals(160_000L, completed.endedAtEpochMilliseconds)
@@ -105,9 +199,13 @@ class HistoryInstrumentationTest {
         val storage = RecordingHistoryStorage()
         val preferences = Gate0Preferences(context, storage)
         val firstId = startConsentedSession(preferences)
-        assertTrue(preferences.stopSession(160_000L, firstId))
+        val firstReceipt = preferences.stopSessionWithCompletion(160_000L, firstId)
+        assertTrue(firstReceipt.succeeded)
+        assertEquals(firstId, firstReceipt.completion?.id)
         val stopped = preferences.snapshot()
-        assertTrue(preferences.stopSession(170_000L, firstId))
+        val duplicate = preferences.stopSessionWithCompletion(170_000L, firstId)
+        assertTrue(duplicate.succeeded)
+        assertNull(duplicate.completion)
         assertEquals(stopped, preferences.snapshot())
         assertEquals(1, preferences.loadHistory().totalCount)
 
@@ -115,7 +213,9 @@ class HistoryInstrumentationTest {
         val secondActive = preferences.snapshot()
         val secondId = requireNotNull(secondActive.activeSessionId)
         assertNotEquals(firstId, secondId)
-        assertFalse(preferences.stopSession(260_000L, firstId))
+        val stale = preferences.stopSessionWithCompletion(260_000L, firstId)
+        assertFalse(stale.succeeded)
+        assertNull(stale.completion)
         assertEquals(secondActive, preferences.snapshot())
         assertTrue(preferences.stopSession(260_000L, secondId))
         assertEquals(setOf(firstId, secondId), preferences.loadHistory().entries.map { it.id }.toSet())
@@ -137,7 +237,9 @@ class HistoryInstrumentationTest {
         assertNull(preferences.snapshot().activeSessionId)
         assertTrue(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION, 150_000L))
 
-        assertTrue(preferences.stopSession(160_000L))
+        val legacy = preferences.stopSessionWithCompletion(160_000L)
+        assertTrue(legacy.succeeded)
+        assertNull(legacy.completion)
 
         assertFalse(preferences.snapshot().desiredActive)
         assertEquals(0, preferences.loadHistory().totalCount)
@@ -222,7 +324,9 @@ class HistoryInstrumentationTest {
         val id = startConsentedSession(preferences)
         storage.failInsert = true
 
-        assertTrue(preferences.stopSession(160_000L, id))
+        val receipt = preferences.stopSessionWithCompletion(160_000L, id)
+        assertTrue(receipt.succeeded)
+        assertEquals(id, receipt.completion?.id)
         val stopped = preferences.snapshot()
         assertFalse(stopped.desiredActive)
         assertTrue(rawPreferences().contains("pending_session_history"))
@@ -236,6 +340,7 @@ class HistoryInstrumentationTest {
         assertNotEquals(id, preferences.snapshot().activeSessionId)
         assertFalse(rawPreferences().contains("pending_session_history"))
         assertEquals(listOf(id), preferences.loadHistory().entries.map { it.id })
+        assertEquals(receipt.completion, preferences.loadHistory().entries.single())
     }
 
     @Test
@@ -247,7 +352,9 @@ class HistoryInstrumentationTest {
         val active = preferences.snapshot()
         failingContext.failNextCommit = true
 
-        assertFalse(preferences.stopSession(160_000L, id))
+        val failed = preferences.stopSessionWithCompletion(160_000L, id)
+        assertFalse(failed.succeeded)
+        assertNull(failed.completion)
 
         assertFalse(failingContext.failNextCommit)
         val rolledBack = preferences.snapshot()
@@ -306,7 +413,10 @@ class HistoryInstrumentationTest {
         assertFalse(rawPreferences().contains("pending_session_history"))
         assertTrue(rawPreferences().getBoolean("history_deletion_pending", false))
         assertFalse(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION))
-        assertTrue(preferences.setSelectedPackages(TARGETS))
+        val stateBeforeRejectedSelection = rawPreferences().all.toMap()
+        assertFalse(preferences.setSelectedPackages(TARGETS))
+        assertEquals(stateBeforeRejectedSelection, rawPreferences().all)
+        assertTrue(preferences.snapshot().selectedPackages.isEmpty())
         assertFalse(preferences.startSession(200_000L))
         val denied = preferences.loadHistory()
         assertTrue(denied.error)
@@ -358,6 +468,15 @@ class HistoryInstrumentationTest {
             interruptedCount = entries.values.count { it.interrupted },
             hasMore = entries.size > limit,
         )
+
+        override fun loadTimeline(range: HistoryDateRange): SessionHistoryTimelineSnapshot {
+            val intervals = entries.values.map {
+                HistoryInterval(it.startedAtEpochMilliseconds, it.endedAtEpochMilliseconds, it.durationMilliseconds, it.interrupted)
+            }
+            val days = HistoryDayAccumulator(range).apply { intervals.forEach(::add) }.summaries()
+            return SessionHistoryTimelineSnapshot(range, days, intervals.size,
+                intervals.sumOf { it.durationMilliseconds }, intervals.count { it.interrupted }, intervals.count { it.timingUncertain })
+        }
 
         override fun clear() {
             check(!failClear) { "Synthetic deletion failure" }

@@ -7,6 +7,76 @@ import org.junit.Test
 
 class Gate0StateReconcilerTest {
     @Test
+    fun `observation samples clock after a heartbeat committed during snapshot read`() {
+        val calls = mutableListOf<String>()
+        var elapsed = 3_999L
+        val observed = Gate0StateReconciler.observe(
+            readStored = {
+                calls += "snapshot"
+                // Models snapshot() waiting for the service's concurrent preference
+                // commit. A clock sampled at method entry would now be too early.
+                elapsed = 4_000L
+                readyState(desiredActive = true).copy(
+                    serviceHeartbeatElapsedMilliseconds = elapsed,
+                )
+            },
+            readAccessibilityEnabled = {
+                calls += "accessibility"
+                true
+            },
+            readElapsedRealtime = {
+                calls += "clock"
+                elapsed
+            },
+        )
+
+        assertEquals(listOf("snapshot", "accessibility", "clock"), calls)
+        assertEquals(4_000L, observed.elapsedMilliseconds)
+        assertEquals(
+            Gate0Truth.ACTIVE,
+            Gate0StateReconciler.reconcile(
+                observed.stored, observed.accessibilityEnabled, observed.elapsedMilliseconds,
+            ),
+        )
+    }
+
+    @Test
+    fun `observation preserves explicit timestamp and unchanged heartbeat boundaries`() {
+        // Explicit timestamps are deterministic observations, not values to clamp
+        // to the heartbeat. In particular, future heartbeats must still fail closed.
+        for ((observedAt, expected) in listOf(
+            3_999L to Gate0Truth.RECOVERY_REQUIRED,
+            4_000L to Gate0Truth.ACTIVE,
+            12_000L to Gate0Truth.ACTIVE,
+            12_001L to Gate0Truth.RECOVERY_REQUIRED,
+        )) {
+            val calls = mutableListOf<String>()
+            val observed = Gate0StateReconciler.observe(
+                readStored = {
+                    calls += "snapshot"
+                    readyState(desiredActive = true)
+                },
+                readAccessibilityEnabled = {
+                    calls += "accessibility"
+                    true
+                },
+                readElapsedRealtime = { error("Explicit observation must not sample the clock") },
+                nowElapsedMilliseconds = observedAt,
+            )
+
+            assertEquals(listOf("snapshot", "accessibility"), calls)
+            assertEquals(observedAt, observed.elapsedMilliseconds)
+            assertEquals(
+                "observedAt=$observedAt",
+                expected,
+                Gate0StateReconciler.reconcile(
+                    observed.stored, observed.accessibilityEnabled, observed.elapsedMilliseconds,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `stale heartbeat never produces active truth`() {
         val stored = readyState(desiredActive = true).copy(
             serviceHeartbeatElapsedMilliseconds = 1_000L,

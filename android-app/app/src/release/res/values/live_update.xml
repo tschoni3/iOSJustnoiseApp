@@ -1,0 +1,4 @@
+<resources>
+    <!-- Reuse the unchanged iOS Zap artwork already included by the release build. -->
+    <item name="session_notification_artwork" type="drawable">@drawable/zap_button</item>
+</resources>

@@ -14,31 +14,45 @@ import android.provider.Settings
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.TextView
+import android.widget.Toast
 import com.justnoise.gate0.R
+import com.justnoise.gate0.data.SelectionEditResult
+import com.justnoise.gate0.data.ZapPairingToken
 import com.justnoise.gate0.domain.SessionTransition
 import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.feature.Gate0Truth
 import com.justnoise.gate0.feature.ScheduleRuntime
-import com.justnoise.gate0.platform.discovery.LauncherAppRepository
+import com.justnoise.gate0.feature.AppSelectionChoice
+import com.justnoise.gate0.feature.AppSelectionManagement
+import com.justnoise.gate0.feature.AppSelectionSnapshot
 import com.justnoise.gate0.platform.nfc.NdefReadFailure
 import com.justnoise.gate0.platform.nfc.NdefReadResult
 import com.justnoise.gate0.platform.nfc.NdefTagReader
 import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
 import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
+import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
     private lateinit var controller: Gate0Controller
-    private lateinit var appRepository: LauncherAppRepository
+    private lateinit var appSelection: AppSelectionManagement
     private lateinit var statusText: TextView
     private lateinit var selectAppsButton: Button
     private lateinit var selectedAppsText: TextView
-    private var appChoices = emptyList<AppChoice>()
+    private var appChoices = emptyList<AppSelectionChoice>()
     private var appPickerDialog: AlertDialog? = null
+    private var appSelectionLoading = false
+    private var appSelectionSaving = false
+    private var pickerOpenRequested = false
+    private var selectionGeneration = 0
+    private var resumed = false
+    private val selectionWorker = Executors.newSingleThreadExecutor()
     private lateinit var consentCheckbox: CheckBox
     private lateinit var accessibilitySettingsButton: Button
     private var nfcAdapter: NfcAdapter? = null
     private val scanCoordinator = OneShotScanCoordinator<ScanPurpose>()
+    private var pairingConfirmation: AlertDialog? = null
+    private var activePairingToken: ZapPairingToken? = null
     private val handler = Handler(Looper.getMainLooper())
 
     private val refreshStatus = object : Runnable {
@@ -55,7 +69,7 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         controller = Gate0Controller(this)
-        appRepository = LauncherAppRepository(this)
+        appSelection = AppSelectionManagement(applicationContext)
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
 
         statusText = findViewById(R.id.statusText)
@@ -72,6 +86,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        resumed = true
         ScheduleRuntime(this).onExplicitForeground()
         val accepted = controller.hasAcceptedCurrentDisclosure()
         consentCheckbox.isChecked = accepted
@@ -83,10 +98,20 @@ class MainActivity : Activity() {
     }
 
     override fun onPause() {
+        resumed = false
+        selectionGeneration += 1
+        pickerOpenRequested = false
+        appSelectionLoading = false
         appPickerDialog?.dismiss()
+        pairingConfirmation?.dismiss()
         cancelReaderMode()
         handler.removeCallbacks(refreshStatus)
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        selectionWorker.shutdown() // A user-confirmed in-flight Save may settle once; never replay it.
+        super.onDestroy()
     }
 
     private fun onTagDiscovered(
@@ -159,13 +184,15 @@ class MainActivity : Activity() {
             val transientCanonicalRecord = acceptedResult.transientCanonicalRecord
             when (token.purpose) {
                 ScanPurpose.PAIR -> {
-                    val paired = try {
-                        controller.pairZap(transientCanonicalRecord)
-                    } catch (_: Exception) {
-                        false
-                    }
+                    val pairingToken = activePairingToken
+                    val paired = foregroundInteractionClaimed && pairingToken != null &&
+                        controller.pairZap(transientCanonicalRecord, pairingToken)
                     showTransientStatus(
-                        if (paired) R.string.status_pair_success else R.string.status_pair_storage_failed,
+                        when {
+                            !foregroundInteractionClaimed -> R.string.status_direct_duplicate_ignored
+                            paired -> R.string.status_pair_success
+                            else -> R.string.status_pair_not_saved
+                        },
                     )
                 }
 
@@ -187,6 +214,7 @@ class MainActivity : Activity() {
                             R.string.status_direct_duplicate_ignored
 
                         interaction == null -> R.string.status_start_failed
+                        interaction.accountRequired -> R.string.status_account_required
                         interaction.persistenceFailed -> R.string.status_session_storage_failed
                         interaction.readDecision.outcome == ZapReadOutcome.UNAUTHORIZED ->
                             R.string.status_scan_unauthorized
@@ -214,6 +242,7 @@ class MainActivity : Activity() {
         } finally {
             result.clearSensitiveData()
             scanCoordinator.finish(token)
+            if (token.purpose == ScanPurpose.PAIR) activePairingToken = null
         }
     }
 
@@ -227,43 +256,97 @@ class MainActivity : Activity() {
             showTransientStatus(R.string.target_edit_requires_stop)
             return
         }
-        if (appPickerDialog?.isShowing == true) return
+        if (appPickerDialog?.isShowing == true || appSelectionSaving) return
+        pickerOpenRequested = true
         loadApps()
-        val choices = appChoices
-        val pendingSelection = controller.selectedPackages().toMutableSet()
+    }
+
+    private fun openLoadedAppPicker(snapshot: AppSelectionSnapshot) {
+        val edit = snapshot.edit ?: return
+        if (edit.sessionRequested || controller.isSessionRequested()) {
+            showTransientStatus(R.string.target_edit_requires_stop)
+            return
+        }
+        val token = edit.token ?: run {
+            showTransientStatus(R.string.target_selection_recovery)
+            return
+        }
+        val choices = snapshot.choices
+        val pendingSelection = edit.selectedPackages.toMutableSet()
         val checked = BooleanArray(choices.size) { choices[it].packageName in pendingSelection }
         appPickerDialog = AlertDialog.Builder(this)
             .setTitle(R.string.target_picker_title)
-            .setMultiChoiceItems(choices.map(AppChoice::label).toTypedArray(), checked) { dialog, which, selected ->
+            .setMultiChoiceItems(choices.map(::choiceLabel).toTypedArray(), checked) { dialog, which, selected ->
                 if (controller.isSessionRequested()) {
                     dialog.dismiss()
                     showTransientStatus(R.string.target_edit_requires_stop)
+                } else if (selected && !choices[which].available) {
+                    // A formerly selected app can be removed but never re-added as a protected target.
+                    // AlertDialog also reuses this array when an offscreen row is rebound.
+                    checked[which] = false
+                    (dialog as AlertDialog).listView.setItemChecked(which, false)
+                    pendingSelection.remove(choices[which].packageName)
+                    Toast.makeText(this, R.string.target_removal_only, Toast.LENGTH_LONG).show()
                 } else if (selected) {
                     pendingSelection.add(choices[which].packageName)
                 } else {
                     pendingSelection.remove(choices[which].packageName)
                 }
             }
-            .setPositiveButton(R.string.target_save) { _, _ ->
-                val saved = controller.selectTargets(pendingSelection.toSet())
-                loadApps()
-                if (saved) {
-                    renderTruth()
-                } else {
-                    showTransientStatus(
-                        if (controller.isSessionRequested()) {
-                            R.string.target_edit_requires_stop
-                        } else {
-                            R.string.target_save_failed
-                        },
-                    )
-                }
-            }
+            .setPositiveButton(R.string.target_save, null)
             .setNegativeButton(android.R.string.cancel, null)
             .create()
             .also { dialog ->
                 dialog.setOnDismissListener { appPickerDialog = null }
                 dialog.show()
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    if (appSelectionSaving) return@setOnClickListener
+                    val draft = pendingSelection.toSet()
+                    val generation = selectionGeneration
+                    appSelectionSaving = true
+                    dialog.listView.isEnabled = false
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                    dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = false
+                    dialog.setCancelable(false)
+                    renderAppSelection()
+                    selectionWorker.execute {
+                        val result = appSelection.save(token, draft)
+                        handler.post {
+                            if (isDestroyed) return@post
+                            appSelectionSaving = false
+                            if (!resumed) return@post
+                            if (generation != selectionGeneration || appPickerDialog !== dialog) {
+                                loadApps()
+                                return@post
+                            }
+                            dialog.setCancelable(true)
+                            dialog.listView.isEnabled = true
+                            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = true
+                            when (result) {
+                                SelectionEditResult.SAVED, SelectionEditResult.UNCHANGED -> {
+                                    dialog.dismiss()
+                                    loadApps()
+                                    renderTruth()
+                                }
+                                else -> {
+                                    val message = selectionFailureMessage(result)
+                                    showTransientStatus(message)
+                                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                                    if (result == SelectionEditResult.CONFLICT) {
+                                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
+                                            setText(R.string.target_reload)
+                                            setOnClickListener { dialog.dismiss(); showAppPicker() }
+                                        }
+                                    } else if (result == SelectionEditResult.ACTIVE_SESSION ||
+                                        result == SelectionEditResult.RECOVERY_REQUIRED
+                                    ) dialog.dismiss()
+                                    renderAppSelection()
+                                }
+                            }
+                        }
+                    }
+                }
             }
     }
 
@@ -285,11 +368,37 @@ class MainActivity : Activity() {
 
     private fun configureZapButtons() {
         findViewById<Button>(R.id.pairZapButton).setOnClickListener {
-            beginOneShotScan(ScanPurpose.PAIR)
+            requestZapPairing()
         }
         findViewById<Button>(R.id.scanZapButton).setOnClickListener {
             beginOneShotScan(ScanPurpose.TOGGLE)
         }
+    }
+
+    private fun requestZapPairing() {
+        if (!resumed || pairingConfirmation?.isShowing == true) return
+        cancelReaderMode()
+        val intent = controller.prepareZapPairing()
+        if (intent == null) {
+            showTransientStatus(R.string.status_pair_unavailable)
+            return
+        }
+        if (!intent.replacesExistingZap) {
+            beginOneShotScan(ScanPurpose.PAIR, intent)
+            return
+        }
+        // Freeze before asking: changes while the dialog or scan is open invalidate this intent.
+        pairingConfirmation = AlertDialog.Builder(this)
+            .setTitle(R.string.pair_replace_title)
+            .setMessage(R.string.pair_replace_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.pair_replace_confirm) { _, _ ->
+                if (resumed) beginOneShotScan(ScanPurpose.PAIR, intent)
+            }
+            .create().also { dialog ->
+                dialog.setOnDismissListener { pairingConfirmation = null }
+                dialog.show()
+            }
     }
 
     private fun configureEscapeControls() {
@@ -304,6 +413,10 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.withdrawButton).setOnClickListener {
             cancelReaderMode()
             val cleared = controller.withdrawAndClear()
+            selectionGeneration += 1
+            appSelectionLoading = false
+            pickerOpenRequested = false
+            appChoices = emptyList()
             consentCheckbox.isChecked = false
             consentCheckbox.isEnabled = true
             accessibilitySettingsButton.isEnabled = false
@@ -320,20 +433,32 @@ class MainActivity : Activity() {
     }
 
     private fun loadApps() {
-        val availableApps = appRepository.load().map { AppChoice(it.label, it.packageName) }
-        val availablePackages = availableApps.mapTo(mutableSetOf(), AppChoice::packageName)
-        val unavailableApps = (controller.selectedPackages() - availablePackages).sorted().map {
-            AppChoice(getString(R.string.target_unavailable, it), it)
-        }
-        // Keep unavailable saved targets visible until the user explicitly removes them.
-        appChoices = availableApps + unavailableApps
+        if (!resumed || appSelectionLoading || appSelectionSaving || appPickerDialog?.isShowing == true) return
+        val generation = ++selectionGeneration
+        appSelectionLoading = true
         renderAppSelection()
+        selectionWorker.execute {
+            val snapshot = appSelection.load()
+            handler.post {
+                if (isDestroyed || !resumed || generation != selectionGeneration) return@post
+                appSelectionLoading = false
+                if (!snapshot.error) appChoices = snapshot.choices
+                renderAppSelection()
+                val openPicker = pickerOpenRequested
+                pickerOpenRequested = false
+                if (snapshot.error) showTransientStatus(R.string.target_load_failed)
+                else if (openPicker) openLoadedAppPicker(snapshot)
+            }
+        }
     }
+
+    private fun choiceLabel(choice: AppSelectionChoice): String =
+        choice.label ?: getString(R.string.target_unavailable, choice.packageName)
 
     private fun renderAppSelection() {
         val sessionRequested = controller.isSessionRequested()
         val selectedPackages = controller.sessionPackages()
-        val labels = appChoices.associateBy(AppChoice::packageName)
+        val labels = appChoices.associateBy(AppSelectionChoice::packageName)
         val summary = if (selectedPackages.isEmpty()) {
             getString(R.string.target_placeholder)
         } else {
@@ -342,10 +467,11 @@ class MainActivity : Activity() {
                 selectedPackages.size,
                 selectedPackages.size,
             ) + "\n" + selectedPackages.sorted().joinToString("\n") {
-                labels[it]?.label ?: getString(R.string.target_unavailable, it)
+                labels[it]?.let(::choiceLabel) ?: getString(R.string.target_unavailable, it)
             }
         }
-        selectAppsButton.isEnabled = !sessionRequested
+        selectAppsButton.isEnabled = !sessionRequested && !appSelectionLoading && !appSelectionSaving
+        findViewById<Button>(R.id.refreshAppsButton).isEnabled = !appSelectionLoading && !appSelectionSaving
         val selectionText = if (sessionRequested) {
             summary + "\n\n" + getString(R.string.target_edit_requires_stop)
         } else {
@@ -354,14 +480,19 @@ class MainActivity : Activity() {
         if (selectedAppsText.text.toString() != selectionText) selectedAppsText.text = selectionText
     }
 
-    private fun beginOneShotScan(purpose: ScanPurpose) {
+    private fun beginOneShotScan(purpose: ScanPurpose, pairingToken: ZapPairingToken? = null) {
+        cancelReaderMode()
+        if (purpose == ScanPurpose.PAIR && pairingToken == null) {
+            showTransientStatus(R.string.status_pair_unavailable)
+            return
+        }
         val adapter = nfcAdapter
         if (adapter == null || !adapter.isEnabled) {
             showTransientStatus(R.string.status_nfc_unavailable)
             return
         }
-        cancelReaderMode()
         val token = scanCoordinator.begin(purpose)
+        activePairingToken = pairingToken
         try {
             adapter.enableReaderMode(
                 this,
@@ -376,6 +507,7 @@ class MainActivity : Activity() {
             )
         } catch (_: RuntimeException) {
             scanCoordinator.cancel(token)
+            activePairingToken = null
             showTransientStatus(R.string.status_nfc_unavailable)
             return
         }
@@ -386,6 +518,7 @@ class MainActivity : Activity() {
 
     private fun cancelReaderMode() {
         scanCoordinator.cancel()
+        activePairingToken = null
         disableReaderModeHardware()
     }
 
@@ -437,11 +570,6 @@ class MainActivity : Activity() {
         }
     }
 
-    private data class AppChoice(
-        val label: String,
-        val packageName: String,
-    )
-
     private enum class ScanPurpose {
         PAIR,
         TOGGLE,
@@ -459,4 +587,12 @@ internal fun withdrawalStatusMessage(cleared: Boolean): Int = if (cleared) {
     R.string.status_withdrawn
 } else {
     R.string.status_withdrawal_failed
+}
+
+internal fun selectionFailureMessage(result: SelectionEditResult): Int = when (result) {
+    SelectionEditResult.ACTIVE_SESSION -> R.string.target_edit_requires_stop
+    SelectionEditResult.CONFLICT -> R.string.target_selection_conflict
+    SelectionEditResult.RECOVERY_REQUIRED -> R.string.target_selection_recovery
+    SelectionEditResult.INVALID_SELECTION -> R.string.target_invalid_selection
+    else -> R.string.target_save_failed
 }

@@ -19,11 +19,12 @@ class StaticPolicyContractTest {
     private val spikeRoot = File(repositoryRoot, "spikes/android-gate0")
 
     @Test
-    fun `manifests keep NFC visibility and only explicit scheduling permissions and receiver`() {
+    fun `manifests keep NFC and only reviewed scheduling and optional notification boundaries`() {
         for (path in sourceManifests()) {
             val manifest = path.readText()
             assertScheduleManifestBoundary(parseManifest(path))
             assertTrue(manifest.contains("android.permission.NFC"))
+            assertTrue(manifest.contains("android.permission.POST_NOTIFICATIONS"))
             assertTrue(manifest.contains("android.intent.category.LAUNCHER"))
             assertTrue(manifest.contains("android.nfc.action.NDEF_DISCOVERED"))
             assertTrue(manifest.contains("android:mimeType=\"text/plain\""))
@@ -32,6 +33,8 @@ class StaticPolicyContractTest {
             assertFalse(manifest.contains("android.permission.QUERY_ALL_PACKAGES"))
             assertFalse(manifest.contains("android.permission.SYSTEM_ALERT_WINDOW"))
             assertFalse(manifest.contains("android.permission.PACKAGE_USAGE_STATS"))
+            assertFalse(manifest.contains("android.permission.POST_PROMOTED_NOTIFICATIONS"))
+            assertFalse(manifest.contains("android.permission.FOREGROUND_SERVICE"))
             assertTrue(manifest.contains("android:allowBackup=\"false\""))
             assertTrue(manifest.contains("android:fullBackupContent=\"false\""))
             assertTrue(manifest.contains("android:dataExtractionRules=\"@xml/data_extraction_rules\""))
@@ -40,7 +43,13 @@ class StaticPolicyContractTest {
 
     @Test
     fun `schedule manifest boundary rejects extra permissions and exported receivers`() {
-        for (permission in listOf("android.permission.INTERNET", "android.permission.USE_EXACT_ALARM")) {
+        for (permission in listOf(
+            "android.permission.INTERNET",
+            "android.permission.USE_EXACT_ALARM",
+            "android.permission.POST_PROMOTED_NOTIFICATIONS",
+            "android.permission.FOREGROUND_SERVICE",
+            "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+        )) {
             val manifest = parseManifest(sourceManifests().first())
             val extra = manifest.createElement("uses-permission").apply {
                 setAttributeNS(ANDROID_NAMESPACE, "android:name", permission)
@@ -58,6 +67,98 @@ class StaticPolicyContractTest {
         val application = manifest.getElementsByTagName("application").item(0) as Element
         application.appendChild(manifest.createElement("receiver"))
         assertThrows(AssertionError::class.java) { assertScheduleManifestBoundary(manifest) }
+    }
+
+    @Test
+    fun `notification dismissal receiver permits only explicit private enabled delivery`() {
+        for ((attribute, value) in listOf(
+            "exported" to "true",
+            "enabled" to "false",
+            "enabled" to "",
+            "permission" to "android.permission.DUMP",
+            "process" to ":notification",
+            "directBootAware" to "true",
+            "directBootAware" to "false",
+            "name" to "com.justnoise.OtherReceiver",
+        )) {
+            val manifest = parseManifest(sourceManifests().first())
+            notificationDismissalReceiver(manifest).setAttributeNS(ANDROID_NAMESPACE, "android:$attribute", value)
+            assertThrows(AssertionError::class.java) { assertScheduleManifestBoundary(manifest) }
+        }
+        for (mutation in listOf("missing", "duplicate", "implicit_export", "intent-filter", "meta-data")) {
+            val manifest = parseManifest(sourceManifests().first())
+            val receiver = notificationDismissalReceiver(manifest)
+            when (mutation) {
+                "missing" -> receiver.parentNode.removeChild(receiver)
+                "duplicate" -> receiver.parentNode.appendChild(receiver.cloneNode(true))
+                "implicit_export" -> receiver.removeAttributeNS(ANDROID_NAMESPACE, "exported")
+                else -> receiver.appendChild(manifest.createElement(mutation))
+            }
+            assertThrows(AssertionError::class.java) { assertScheduleManifestBoundary(manifest) }
+        }
+        for (enabled in listOf("", "true")) {
+            val manifest = parseManifest(sourceManifests().first())
+            val receiver = notificationDismissalReceiver(manifest)
+            if (enabled.isEmpty()) receiver.removeAttributeNS(ANDROID_NAMESPACE, "enabled")
+            else receiver.setAttributeNS(ANDROID_NAMESPACE, "android:enabled", enabled)
+            assertScheduleManifestBoundary(manifest)
+        }
+    }
+
+    @Test
+    fun `Live Update experiment permission exists only in the exact debug overlays`() {
+        for (mainManifest in sourceManifests()) {
+            val sources = mainManifest.parentFile.parentFile
+            val debugManifest = File(sources, "debug/AndroidManifest.xml")
+            assertTrue("Required debug experiment overlay is missing: $debugManifest", debugManifest.isFile)
+            assertDebugPromotionOverlay(parseManifest(debugManifest))
+            assertNoPromotionPermission(parseManifest(mainManifest))
+            val releaseManifest = File(sources, "release/AndroidManifest.xml")
+            if (releaseManifest.exists()) assertNoPromotionPermission(parseManifest(releaseManifest))
+        }
+    }
+
+    @Test
+    fun `debug promotion overlay rejects extra permissions components and manifest overrides`() {
+        val source = File(sourceManifests().first().parentFile.parentFile, "debug/AndroidManifest.xml")
+        for (mutation in listOf(
+            "missing_permission", "duplicate_permission", "wrong_permission", "sdk_qualified_permission",
+            "permission_attribute", "permission_child", "manifest_attribute", "extra_namespace",
+            "application", "uses-sdk", "permission", "receiver",
+        )) {
+            val document = parseManifest(source)
+            val root = document.documentElement
+            val permission = root.childElements().single()
+            when (mutation) {
+                "missing_permission" -> root.removeChild(permission)
+                "duplicate_permission" -> root.appendChild(permission.cloneNode(true))
+                "wrong_permission" -> permission.setAttributeNS(
+                    ANDROID_NAMESPACE, "android:name", "android.permission.FOREGROUND_SERVICE",
+                )
+                "sdk_qualified_permission" -> document.renameNode(permission, null, "uses-permission-sdk-23")
+                "permission_attribute" -> permission.setAttributeNS(ANDROID_NAMESPACE, "android:maxSdkVersion", "36")
+                "permission_child" -> permission.appendChild(document.createElement("intent-filter"))
+                "manifest_attribute" -> root.setAttribute("package", "com.justnoise.unreviewed")
+                "extra_namespace" -> root.setAttributeNS(
+                    XMLNS_NAMESPACE, "xmlns:tools", "http://schemas.android.com/tools",
+                )
+                else -> root.appendChild(document.createElement(mutation))
+            }
+            assertThrows(AssertionError::class.java) { assertDebugPromotionOverlay(document) }
+        }
+    }
+
+    @Test
+    fun `release overlays cannot request promotion even through an sdk qualified permission`() {
+        val source = File(sourceManifests().first().parentFile.parentFile, "debug/AndroidManifest.xml")
+        for (tag in listOf("uses-permission", "uses-permission-sdk-23", "uses-permission-sdk-m")) {
+            val document = parseManifest(source)
+            document.renameNode(document.documentElement.childElements().single(), null, tag)
+            assertThrows(AssertionError::class.java) { assertNoPromotionPermission(document) }
+        }
+        val emptyOverlay = parseManifest(source)
+        emptyOverlay.documentElement.removeChild(emptyOverlay.documentElement.childElements().single())
+        assertNoPromotionPermission(emptyOverlay)
     }
 
     @Test
@@ -113,6 +214,58 @@ class StaticPolicyContractTest {
         assertTrue(metadata.contains("android:isAccessibilityTool=\"false\""))
         assertTrue(metadata.contains("android:notificationTimeout=\"0\""))
         assertFalse(metadata.contains("android:accessibilityFlags"))
+    }
+
+    @Test
+    fun `integrated service description discloses while enabled observation for schedules`() {
+        val path = File(repositoryRoot, "spikes/android-integrated/app/src/main/res/values/strings.xml")
+        val document = DocumentBuilderFactory.newInstance().apply {
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }.newDocumentBuilder().parse(path)
+        val strings = document.getElementsByTagName("string")
+        val description = (0 until strings.length).map { strings.item(it) as Element }
+            .single { it.getAttribute("name") == "integrated_accessibility_service_description" }
+            .textContent
+
+        listOf("While enabled", "foreground app identifiers", "temporarily keeps the latest",
+            "scheduled starts", "During an eligible session", "cannot retrieve screen content").forEach {
+            assertTrue("Service description must retain: $it", description.contains(it))
+        }
+        assertFalse("Observation must not be described as limited to an active session",
+            description.contains("while a Justnoise session is active"))
+    }
+
+    @Test
+    fun `Android privacy draft uses owner identity without claiming a published policy`() {
+        val resourceRoot = File(repositoryRoot, "spikes/android-integrated/app/src/main/res/values")
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }
+        val privacy = factory.newDocumentBuilder().parse(File(resourceRoot, "privacy_draft.xml"))
+        val items = privacy.getElementsByTagName("item")
+        val paragraphs = (0 until items.length).map { items.item(it).textContent }
+        val declaration = file("evidence/PLAY_DECLARATION_DRAFT.md").readText()
+
+        assertTrue(paragraphs.contains("Publisher: Justnoise Media"))
+        assertTrue(paragraphs.any { it.startsWith("Privacy contact: hello@justnoise.shop") })
+        assertTrue(declaration.contains("**Publisher:** Justnoise Media"))
+        assertTrue(declaration.contains("**Privacy contact:** hello@justnoise.shop"))
+        for (copy in listOf(paragraphs.joinToString("\n"), declaration)) {
+            assertFalse("The former publisher placeholder must not remain", copy.contains("[YOUR LEGAL NAME / REGISTERED BUSINESS NAME]"))
+            assertFalse("The former contact placeholder must not remain", copy.contains("privacy@example.com"))
+            assertTrue("The Android notice remains a draft", copy.contains("Privacy Policy draft"))
+            assertTrue("A real public policy URL has not yet been supplied",
+                copy.contains("[YOUR PUBLISHED ANDROID PRIVACY POLICY URL]"))
+        }
+
+        val settings = factory.newDocumentBuilder().parse(File(resourceRoot, "settings.xml"))
+        val strings = settings.getElementsByTagName("string")
+        val values = (0 until strings.length).map { strings.item(it) as Element }
+            .associate { it.getAttribute("name") to it.textContent }
+        assertTrue(values.getValue("integrated_settings_privacy_detail").contains("Justnoise Media"))
+        assertEquals("DRAFT — NOT FINAL", values["integrated_settings_privacy_draft_title"])
+        assertTrue("Supplying identity does not silently remove the unpublished-policy warning",
+            values.getValue("integrated_settings_privacy_draft_warning").contains("not a published policy"))
     }
 
     @Test
@@ -253,12 +406,33 @@ class StaticPolicyContractTest {
         setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
     }.newDocumentBuilder().parse(path)
 
+    private fun assertDebugPromotionOverlay(document: Document) {
+        val root = document.documentElement
+        assertEquals("manifest", root.tagName)
+        assertEquals(1, root.attributes.length)
+        assertEquals(ANDROID_NAMESPACE, root.getAttributeNS(XMLNS_NAMESPACE, "android"))
+        val children = root.childElements()
+        assertEquals(1, children.size)
+        val permission = children.single()
+        assertEquals("uses-permission", permission.tagName)
+        assertEquals(1, permission.attributes.length)
+        assertEquals(PROMOTION_PERMISSION, permission.getAttributeNS(ANDROID_NAMESPACE, "name"))
+        assertTrue(permission.childElements().isEmpty())
+    }
+
+    private fun assertNoPromotionPermission(document: Document) {
+        assertEquals("manifest", document.documentElement.tagName)
+        val requests = document.documentElement.childElements().filter { it.tagName.startsWith("uses-permission") }
+        assertFalse(requests.any { it.getAttributeNS(ANDROID_NAMESPACE, "name") == PROMOTION_PERMISSION })
+    }
+
     private fun assertScheduleManifestBoundary(document: Document) {
         val root = document.documentElement
         assertEquals("manifest", root.tagName)
         val permissions = root.childElements().filter { it.tagName.startsWith("uses-permission") }
         val expectedPermissions = setOf(
             "android.permission.NFC",
+            "android.permission.POST_NOTIFICATIONS",
             "android.permission.SCHEDULE_EXACT_ALARM",
             "android.permission.RECEIVE_BOOT_COMPLETED",
             "android.permission.WAKE_LOCK",
@@ -274,12 +448,13 @@ class StaticPolicyContractTest {
         assertEquals(1, applications.size)
         val application = applications.single()
         val receivers = application.childElements().filter { it.tagName == "receiver" }
-        assertEquals(1, receivers.size)
-        val receiver = receivers.single()
-        assertTrue(receiver.getAttributeNS(ANDROID_NAMESPACE, "name") in setOf(
+        assertEquals(2, receivers.size)
+        val scheduleReceivers = receivers.filter { it.getAttributeNS(ANDROID_NAMESPACE, "name") in setOf(
             ".platform.schedule.ScheduleAlarmReceiver",
             "com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver",
-        ))
+        ) }
+        assertEquals(1, scheduleReceivers.size)
+        val receiver = scheduleReceivers.single()
         for (index in 0 until receiver.attributes.length) {
             val attribute = receiver.attributes.item(index)
             assertEquals(ANDROID_NAMESPACE, attribute.namespaceURI)
@@ -309,12 +484,37 @@ class StaticPolicyContractTest {
             assertEquals(1, action.attributes.length)
             assertTrue(action.childElements().isEmpty())
         }
+        val dismissals = receivers.filter {
+            it.getAttributeNS(ANDROID_NAMESPACE, "name") == NOTIFICATION_DISMISS_RECEIVER
+        }
+        assertEquals(1, dismissals.size)
+        val dismissal = dismissals.single()
+        for (index in 0 until dismissal.attributes.length) {
+            val attribute = dismissal.attributes.item(index)
+            assertEquals(ANDROID_NAMESPACE, attribute.namespaceURI)
+            assertTrue(attribute.localName in setOf("name", "exported", "enabled"))
+        }
+        assertEquals("false", dismissal.getAttributeNS(ANDROID_NAMESPACE, "exported"))
+        assertTrue(
+            !dismissal.hasAttributeNS(ANDROID_NAMESPACE, "enabled") ||
+                dismissal.getAttributeNS(ANDROID_NAMESPACE, "enabled") == "true",
+        )
+        assertTrue(dismissal.childElements().isEmpty())
     }
+
+    private fun notificationDismissalReceiver(document: Document): Element =
+        (document.getElementsByTagName("application").item(0) as Element).childElements().single {
+            it.tagName == "receiver" && it.getAttributeNS(ANDROID_NAMESPACE, "name") == NOTIFICATION_DISMISS_RECEIVER
+        }
 
     private fun Element.childElements(): List<Element> = (0 until childNodes.length)
         .mapNotNull { childNodes.item(it) as? Element }
 
     private companion object {
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
+        const val XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/"
+        const val PROMOTION_PERMISSION = "android.permission.POST_PROMOTED_NOTIFICATIONS"
+        const val NOTIFICATION_DISMISS_RECEIVER =
+            "com.justnoise.gate0.platform.notification.SessionNotificationDismissReceiver"
     }
 }

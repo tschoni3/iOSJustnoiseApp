@@ -14,6 +14,11 @@ class LauncherAppRepository(
     private val protectedPackageResolver: ProtectedPackageResolver =
         ProtectedPackageResolver(context),
 ) {
+    /** Eligibility needs package identity only, never labels, icons or sorting. */
+    fun loadPackageNames(): Set<String> = queryIntentActivities(
+        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+    ).mapTo(mutableSetOf()) { it.activityInfo.packageName }
+
     fun load(): List<LaunchableApp> {
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val protectedPackages = protectedPackageResolver.resolve()

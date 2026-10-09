@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:name="com.justnoise.app.auth.AccountApplication" android:label="Justnoise"
+        tools:replace="android:label,android:name">
+        <activity android:name="com.justnoise.app.auth.AccountActivity" android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="shop.justnoise.app" android:host="auth" android:path="/callback" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

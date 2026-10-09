@@ -2,6 +2,17 @@
 
 Status: target architecture, version 1.0.20
 
+September 9 owner extension: Sign-in, PostHog and Samsung Now Bar are now part of
+the desired Android release. See `ANDROID_CONNECTED_RELEASE.md` for sequencing,
+read-only iOS reference audit and remaining acceptance. This supersedes the older
+MVP feature exclusions only; it does not waive release safety or distribution gates.
+
+September 8 owner-authorized exception: local production packaging/signing now
+exists in `android-app/`, reusing canonical integrated/capability/shared sources
+without copying runtime implementations. Historical directory/production holds
+below are superseded only for building. Installation/distribution and physical
+acceptance remain HOLD. See `android-app/README.md` for the signed candidate.
+
 ## Decision
 
 Justnoise will use native SwiftUI on iOS and native Kotlin with Jetpack Compose on Android. The two applications share product contracts rather than a UI runtime. This preserves the published iOS experience and gives each platform direct access to the system capabilities required for NFC, restrictions, background work, notifications, and platform-owned UI.
@@ -14,6 +25,14 @@ single-app local beta is only a foundation step, not MVP completion. These four
 features remain local-first; authentication/cloud sync, widgets and Capture/Signal
 are not prerequisites. The current dependency order and evidence are in
 `docs/ANDROID_PREDEVICE_READINESS.md`.
+
+Owner scope extension, 2026-09-07: Android now includes named modes as part of app
+selection: stable local IDs/names/target sets, explicit recent-mode selection and
+per-schedule mode references. Earlier single-selection/named-mode exclusions are
+historical. The bounded native rules and migration are recorded in
+`docs/MOBILE_BEHAVIOR_V1.md` and `product/behavior/android-modes.v1.json`; iOS and
+the original portable fixtures remain unchanged. Implementation and affected
+device acceptance are still required; this does not authorize production promotion.
 
 Android MVP implementation update, 2026-09-02: the existing development sources now
 support one saved multi-app selection and a fixed active-session target snapshot.
@@ -244,7 +263,7 @@ Audited from the iOS 1.1.0 Release root flow, compile-time feature gates, SwiftU
 ### Delivery slices
 
 1. **Current pre-device phase:** maintain shared contracts, the disposable Gate 0 and UI spikes, policy evidence, and this matrix. Do not create `android-app/`.
-2. **MVP foundation after the separate A16 safety GO:** one Compose application module with local onboarding/pairing, one saved multi-app selection, durable session identity/target snapshots, the existing Zap/restriction engine and truthful recovery. Authentication, multiple named modes and cloud data are not required for this slice.
+2. **MVP foundation after the separate A16 safety GO:** one Compose application module with local onboarding/pairing, saved app selections, durable session identity/target snapshots, the existing Zap/restriction engine and truthful recovery. Named modes were added to the scope on September 7; authentication and cloud data remain excluded. Reuse the reviewed native engine rather than introduce a second implementation.
 3. **Required MVP History:** persist real session completion once and connect native History to those records and shared summary rules. Preview data is not delivery; weekly insight and account/settings expansion are later work.
 4. **Required MVP schedules:** define temporal/collision/recovery rules and fixtures, persist schedules and deliver them through the same session engine. This is sequenced after the foundation, not deferred outside the MVP. Release acceptance must include all four required features on the A16 candidate.
 5. **Later products:** Capture, Signal UI, and an Android widget require separate launch decisions and are not allowed to delay the core Android focus experience.

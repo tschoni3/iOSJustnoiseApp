@@ -2,6 +2,13 @@
 
 Status: **PHYSICAL GATE 0 IN PROGRESS — PRODUCTION IMPLEMENTATION HOLD**
 
+September 8 exception: the owner authorized local production packaging/signing
+with "jetzt bauen". `android-app/` now builds a signed candidate from canonical
+sources; the old directory-absence guard is replaced by layout verification.
+The historical production prohibition below no longer applies to this build-only
+scope. Installation/distribution and both safety decisions remain HOLD. See
+[`android-app/README.md`](../android-app/README.md) for current artifacts/evidence.
+
 This is the handoff between repository preparation and evidence that only consumer hardware, policy review, and Google Play can provide. It does not authorize `android-app/`.
 
 **Latest MVP scope, 2026-09-02:** the owner requires multiple-app selection, Zap
@@ -9,13 +16,31 @@ sessions, schedules and history. This supersedes the earlier proposal to deliver
 a single-selected-app build as the MVP. That build remains a foundation/safety
 sample, not the requested finished app. The four-feature scope below controls planning.
 
+**Scope extension, 2026-09-07:** the owner now requires named Android modes within
+app selection. Stable local names/IDs/target sets, last-explicit-mode Zap starts,
+per-schedule mode references and safe migration/deletion follow
+[`android-modes.v1.json`](../product/behavior/android-modes.v1.json) and
+`MOBILE_BEHAVIOR_V1.md`. Earlier single-selection/named-mode exclusions are historical.
+Source implementation and focused local/emulator checks are recorded in
+[`ANDROID_NAMED_MODES.md`](ANDROID_NAMED_MODES.md). A16 feature acceptance remains
+pending; iOS stays unchanged and the separate A16 beta GO is still required before
+production promotion.
+
 Release identity decision, 2026-09-02: the owner delegated a conventional Android ID;
-use `com.justnoise.app` with public name **Justnoise**, subject to Play Console
-availability/registration. The existing development installation stays
+Google Play later reported `com.justnoise.app` as already in use. Use the available,
+domain-derived `shop.justnoise.app` with public name **Justnoise**. The existing development installation stays
 `com.justnoise.androiddev`; do not rename or erase it while preparing the release.
-The chosen ID is not yet registered, signed, or used by a production build.
+The chosen release ID is signed and available but not yet registered.
 
 ## One reproducible repository check
+
+Latest optional Android session-notification slice (2026-09-06): full verifier
+passes **229 JVM tests and 36 Python package-checker tests**, plus **8 targeted
+notification and 2 Settings emulator cases**. Actual denied notification permission
+does not mutate the session; no extra Accessibility privilege or foreground service
+is added. A16 installation/rendering remains pending while the prior session is active.
+See the [scoped evidence and limitations](../spikes/android-integrated/evidence/session-notification-2026-09-06/README.md).
+This is not a production-signing, internal-beta GO or upload-ready claim.
 
 From the repository root, with JDK 17 and Android SDK 36 configured, run:
 
@@ -66,7 +91,9 @@ GitHub's **Android Gate 0** workflow runs the same command whenever either Andro
 
 ## Work not authorized during the current internal-beta HOLD
 
-- Do not create `android-app/` until the smaller A16 internal-beta checkpoint is recorded as GO (or full Gate 0 passes). The owner-delegated ID decision is already `com.justnoise.app`; verify availability/registration without asking for the same naming decision again.
+- The historical production-directory hold is superseded: `android-app/` exists and
+  the owner-authorized signed release uses the Play-confirmed available
+  `shop.justnoise.app`. Do not recreate or rename it without a new Console conflict.
 - Do not promote spike code into production packages.
 - Do not connect production accounts, analytics, backend data, signing keys, or store listings to a spike.
 - Do not claim working app restriction, NFC parity, background durability, or release readiness from unit tests, screenshots, or an emulator.
@@ -85,13 +112,70 @@ Budget-conscious sequence agreed 2026-09-02: complete the smaller A16 safety che
 
 Only after the separate internal-beta decision says `GO` (or full Gate 0 says `PASS`):
 
-1. Confirm Play availability/registration for the selected `com.justnoise.app` application ID.
+1. Register the Play-confirmed available `shop.justnoise.app` application ID.
 2. Create one `android-app/app` module beside the existing iOS project.
 3. Reuse the working NFC, blocker, Compose and contract components after release-boundary review; avoid a wholesale rewrite or an unreviewed bulk rename of spike packages.
-4. Implement the four-feature local MVP below. Define schedule semantics before scheduling implementation, but do not move schedules or history outside the MVP. Broader parity remains a later roadmap.
+4. Preserve and release-check the four-feature local MVP below, including the approved schedule timing contract and September 7 named-mode extension. Do not rebuild the existing engine or introduce excluded backend/Capture prerequisites. Broader parity remains a later roadmap.
 5. Preserve physical-device and Play Console evidence as release gates, not one-time assumptions.
 
+## September 6 physical progress — supersedes older pending-device statements
+
+The A16 now has the four-feature integrated development app, not the older
+single-target candidate. Its build-scoped evidence is recorded in
+[the current candidate record](../spikes/android-gate0/evidence/A16_MVP_CANDIDATE_2026-09-03.md).
+
+| MVP area | Observed on the A16 | Remaining limitation |
+| --- | --- | --- |
+| App selection | Chrome and Samsung Browser saved; both displayed correctly named blockers in one active session | Not exhaustive bypass coverage |
+| Zap sessions | Current UI candidate observed active with two targets, then owner stop reached idle revision 36 with connected service | Physical rejected/rapid-repeat acceptance remains open; earlier stop/unblock acceptance stands |
+| Schedules | Separate 20:20 one-time alarm started at 20:20:00.058 with Chrome already open; paired-Zap stop produced one clean two-target History entry | Clean ordinary cycle passes; Doze/reboot/endurance remain separate, not prerequisites for this smaller beta |
+| History | Manual 210,307 ms and scheduled 131,764 ms two-target sessions saved exactly once without new warnings; six total rows and two old warnings preserved through the UI update | Old second interruption cause remains unknown, not a demand to reproduce an unrecorded historical cause |
+
+The earlier multi-app interception and schedule samples belong to APK `ecd76456…`.
+The locally verified clock-order
+correction APK `4fee3831…` was subsequently installed in place: two selected apps,
+idle revision 30 and connected service were retained, and Main showed **Ready to
+Zap**. The later current UI APK `3d9ff301…` now has a clean bounded physical
+session/History completion and active/idle UI evidence. Its one saved schedule,
+pairing and selection were retained; native emergency keypad non-obstruction was
+also observed. Full hashes, exact-once counts, screenshots and limits are in
+[the current A16 UI/session evidence](../spikes/android-integrated/evidence/a16-current-ui-2026-09-06/README.md).
+The later contrast-only `e217eb1a…` APK is installed/hash-verified with the A16
+selection-sheet contrast corrected; the clean 20:20 scheduled cycle and six-row
+preservation are in [the follow-up evidence](../spikes/android-integrated/evidence/schedule-modal-contrast-2026-09-06/README.md).
+
+The remaining work is not another device purchase or a repeat of accepted Chrome
+unblocking or blind repetition to explain an old warning: close physical rejected/
+rapid-repeat input and authorized cleanup/fresh-consent evidence, then complete final review,
+release promotion and applicable store steps.
+Internal-beta and full-release decisions remain HOLD. The table and milestones
+below retain their earlier implementation checkpoint context; they must not be used
+to claim the current phone still needs initial installation or v4 setup.
+
 ## Required MVP: apps, Zap sessions, schedules and history
+
+Current source-first UI continuation, 2026-09-06: real onboarding/initial pairing,
+source-matched Zap, Compose selection, calendar History/day details, compact
+schedules/modal editing, grouped Settings and exact-receipt foreground completion
+now exist in the integrated development app. Legacy Zap replacement is guarded by
+explicit confirmation and atomic stale-state checks. See the
+[implementation tracker](ANDROID_PLAY_IMPLEMENTATION.md) for current verification,
+explicit Android visual adaptations and final rendered/A16/release dependencies.
+This supersedes the following earlier "calendar UI is not implemented"
+checkpoint, not the physical/signing/release HOLD.
+
+Latest implementation follow-up, 2026-09-06: the owner-approved
+[iOS-style MVP → Play plan](ANDROID_PLAY_IMPLEMENTATION.md) now has a tested
+range/day History read interface, midnight/DST/subminute duration attribution and
+clock-order regression coverage. Existing rows, interruption flags and the paired
+A16 remain untouched. All 178 JVM tests, lint/builds, 17 release-checker tests and
+the packaged boundary pass; 13 History storage cases additionally passed on a
+read-only emulator, including 126-row preservation beyond the list page. The
+calendar **UI is not implemented yet**. Three unchanged iOS Release onboarding/
+activation references are captured; the remaining reference states were requested.
+No production promotion, signed AAB or Play readiness is claimed. The table below
+retains its earlier baseline context; September 6 evidence above controls current
+physical status.
 
 The owner clarified: **“mvp is select apps to block, tap zap to start session, and
 schedule, history.”** All four must work with real persisted data. Keep this
@@ -104,7 +188,7 @@ local-first on the existing A16; no account system or framework rewrite is requi
 | Schedules | Versioned configuration, shared temporal rules, atomic occurrence/start receipts and native alarm runtime now have a real integrated list/editor, explicit exact-access entry and stored outcomes | Verify the combined editor/background-start/History and recovery flow on A16; local tests and UI smoke do not establish OEM reliability |
 | History | Real local UUID/outbox/SQLite records and native list/summary; scheduled starts reuse the same completion engine and the new v4 consent boundary | A16 real-Zap and scheduled completion/History plus physical visual acceptance |
 
-Minimum implementation order:
+Historical September 2 implementation order (the September 7 mode extension above supersedes the single-selection scope):
 
 1. **Saved apps and session data:** one saved multi-app selection, stable session
    identity and active target snapshot. Preserve pairing during migration. Multiple

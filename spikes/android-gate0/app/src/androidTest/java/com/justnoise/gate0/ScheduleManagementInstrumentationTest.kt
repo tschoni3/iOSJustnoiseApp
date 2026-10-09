@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.data.ScheduleDraft
+import com.justnoise.gate0.data.ModeMutationResult
 import com.justnoise.gate0.domain.ScheduleTiming
 import com.justnoise.gate0.feature.ScheduleManagement
 import com.justnoise.gate0.feature.ScheduleMutationFailure
@@ -63,7 +64,8 @@ class ScheduleManagementInstrumentationTest {
         assertFalse(empty.error)
         assertFalse(empty.consentAccepted)
         assertFalse(empty.zapPaired)
-        assertEquals(0, empty.selectedAppCount)
+        assertTrue(empty.modes.isEmpty())
+        assertNull(empty.recentModeId)
         assertTrue(empty.schedules.isEmpty())
         acceptConsent()
         assertTrue(preferences.setZapDigest("synthetic-management-digest"))
@@ -77,7 +79,7 @@ class ScheduleManagementInstrumentationTest {
         assertTrue(loaded.consentAccepted)
         assertEquals(preferences.snapshot().acceptedDisclosureEpochMilliseconds, loaded.consentEpochMilliseconds)
         assertTrue(loaded.zapPaired)
-        assertEquals(2, loaded.selectedAppCount)
+        assertEquals(2, loaded.modeForReference(loaded.schedules.single().modeReference)?.selectedPackages?.size)
         assertEquals(preferences.loadSchedules().schedules, loaded.schedules)
         assertEquals(preferences.loadScheduleExecutions().entries, loaded.executions)
         assertEquals(ScheduleAlarmScheduler(context).hasExactAlarmAccess(), loaded.exactAlarmAccess)
@@ -226,6 +228,7 @@ class ScheduleManagementInstrumentationTest {
         val queuedDraft = draft()
         assertTrue(preferences.clearForWithdrawal())
         assertTrue(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION, oldEpoch + 1L))
+        ensureMode()
         assertFailure(
             ScheduleMutationFailure.CONSENT_REQUIRED,
             manager.save(queuedDraft, expectedConsentEpochMilliseconds = oldEpoch),
@@ -354,8 +357,36 @@ class ScheduleManagementInstrumentationTest {
         assertFalse(preferences.snapshot().desiredActive)
     }
 
+    @Test
+    fun selectedModeFailuresDoNotFallbackAndAnExistingEmptyModeScheduleCanStillBeDisabled() {
+        acceptConsent()
+        val manager = quietManager()
+        assertFailure(ScheduleMutationFailure.MODE_UNAVAILABLE, manager.save(draft().copy(modeReference = "missing")))
+        assertTrue(preferences.loadSchedules().schedules.isEmpty())
+        assertTrue(manager.save(draft()).saved)
+        val saved = preferences.loadSchedules().schedules.single()
+        assertTrue(preferences.setSelectedPackages(emptySet()))
+        assertFailure(ScheduleMutationFailure.EMPTY_SELECTION, manager.save(draft(false), saved.id, saved.revision))
+        assertTrue(manager.setEnabled(saved.id, saved.revision, false).saved)
+        val disabled = preferences.loadSchedules().schedules.single()
+        assertFalse(disabled.enabled)
+        assertFailure(ScheduleMutationFailure.EMPTY_SELECTION, manager.setEnabled(disabled.id, disabled.revision, true))
+        assertEquals(disabled, preferences.loadSchedules().schedules.single())
+    }
+
     private fun acceptConsent() {
         assertTrue(preferences.acceptDisclosure(Gate0Preferences.CURRENT_DISCLOSURE_VERSION))
+        ensureMode()
+    }
+
+    private fun ensureMode() {
+        val modes = preferences.loadModes()
+        if (modes.modes.isNotEmpty()) return
+        assertEquals(ModeMutationResult.SAVED,
+            preferences.saveMode(requireNotNull(modes.token), null, "Focus", setOf("synthetic.one")))
+        val created = preferences.loadModes()
+        assertEquals(ModeMutationResult.SAVED,
+            preferences.selectMode(requireNotNull(created.token), created.modes.single().id))
     }
 
     private fun quietManager(rearm: () -> Unit = {}) = ScheduleManagement(context, preferences, { false }, rearm)

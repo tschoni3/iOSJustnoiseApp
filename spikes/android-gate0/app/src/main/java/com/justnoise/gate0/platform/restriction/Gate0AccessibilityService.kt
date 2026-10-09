@@ -3,6 +3,7 @@ package com.justnoise.gate0.platform.restriction
 import android.accessibilityservice.AccessibilityService
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -11,11 +12,17 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
+import com.justnoise.gate0.app.DirectNfcActivity
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.platform.discovery.ProtectedPackagePolicy
 import com.justnoise.gate0.platform.discovery.ProtectedPackageResolver
+import com.justnoise.gate0.platform.notification.SessionNotifications
+import com.justnoise.gate0.platform.restriction.ScheduledEnforcement.ReadinessStatus
+import java.io.FileDescriptor
+import java.io.PrintWriter
 
 class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEndpoint {
     private lateinit var preferences: Gate0Preferences
@@ -37,6 +44,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
                     overlayController.hide()
                 }
                 ACTION_WITHDRAW -> {
+                    SessionNotifications.cancel(this@Gate0AccessibilityService)
                     foregroundGeneration += 1L
                     boundForScheduling = false
                     ScheduledEnforcement.disconnected(this@Gate0AccessibilityService)
@@ -50,6 +58,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
                     // Any config or session revision invalidates the current overlay. A fresh,
                     // exact target-package event is required before it can be shown again.
                     overlayController.hide()
+                    SessionNotifications.refresh(this@Gate0AccessibilityService)
                 }
             }
         }
@@ -67,6 +76,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
                 ScheduledEnforcement.disconnected(this@Gate0AccessibilityService)
                 lastForegroundPackage = null
                 preferences.markServiceDisconnected()
+                SessionNotifications.cancel(this@Gate0AccessibilityService)
                 disableSelf()
                 return
             }
@@ -76,6 +86,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
             }
             preferences.updateServiceHeartbeat(SystemClock.elapsedRealtime())
             if (!stored.desiredActive || stored.recoveryRequired) overlayController.hide()
+            SessionNotifications.refresh(this@Gate0AccessibilityService)
             handler.postDelayed(this, HEARTBEAT_INTERVAL_MILLISECONDS)
         }
     }
@@ -83,7 +94,10 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
     override fun onServiceConnected() {
         super.onServiceConnected()
         preferences = Gate0Preferences(this)
-        overlayController = OverlayController(this, preferences::markRecoveryRequired)
+        overlayController = OverlayController(this) {
+            preferences.markRecoveryRequired()
+            SessionNotifications.refresh(this)
+        }
         protectedPackageResolver = ProtectedPackageResolver(this)
 
         val stored = preferences.snapshot()
@@ -92,6 +106,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
             stored.acceptedDisclosureEpochMilliseconds <= 0L
         ) {
             preferences.markServiceDisconnected()
+            SessionNotifications.cancel(this)
             disableSelf()
             return
         }
@@ -108,18 +123,62 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val foregroundPackage = event?.packageName?.toString()?.takeIf(String::isNotBlank)
         val windowChange = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-        if (windowChange && !(overlayController.isShowing && foregroundPackage == packageName)) {
+        val eventClass = if (windowChange) event?.className?.toString() else null
+        val ownActivityWindow = windowChange && foregroundPackage == packageName &&
+            isVisibleOwnActivity(eventClass)
+        // SoftInputWindow belongs to the keyboard process, not the app beneath it.
+        // Class metadata also distinguishes our declared UI activities from our overlay.
+        // No event content,
+        // node, window list or typed text is read or retained.
+        val observedPackage = if (windowChange) {
+            ForegroundWindowRules.observedPackage(
+                previousPackage = lastForegroundPackage,
+                eventPackage = foregroundPackage,
+                eventClass = eventClass,
+                currentInputMethodPackage = if (eventClass == ForegroundWindowRules.SOFT_INPUT_WINDOW)
+                    currentInputMethodPackage() else null,
+                eventPackageProtected = foregroundPackage == null ||
+                    (eventClass == ForegroundWindowRules.SOFT_INPUT_WINDOW &&
+                        ProtectedPackagePolicy.isProtected(foregroundPackage, protectedPackageResolver.resolve())),
+            )
+        } else foregroundPackage
+        if (windowChange && !(overlayController.isShowing && foregroundPackage == packageName &&
+                !ownActivityWindow)) {
             foregroundGeneration += 1L
-            lastForegroundPackage = foregroundPackage
+            lastForegroundPackage = observedPackage
         }
-        applyObservedPackage(foregroundPackage, windowChange)
+        applyObservedPackage(observedPackage, windowChange, ownActivityWindow)
     }
 
-    private fun applyObservedPackage(foregroundPackage: String?, windowChange: Boolean) {
+    private fun isVisibleOwnActivity(eventClass: String?): Boolean {
+        // The transparent NFC trampoline is not an app UI transition: ignoring it
+        // must not briefly expose a blocked target while a tag is being validated.
+        if (eventClass.isNullOrBlank() || eventClass == DirectNfcActivity::class.java.name) return false
+        return try {
+            val activity = packageManager.getActivityInfo(ComponentName(packageName, eventClass), 0)
+            activity.packageName == packageName && activity.name == eventClass
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun currentInputMethodPackage(): String? = try {
+        Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+            ?.let(ComponentName::unflattenFromString)?.packageName
+    } catch (_: RuntimeException) {
+        null // Unknown metadata must not invent a foreground app or bypass an escape.
+    }
+
+    private fun applyObservedPackage(
+        foregroundPackage: String?,
+        windowChange: Boolean,
+        ownActivityWindow: Boolean = false,
+    ) {
         val stored = preferences.snapshot()
         if (stored.desiredActive && stored.activeScheduleId != null && hasUnknownInteractiveForeground()) {
             preferences.markRecoveryRequired()
             overlayController.hide()
+            SessionNotifications.refresh(this)
             return
         }
         val activePackages = stored.activePackages
@@ -141,6 +200,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
                 selectedPackages = activePackages,
                 enforcementEligible = enforcementEligible,
                 overlayIsShowing = overlayController.isShowing,
+                isOwnActivityWindow = ownActivityWindow,
             )
         ) {
             OverlayEventDecision.SHOW ->
@@ -151,18 +211,32 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
         }
     }
 
-    override fun prepareScheduleStart(): Long? {
+    override fun prepareScheduleStart(): ScheduledEnforcement.Preparation {
         check(Looper.myLooper() == Looper.getMainLooper())
-        if (!boundForScheduling || !AccessibilityServiceStatus.isEnabled(this)) return null
+        if (!boundForScheduling) return rejectSchedulePreparation(ReadinessStatus.NO_BOUND_SERVICE)
+        if (!AccessibilityServiceStatus.isEnabled(this))
+            return rejectSchedulePreparation(ReadinessStatus.SERVICE_DISABLED)
         val stored = preferences.snapshot()
         if (stored.acceptedDisclosureVersion != Gate0Preferences.CURRENT_DISCLOSURE_VERSION ||
-            stored.acceptedDisclosureEpochMilliseconds <= 0L || stored.recoveryRequired
-        ) return null
+            stored.acceptedDisclosureEpochMilliseconds <= 0L
+        ) return rejectSchedulePreparation(ReadinessStatus.CONSENT_REQUIRED)
+        if (stored.recoveryRequired) return rejectSchedulePreparation(ReadinessStatus.RECOVERY_REQUIRED)
         val interactive = getSystemService(PowerManager::class.java).isInteractive
         val locked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
         // A cold/unknown foreground cannot be presented as an already-intercepted app.
-        if (interactive && !locked && lastForegroundPackage == null) return null
-        return if (preferences.updateServiceHeartbeat(SystemClock.elapsedRealtime())) foregroundGeneration else null
+        if (interactive && !locked && lastForegroundPackage == null)
+            return rejectSchedulePreparation(ReadinessStatus.FOREGROUND_UNKNOWN)
+        return if (preferences.updateServiceHeartbeat(SystemClock.elapsedRealtime()))
+            ScheduledEnforcement.Preparation.Ready(foregroundGeneration)
+            else rejectSchedulePreparation(ReadinessStatus.HEARTBEAT_WRITE_FAILED)
+    }
+
+    private fun rejectSchedulePreparation(status: ReadinessStatus) =
+        ScheduledEnforcement.Preparation.Rejected(status)
+
+    /** Read-only Android service diagnostics; deliberately omit all product/event data. */
+    override fun dump(fd: FileDescriptor, writer: PrintWriter, args: Array<out String>?) {
+        writer.write("Justnoise schedule readiness: ${ScheduledEnforcement.lastReadinessStatus.name}\n")
     }
 
     override fun isScheduleReadinessCurrent(generation: Long): Boolean =
@@ -178,11 +252,13 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
             val stored = preferences.snapshot()
             if (!stored.desiredActive || stored.recoveryRequired) {
                 overlayController.hide()
+                SessionNotifications.refresh(this)
                 return@post
             }
             if (hasUnknownInteractiveForeground()) {
                 preferences.markRecoveryRequired()
                 overlayController.hide()
+                SessionNotifications.refresh(this)
                 return@post
             }
             val interactive = getSystemService(PowerManager::class.java).isInteractive
@@ -193,6 +269,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
             } else {
                 applyObservedPackage(lastForegroundPackage, windowChange = true)
             }
+            SessionNotifications.refresh(this)
         }
     }
 
@@ -210,6 +287,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
         foregroundGeneration += 1L
         lastForegroundPackage = null
         if (::preferences.isInitialized) preferences.markRecoveryRequired()
+        SessionNotifications.refresh(this)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -250,6 +328,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
         handler.removeCallbacks(heartbeat)
         if (::overlayController.isInitialized) overlayController.hide()
         if (::preferences.isInitialized) preferences.markServiceDisconnected()
+        SessionNotifications.cancel(this)
         if (receiverRegistered) {
             try {
                 unregisterReceiver(stateReceiver)

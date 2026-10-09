@@ -1,0 +1,8 @@
+
+com.justnoise.integrated.IntegratedSelectionActivityInstrumentationTest:....
+
+Time: 10.16
+
+OK (4 tests)
+
+

@@ -1,0 +1,5 @@
+<resources>
+    <string name="cleanup_check_app_label">Justnoise Cleanup Check</string>
+    <string name="app_name">Justnoise Cleanup Check</string>
+    <string name="integrated_accessibility_service_label">Justnoise Cleanup Check — disposable app blocking</string>
+</resources>

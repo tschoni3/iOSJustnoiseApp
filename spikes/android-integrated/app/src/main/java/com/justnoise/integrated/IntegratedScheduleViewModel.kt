@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import com.justnoise.gate0.R
 import com.justnoise.gate0.data.StoredSchedule
 import com.justnoise.gate0.domain.PortableWeekday
 import com.justnoise.gate0.feature.ScheduleManagement
@@ -34,6 +35,12 @@ data class IntegratedScheduleState(
         if (!canEditDraft || current.id != changed.id || current.expectedRevision != changed.expectedRevision) return this
         return copy(editor = changed, editorError = null)
     }
+
+    /** A confirmed withdrawal invalidates old notices; a failed read is not withdrawal. */
+    fun withoutRevokedConsentMessage(): IntegratedScheduleState {
+        val current = snapshot ?: return this
+        return if (!current.error && !current.consentAccepted) copy(message = null) else this
+    }
 }
 
 /** Retains the one in-flight mutation across rotation; no Activity or NFC reader is retained. */
@@ -53,7 +60,7 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
         initialized = true
         val interruptedMutation = saved?.getBoolean("mutation_running") == true
         state = state.copy(
-            editor = saved?.getBundle("editor")?.let(::restoreEditor),
+            editor = saved?.getBundle("editor")?.let(IntegratedScheduleEditorPersistence::restore),
             mutationUncertain = interruptedMutation,
             editorError = if (interruptedMutation) UNCERTAIN_SAVE else null,
             message = if (interruptedMutation) UNCERTAIN_SAVE else null,
@@ -62,7 +69,7 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
 
     fun saveInstanceState(): Bundle = Bundle().apply {
         putBoolean("mutation_running", state.saving || state.mutationUncertain)
-        state.editor?.let { putBundle("editor", storeEditor(it)) }
+        state.editor?.let { putBundle("editor", IntegratedScheduleEditorPersistence.store(it)) }
     }
 
     fun load() = load(refreshRuntime = false)
@@ -92,7 +99,7 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
                         message = if (reviewedUncertainMutation) {
                             "Saved schedules refreshed. The previous change was not repeated."
                         } else state.message,
-                    )
+                    ).withoutRevokedConsentMessage()
                 }
             }
         }
@@ -100,8 +107,12 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
 
     fun newSchedule() {
         if (state.saving || state.snapshot?.consentAccepted != true || state.snapshot?.error == true) return
+        val snapshot = state.snapshot ?: return
         state = state.copy(
-            editor = IntegratedScheduleEditor.new(System.currentTimeMillis(), ZoneId.systemDefault().id),
+            editor = IntegratedScheduleEditor.new(
+                System.currentTimeMillis(), ZoneId.systemDefault().id,
+                snapshot.modeForReference(snapshot.recentModeId)?.id,
+            ),
             editorError = null,
             message = null,
             mutationUncertain = false,
@@ -149,7 +160,7 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
                             editor = if (revoked) null else state.editor,
                             editorError = if (revoked) null else state.editorError,
                             mutationUncertain = !revoked && state.mutationUncertain,
-                        )
+                        ).withoutRevokedConsentMessage()
                         return@post
                     }
                     val latest = snapshot.schedules.find { it.id == id }
@@ -173,7 +184,7 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
                             ),
                             editorError = null, mutationUncertain = false,
                         )
-                    }
+                    }.withoutRevokedConsentMessage()
                 }
             }
         }
@@ -181,26 +192,36 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
 
     fun save() {
         val editor = state.editor ?: return
-        if (state.saving || state.mutationUncertain) return
+        if (!state.canEditDraft) return
+        val snapshot = state.snapshot ?: return
+        if (snapshot.error || !snapshot.consentAccepted) return
+        editor.modeProblem(snapshot.modes)?.let { problem ->
+            state = state.copy(editorError = getApplication<Application>().getString(when (problem) {
+                IntegratedScheduleModeProblem.REQUIRED -> R.string.integrated_schedule_mode_required
+                IntegratedScheduleModeProblem.UNAVAILABLE -> R.string.integrated_schedule_mode_unavailable
+                IntegratedScheduleModeProblem.EMPTY -> R.string.integrated_schedule_mode_empty
+            }))
+            return
+        }
         when (val result = editor.toDraft(System.currentTimeMillis(), ZoneId.systemDefault().id)) {
             is IntegratedScheduleEditorResult.Invalid -> state = state.copy(editorError = result.message)
-            is IntegratedScheduleEditorResult.Valid -> mutate("Schedule saved.") { consentEpoch ->
+            is IntegratedScheduleEditorResult.Valid -> mutate { consentEpoch ->
                 management.save(result.draft, editor.id, editor.expectedRevision, consentEpoch)
             }
         }
     }
 
-    fun setEnabled(schedule: StoredSchedule, enabled: Boolean) = mutate(
-        if (enabled) "Automatic start requested." else "Schedule disabled. Any active session keeps running.",
-    ) { consentEpoch -> management.setEnabled(schedule.id, schedule.revision, enabled, consentEpoch) }
+    fun setEnabled(schedule: StoredSchedule, enabled: Boolean) = mutate { consentEpoch ->
+        management.setEnabled(schedule.id, schedule.revision, enabled, consentEpoch)
+    }
 
-    fun delete(schedule: StoredSchedule) = mutate(
-        "Schedule deleted. Any active session keeps running.",
-    ) { consentEpoch -> management.delete(schedule.id, schedule.revision, consentEpoch) }
+    fun delete(schedule: StoredSchedule) = mutate { consentEpoch ->
+        management.delete(schedule.id, schedule.revision, consentEpoch)
+    }
 
     fun showMessage(message: String) { state = state.copy(message = message) }
 
-    private fun mutate(successMessage: String, action: (Long) -> ScheduleMutationResult) {
+    private fun mutate(action: (Long) -> ScheduleMutationResult) {
         if (closed || state.saving) return
         val consentEpoch = state.snapshot?.consentEpochMilliseconds ?: 0L
         loadGeneration += 1
@@ -218,12 +239,16 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
                         !snapshot.error && !snapshot.consentAccepted -> "Review Setup before using schedules."
                         result.saved && result.failure == ScheduleMutationFailure.REARM_FAILED ->
                             "Saved, but scheduling could not refresh. Check setup and retry Refresh."
-                        result.saved && result.setupRequired -> "$successMessage Setup is still required for automatic starts."
-                        result.saved -> successMessage
+                        result.saved && result.setupRequired -> "Setup is still required for automatic starts."
+                        result.saved -> null
                         result.failure == ScheduleMutationFailure.CONSENT_REQUIRED ->
                             "Review the current disclosure in Setup before saving schedules."
                         result.failure == ScheduleMutationFailure.CONFLICT ->
                             "This schedule changed. Reload it before trying again; your edits were not saved."
+                        result.failure == ScheduleMutationFailure.MODE_UNAVAILABLE ->
+                            getApplication<Application>().getString(R.string.integrated_schedule_mode_unavailable)
+                        result.failure == ScheduleMutationFailure.EMPTY_SELECTION ->
+                            getApplication<Application>().getString(R.string.integrated_schedule_mode_empty)
                         else -> "Couldn’t save the change. Check the date, time and free storage, then refresh or retry."
                     }
                     val revoked = !snapshot.error && !snapshot.consentAccepted
@@ -251,7 +276,15 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
         super.onCleared()
     }
 
-    private fun storeEditor(editor: IntegratedScheduleEditor) = Bundle().apply {
+    private companion object {
+        const val UNCERTAIN_SAVE = "A previous save may have completed before the app closed. " +
+            "Review the schedule list before creating another; nothing will be saved again automatically."
+    }
+}
+
+/** Instance state retains the chosen reference, including missing modes; it never selects a fallback. */
+internal object IntegratedScheduleEditorPersistence {
+    fun store(editor: IntegratedScheduleEditor) = Bundle().apply {
         putString("id", editor.id)
         editor.expectedRevision?.let { putLong("revision", it) }
         putString("name", editor.name)
@@ -264,9 +297,10 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
         putString("zone", editor.zoneId)
         editor.originalOneTimeEpochMilliseconds?.let { putLong("original_instant", it) }
         putString("original_zone", editor.originalOneTimeZoneId)
+        putString("mode_reference", editor.modeReference)
     }
 
-    private fun restoreEditor(bundle: Bundle): IntegratedScheduleEditor? = try {
+    fun restore(bundle: Bundle): IntegratedScheduleEditor? = try {
         IntegratedScheduleEditor(
             id = bundle.getString("id"),
             expectedRevision = if (bundle.containsKey("revision")) bundle.getLong("revision") else null,
@@ -279,11 +313,8 @@ class IntegratedScheduleViewModel(application: Application) : AndroidViewModel(a
             originalOneTimeEpochMilliseconds =
                 if (bundle.containsKey("original_instant")) bundle.getLong("original_instant") else null,
             originalOneTimeZoneId = bundle.getString("original_zone"),
+            modeReference = bundle.getString("mode_reference"),
         )
     } catch (_: Exception) { null }
 
-    private companion object {
-        const val UNCERTAIN_SAVE = "A previous save may have completed before the app closed. " +
-            "Review the schedule list before creating another; nothing will be saved again automatically."
-    }
 }

@@ -1,0 +1,22 @@
+
+com.justnoise.integrated.IntegratedSettingsUiInstrumentationTest:...
+Error in emailHandoffContainsOnlyRecipientAndHandlesUnavailableAppsWithoutSending(com.justnoise.integrated.IntegratedSettingsUiInstrumentationTest):
+org.junit.ComparisonFailure: expected:<mailto:hello[@]justnoise.shop> but was:<mailto:hello[%40]justnoise.shop>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.justnoise.integrated.IntegratedSettingsUiInstrumentationTest.emailHandoffContainsOnlyRecipientAndHandlesUnavailableAppsWithoutSending(IntegratedSettingsUiInstrumentationTest.kt:146)
+..
+com.justnoise.integrated.IntegratedSettingsActivityInstrumentationTest:....
+
+Time: 19.492
+There was 1 failure:
+1) emailHandoffContainsOnlyRecipientAndHandlesUnavailableAppsWithoutSending(com.justnoise.integrated.IntegratedSettingsUiInstrumentationTest)
+org.junit.ComparisonFailure: expected:<mailto:hello[@]justnoise.shop> but was:<mailto:hello[%40]justnoise.shop>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.justnoise.integrated.IntegratedSettingsUiInstrumentationTest.emailHandoffContainsOnlyRecipientAndHandlesUnavailableAppsWithoutSending(IntegratedSettingsUiInstrumentationTest.kt:146)
+
+FAILURES!!!
+Tests run: 10,  Failures: 1
+
+

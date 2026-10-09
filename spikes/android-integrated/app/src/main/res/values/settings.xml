@@ -1,0 +1,31 @@
+<resources>
+    <string name="integrated_settings_title">Settings</string>
+    <string name="integrated_settings_done">Done</string>
+    <string name="integrated_settings_back">Back</string>
+    <string name="integrated_settings_setup_group">SETUP</string>
+    <string name="integrated_settings_setup">Blocking &amp; Zap setup</string>
+    <string name="integrated_settings_setup_detail">Review disclosure, permissions, pairing and recovery.</string>
+    <string name="integrated_settings_onboarding_group">HOW TO USE</string>
+    <string name="integrated_settings_tutorial">Replay introduction</string>
+    <string name="integrated_settings_tutorial_detail">Watch the two-page guide. Your setup stays unchanged.</string>
+    <string name="integrated_settings_privacy_group">PRIVACY &amp; DATA</string>
+    <string name="integrated_settings_privacy">Privacy Policy</string>
+    <string name="integrated_settings_privacy_detail">Justnoise Media — Android policy draft, not yet published.</string>
+    <string name="integrated_settings_local_data">Review local-data removal</string>
+    <string name="integrated_settings_local_data_detail">Open setup to review withdrawal. This row does not clear data.</string>
+    <string name="integrated_settings_recovery_group">HELP &amp; RECOVERY</string>
+    <string name="integrated_settings_support">Contact support</string>
+    <string name="integrated_settings_support_email" translatable="false">hello@justnoise.shop</string>
+    <string name="integrated_settings_support_detail">Questions or feedback? Email Justnoise Media. No app data is attached automatically.</string>
+    <string name="integrated_settings_email_support">Email support</string>
+    <string name="integrated_settings_email_unavailable">Could not open an email app. Press and hold the address above to copy it, then email us from your browser or another device.</string>
+    <string name="integrated_settings_app_info">Android app settings</string>
+    <string name="integrated_settings_app_info_detail">Open App info for Android recovery controls. Nothing changes until you act there.</string>
+    <string name="integrated_settings_about_group">ABOUT JUSTNOISE</string>
+    <string name="integrated_settings_local_only">Focus sessions, selected apps, schedules and History stay on this device. No app account is required.</string>
+    <string name="integrated_settings_version">Installed version</string>
+    <string name="integrated_settings_version_unavailable">Version unavailable</string>
+    <string name="integrated_settings_privacy_draft_title">DRAFT — NOT FINAL</string>
+    <string name="integrated_settings_privacy_draft_warning">This is the Android development privacy draft, not a published policy. The publisher and contact were supplied by the owner. The public policy URL is still a placeholder; publication and final release review remain pending.</string>
+    <string name="integrated_settings_privacy_end">End of Android privacy draft. Reading this page does not accept the Accessibility disclosure, change permissions or clear data.</string>
+</resources>

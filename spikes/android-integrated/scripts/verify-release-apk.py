@@ -13,13 +13,36 @@ ANDROID = "http://schemas.android.com/apk/res/android:"
 SERVICE = "com.justnoise.gate0.platform.restriction.Gate0AccessibilityService"
 RECEIVER_PERMISSION = ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
 SCHEDULE_RECEIVER = "com.justnoise.gate0.platform.schedule.ScheduleAlarmReceiver"
+NOTIFICATION_DISMISS_RECEIVER = "com.justnoise.gate0.platform.notification.SessionNotificationDismissReceiver"
 PROFILE_RECEIVER = "androidx.profileinstaller.ProfileInstallReceiver"
+# The current candidate still needs its private setup Activity for consent,
+# pairing and app selection. Only launcher and live-tag entry are exported.
+ACTIVITY_EXPORTS = {
+    "com.justnoise.integrated.MainActivity": "true",
+    "com.justnoise.gate0.app.MainActivity": "false",
+    "com.justnoise.gate0.app.DirectNfcActivity": "true",
+}
+ACCOUNT_ACTIVITY = "com.justnoise.app.auth.AccountActivity"
+ACCOUNT_APPLICATION = "com.justnoise.app.auth.AccountApplication"
+PRODUCTION_ID = "shop.justnoise.app"
+AUTH_CALLBACK_SCHEME = "shop.justnoise.app"
 PLATFORM_PERMISSIONS = {
     "android.permission.NFC",
+    "android.permission.POST_NOTIFICATIONS",
     "android.permission.SCHEDULE_EXACT_ALARM",
     "android.permission.RECEIVE_BOOT_COMPLETED",
     "android.permission.WAKE_LOCK",
 }
+PRODUCTION_PROMOTION_PERMISSION = "android.permission.POST_PROMOTED_NOTIFICATIONS"
+
+
+def permissions_for(application_id):
+    # September 9 owner extension: only production requests promotion and account networking.
+    # Keep the disposable capability/integrated release packages local and unpromoted.
+    return PLATFORM_PERMISSIONS | ({PRODUCTION_PROMOTION_PERMISSION, "android.permission.INTERNET"}
+                                   if application_id == PRODUCTION_ID else set())
+
+
 SCHEDULE_ACTIONS = {
     "android.intent.action.BOOT_COMPLETED",
     "android.intent.action.TIME_SET",
@@ -93,11 +116,46 @@ def one(nodes, description):
     return nodes[0]
 
 
+def activity_boundary(app, expected_id="com.justnoise.androiddev"):
+    require(not any(node.name == "activity-alias" for node in app.children),
+            "Release activity aliases are not allowed")
+    activities = [node for node in app.children if node.name == "activity"]
+    names = [text_attr(node, "android:name") for node in activities]
+    expected = dict(ACTIVITY_EXPORTS)
+    if expected_id == PRODUCTION_ID:
+        expected[ACCOUNT_ACTIVITY] = "true"
+        require(text_attr(app, "android:name") == ACCOUNT_APPLICATION,
+                "Production account reconciliation Application is missing")
+    require(len(names) == len(expected) and set(names) == set(expected),
+            "Release activities differ from the package-specific reviewed boundary")
+    for node in activities:
+        name = text_attr(node, "android:name")
+        require(node.attrs.get("android:exported") == expected[name],
+                f"Release Activity export boundary changed: {name}")
+        require(node.attrs.get("android:enabled", "true") == "true",
+                f"Required release Activity is disabled: {name}")
+        if name == ACCOUNT_ACTIVITY:
+            # aapt2 prints the integer; bundletool XML encodes the same integer as a string.
+            require(node.attrs.get("android:launchMode") in {'"singleTop"', '1', '"1"'}, "Account callback launch mode differs")
+            intent = one(node.children, "account callback intent filter")
+            require(intent.name == "intent-filter" and not intent.attrs, "Unexpected account callback filter")
+            actions = [text_attr(child, "android:name") for child in intent.children if child.name == "action"]
+            categories = [text_attr(child, "android:name") for child in intent.children if child.name == "category"]
+            data = one([child for child in intent.children if child.name == "data"], "account callback data")
+            require(len(intent.children) == 4 and actions == ["android.intent.action.VIEW"] and
+                    len(categories) == 2 and set(categories) == {"android.intent.category.DEFAULT", "android.intent.category.BROWSABLE"},
+                    "Account callback actions/categories differ")
+            require(set(data.attrs) == {"android:scheme", "android:host", "android:path"} and not data.children and
+                    text_attr(data, "android:scheme") == AUTH_CALLBACK_SCHEME and
+                    text_attr(data, "android:host") == "auth" and text_attr(data, "android:path") == "/callback",
+                    "Account callback URI must be exact, without wildcard/prefix alternatives")
+
+
 def receiver_boundary(app):
     receivers = [node for node in app.children if node.name == "receiver"]
     names = [text_attr(node, "android:name") for node in receivers]
     require(len(names) == len(set(names)) and
-            set(names) <= {SCHEDULE_RECEIVER, PROFILE_RECEIVER},
+            set(names) <= {SCHEDULE_RECEIVER, NOTIFICATION_DISMISS_RECEIVER, PROFILE_RECEIVER},
             "Unexpected or duplicate release receiver")
     receiver = one([node for node in receivers
                     if text_attr(node, "android:name") == SCHEDULE_RECEIVER],
@@ -122,6 +180,18 @@ def receiver_boundary(app):
     require(len(actions) == len(SCHEDULE_ACTIONS) and set(actions) == SCHEDULE_ACTIONS,
             "Schedule receiver system actions differ from the exact allowlist")
 
+    dismissal = one([node for node in receivers
+                     if text_attr(node, "android:name") == NOTIFICATION_DISMISS_RECEIVER],
+                    "session notification dismissal receiver")
+    require(set(dismissal.attrs) <= {"android:name", "android:exported", "android:enabled"},
+            "Unexpected notification dismissal receiver attribute, permission or execution override")
+    require(dismissal.attrs.get("android:exported") == "false",
+            "Notification dismissal receiver must explicitly be non-exported")
+    require(dismissal.attrs.get("android:enabled", "true") == "true",
+            "Notification dismissal receiver must be enabled")
+    require(not dismissal.children,
+            "Notification dismissal receiver must not have intent filters or other children")
+
     for node in receivers:
         if text_attr(node, "android:name") == PROFILE_RECEIVER:
             require(text_attr(node, "android:permission") == "android.permission.DUMP",
@@ -135,16 +205,22 @@ def manifest_boundary(dump, expected_id):
     root = xml_tree(dump)
     require(root.name == "manifest", "Expected a manifest XML root")
     require(text_attr(root, "package") == expected_id, "Packaged application ID differs")
+    require(not any(n.name == "instrumentation" for n in root.children),
+            "Instrumentation must not ship in the release APK")
     app = one([n for n in root.children if n.name == "application"], "application")
-    require(app.attrs.get("android:debuggable", "false") == "false",
-            "Release APK is debuggable or has an unknown debuggable value")
-    for node in app.children:
-        if node.name in ("activity", "activity-alias"):
-            require(text_attr(node, "android:name") != "androidx.compose.ui.tooling.PreviewActivity",
-                    "Compose PreviewActivity must not be packaged in release")
-            require('"androidx.compose.ui.tooling.PreviewActivity"' not in
-                    node.attrs.get("android:targetActivity", ""),
-                    "Release activity alias targets Compose PreviewActivity")
+    for name in ("debuggable", "testOnly", "usesCleartextTraffic"):
+        require(app.attrs.get("android:" + name, "false") == "false",
+                f"Release application {name} must be false")
+    require(app.attrs.get("android:allowBackup") == "false",
+            "Release application allowBackup must explicitly be false")
+    require(app.attrs.get("android:enabled", "true") == "true",
+            "Release application is disabled or its enabled value is unknown")
+    pending = [app]
+    while pending:
+        node = pending.pop()
+        require("android:process" not in node.attrs, "Unreviewed release process override")
+        pending.extend(node.children)
+    activity_boundary(app, expected_id)
 
     expected_permission = expected_id + RECEIVER_PERMISSION
     permission_nodes = [n for n in root.children if n.name.startswith("uses-permission")]
@@ -152,9 +228,9 @@ def manifest_boundary(dump, expected_id):
                 not n.children for n in permission_nodes),
             "Unexpected requested-permission tag or attribute")
     requested = [text_attr(n, "android:name") for n in permission_nodes]
-    expected_permissions = PLATFORM_PERMISSIONS | {expected_permission}
+    expected_permissions = permissions_for(expected_id) | {expected_permission}
     require(len(requested) == len(expected_permissions) and set(requested) == expected_permissions,
-            "Requested permissions must be exactly NFC, explicit scheduling permissions and the app-scoped receiver permission")
+            "Requested permissions must be exactly NFC, optional notifications, explicit scheduling permissions and the app-scoped receiver permission")
     declared = one([n for n in root.children if n.name == "permission"],
                    "app-scoped permission declaration")
     require(text_attr(declared, "android:name") == expected_permission,

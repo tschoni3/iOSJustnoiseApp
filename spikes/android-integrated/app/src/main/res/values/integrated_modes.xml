@@ -1,0 +1,46 @@
+<resources>
+    <string name="integrated_mode_done">Done</string>
+    <string name="integrated_mode_cancel">Cancel</string>
+    <string name="integrated_mode_new">New Mode</string>
+    <string name="integrated_mode_add">+ New Mode</string>
+    <string name="integrated_mode_edit">Edit</string>
+    <string name="integrated_mode_edit_title">Edit Mode</string>
+    <string name="integrated_mode_edit_description">Edit %1$s</string>
+    <string name="integrated_mode_select_description">Select %1$s</string>
+    <string name="integrated_mode_selected">Selected</string>
+    <string name="integrated_mode_name">Mode name</string>
+    <string name="integrated_mode_name_limit">%1$d / %2$d characters</string>
+    <string name="integrated_mode_apps_heading">Select apps to block</string>
+    <string name="integrated_mode_apps_help">Each mode has its own app selection. System and safety apps cannot be selected.</string>
+    <string name="integrated_mode_missing_apps">Unavailable or protected saved apps can only be removed.</string>
+    <string name="integrated_mode_unavailable_app">Unavailable · remove only</string>
+    <string name="integrated_mode_empty">Create a mode, choose its apps, then select it for your next Zap.</string>
+    <string name="integrated_mode_no_apps">No apps selected · edit to set up</string>
+    <string name="integrated_mode_no_recent">Choose a mode for your next Zap.</string>
+    <string name="integrated_mode_recent_help">Your next Zap uses the mode you select here. Scheduled sessions use their own saved mode.</string>
+    <string name="integrated_mode_save">Save</string>
+    <string name="integrated_mode_saving">Saving…</string>
+    <string name="integrated_mode_save_help">Saving does not change your selected mode. Select its row after saving to use it for your next Zap.</string>
+    <string name="integrated_mode_loading">Loading modes and apps…</string>
+    <string name="integrated_mode_reload">Reload saved modes</string>
+    <string name="integrated_mode_reload_title">Discard this draft?</string>
+    <string name="integrated_mode_reload_body">Reloading discards unsaved changes and reads the current saved modes.</string>
+    <string name="integrated_mode_keep_editing">Keep editing</string>
+    <string name="integrated_mode_delete">Delete Mode</string>
+    <string name="integrated_mode_delete_title">Delete %1$s?</string>
+    <string name="integrated_mode_delete_body">This removes the mode and its app selection. A mode used by a schedule cannot be deleted until you change or delete that schedule.</string>
+    <string name="integrated_mode_load_failed">Saved modes could not be read. Reload before making changes.</string>
+    <string name="integrated_mode_storage_failed">The change could not be confirmed. Reload saved modes before trying again.</string>
+    <string name="integrated_mode_active">Tap your Zap to stop the current session before changing modes.</string>
+    <string name="integrated_mode_recovery">Complete setup or recovery before changing modes.</string>
+    <string name="integrated_mode_conflict">Saved state changed while this view was open. Reload before making changes.</string>
+    <string name="integrated_mode_invalid_name">Enter a valid mode name (up to %1$d characters).</string>
+    <string name="integrated_mode_invalid_selection">Choose at least one available app. Remove unavailable or protected apps before saving.</string>
+    <string name="integrated_mode_not_found">This mode is no longer available. Reload and explicitly choose a mode.</string>
+    <string name="integrated_mode_referenced">A schedule uses this mode. Change or delete that schedule before deleting this mode.</string>
+    <string name="integrated_mode_limit">The mode limit has been reached. Delete an unused mode before creating another.</string>
+    <plurals name="integrated_mode_app_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+</resources>

@@ -1,0 +1,13 @@
+<resources>
+    <string name="completion_title">SESSION COMPLETE</string>
+    <string name="completion_session_time">Session time</string>
+    <string name="completion_ended">Your session has ended.</string>
+    <string name="completion_interrupted">Blocking interrupted</string>
+    <string name="completion_timing_uncertain">Timing uncertain</string>
+    <string name="completion_duration_meaning">Session time is elapsed duration, not a guarantee of continuous blocking.</string>
+    <string name="completion_done">Done</string>
+    <plurals name="completion_selected_apps">
+        <item quantity="one">%d selected app</item>
+        <item quantity="other">%d selected apps</item>
+    </plurals>
+</resources>

@@ -18,6 +18,7 @@ on:
       - "spikes/android-integrated/**"
       - "spikes/android-shared/**"
       - "spikes/android-ui/**"
+      - "android-app/**"
   push:
     branches:
       - main
@@ -37,6 +38,7 @@ on:
       - "spikes/android-integrated/**"
       - "spikes/android-shared/**"
       - "spikes/android-ui/**"
+      - "android-app/**"
   workflow_dispatch:
 
 concurrency:

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="session_notification_artwork" type="drawable">@drawable/ic_session_notification</item>
+    <string name="session_notification_channel">Zap session</string>
+    <string name="session_notification_channel_description">Live session timer. No ordinary notification fallback. Session time does not certify continuous app blocking.</string>
+    <string name="session_notification_title">LOCKED IN FOR</string>
+    <string name="session_notification_body">Session time · Justnoise</string>
+    <string name="session_notification_mode_body">Session time · %1$s</string>
+    <string name="session_notification_attention_title">Blocking needs attention</string>
+    <string name="session_notification_attention_body">Open Justnoise to check your session and setup.</string>
+</resources>

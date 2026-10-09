@@ -1,0 +1,38 @@
+<resources>
+    <string name="history_title">Timeline</string>
+    <string name="history_back">Back to Zap</string>
+    <string name="history_settings">History settings</string>
+    <string name="history_ninety_days">90 Days</string>
+    <string name="history_year">Year</string>
+    <string name="history_zaps">Zaps</string>
+    <string name="history_session_time">Session time</string>
+    <string name="history_refresh">Refresh</string>
+    <string name="history_retry">Retry</string>
+    <string name="history_close">Close</string>
+    <string name="history_loading">Loading History</string>
+    <string name="history_today">Today</string>
+    <string name="history_future">Future date</string>
+    <string name="history_interrupted">Blocking interrupted</string>
+    <string name="history_uncertain">Duration may be inaccurate</string>
+    <string name="history_day_duration">%1$s session time</string>
+    <string name="history_year_progress">%1$dd left • %2$d%%</string>
+    <string name="history_zone">Days use your current time zone: %1$s.</string>
+    <string name="history_meaning">Totals include all completed sessions saved on this phone. Active sessions appear after they end. Session time is elapsed duration, not a guarantee of continuous blocking.</string>
+    <string name="history_day_meaning">Time is the portion of completed sessions attributed to this local day, not verified continuous blocking. A session crossing midnight can appear on more than one day.</string>
+    <string name="history_empty_title">No completed sessions yet</string>
+    <string name="history_empty_body">Start a session with your paired Zap, then tap it again to finish. Completed sessions will appear on the timeline.</string>
+    <string name="history_error_title">History couldn’t load</string>
+    <string name="history_error_body">We couldn’t read or save your sessions. Check that your phone has free storage, then retry. Your saved sessions have not been replaced.</string>
+    <plurals name="history_day_sessions">
+        <item quantity="one">%d completed session touches this day</item>
+        <item quantity="other">%d completed sessions touch this day</item>
+    </plurals>
+    <plurals name="history_interrupted_count">
+        <item quantity="one">Blocking was interrupted in %d session</item>
+        <item quantity="other">Blocking was interrupted in %d sessions</item>
+    </plurals>
+    <plurals name="history_uncertain_count">
+        <item quantity="one">%d session duration may be inaccurate</item>
+        <item quantity="other">%d session durations may be inaccurate</item>
+    </plurals>
+</resources>

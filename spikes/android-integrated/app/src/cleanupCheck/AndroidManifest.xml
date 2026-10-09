@@ -1,0 +1,13 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application
+        android:label="@string/cleanup_check_app_label"
+        android:testOnly="true"
+        tools:replace="android:label">
+        <!-- Foreground pairing/scanning stays real; this test install must not
+             compete with the owner's app for background NFC tag dispatch. -->
+        <activity
+            android:name="com.justnoise.gate0.app.DirectNfcActivity"
+            android:enabled="false" />
+    </application>
+</manifest>

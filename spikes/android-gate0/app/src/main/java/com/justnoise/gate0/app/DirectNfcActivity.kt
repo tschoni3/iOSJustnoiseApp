@@ -9,11 +9,13 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.widget.Toast
 import com.justnoise.gate0.R
+import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.domain.SessionTransition
 import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.feature.Gate0Controller
 import com.justnoise.gate0.feature.Gate0Truth
 import com.justnoise.gate0.platform.nfc.DirectNfcDispatchRules
+import com.justnoise.gate0.platform.nfc.DirectNfcReadinessWait
 import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
 import com.justnoise.gate0.platform.nfc.NdefReadFailure
 import com.justnoise.gate0.platform.nfc.NdefReadResult
@@ -75,12 +77,16 @@ class DirectNfcActivity : Activity() {
     }
 
     private fun awaitFreshServiceHandshake(token: OneShotScanCoordinator.Token<Unit>) {
-        if (controller.truth() != Gate0Truth.RECOVERY_REQUIRED) return
+        val preferences = Gate0Preferences(this)
         val deadline = SystemClock.elapsedRealtime() + SERVICE_HANDSHAKE_TIMEOUT_MILLISECONDS
         while (
             coordinator.isClaimActive(token) &&
-            controller.truth() == Gate0Truth.RECOVERY_REQUIRED &&
-            SystemClock.elapsedRealtime() < deadline
+            DirectNfcReadinessWait.shouldWait(
+                claimActive = true,
+                accountRestoring = preferences.awaitingAccountStartRestoration(),
+                serviceRecovering = controller.truth() == Gate0Truth.RECOVERY_REQUIRED,
+                nowElapsed = SystemClock.elapsedRealtime(), deadlineElapsed = deadline,
+            )
         ) {
             SystemClock.sleep(SERVICE_HANDSHAKE_POLL_MILLISECONDS)
         }
@@ -117,6 +123,7 @@ class DirectNfcActivity : Activity() {
             }
             val status = when {
                 interaction == null -> R.string.status_start_failed
+                interaction.accountRequired -> R.string.status_account_required
                 interaction.persistenceFailed -> R.string.status_session_storage_failed
                 interaction.readDecision.outcome == ZapReadOutcome.UNAUTHORIZED ->
                     R.string.status_scan_unauthorized

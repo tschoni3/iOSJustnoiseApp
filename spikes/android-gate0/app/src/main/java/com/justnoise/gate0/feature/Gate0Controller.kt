@@ -8,6 +8,10 @@ import com.justnoise.gate0.data.HmacZapStore
 import com.justnoise.gate0.data.ScheduledOccurrence
 import com.justnoise.gate0.data.ScheduleDispatchResult
 import com.justnoise.gate0.data.ScheduleOutcomeCode
+import com.justnoise.gate0.data.SelectionEditResult
+import com.justnoise.gate0.data.SelectionEditToken
+import com.justnoise.gate0.data.SessionHistoryEntry
+import com.justnoise.gate0.data.ZapPairingToken
 import com.justnoise.gate0.domain.PayloadClassification
 import com.justnoise.gate0.domain.RestrictionAction
 import com.justnoise.gate0.domain.RestrictionCapability
@@ -20,6 +24,7 @@ import com.justnoise.gate0.domain.ZapReadRules
 import com.justnoise.gate0.platform.discovery.LauncherAppRepository
 import com.justnoise.gate0.platform.discovery.ProtectedPackagePolicy
 import com.justnoise.gate0.platform.discovery.ProtectedPackageResolver
+import com.justnoise.gate0.platform.notification.SessionNotifications
 import com.justnoise.gate0.platform.restriction.AccessibilityServiceStatus
 import com.justnoise.gate0.platform.restriction.Gate0AccessibilityService
 import com.justnoise.gate0.platform.restriction.ScheduledEnforcement
@@ -29,16 +34,19 @@ data class ZapInteraction(
     val readDecision: ZapReadDecision,
     val sessionDecision: SessionDecision?,
     val persistenceFailed: Boolean = false,
+    val completedSession: SessionHistoryEntry? = null,
+    val accountRequired: Boolean = false,
 )
 
 class Gate0Controller(
     context: Context,
     private val preferences: Gate0Preferences = Gate0Preferences(context),
     private val zapStore: HmacZapStore = HmacZapStore(preferences),
+    private val loadLaunchablePackages: () -> Set<String> =
+        LauncherAppRepository(context.applicationContext)::loadPackageNames,
 ) {
     private val applicationContext = context.applicationContext
     private val protectedPackages = ProtectedPackageResolver(applicationContext)
-    private val launchableApps = LauncherAppRepository(applicationContext)
 
     fun acceptDisclosure(): Boolean = preferences.acceptDisclosure(
         Gate0Preferences.CURRENT_DISCLOSURE_VERSION,
@@ -48,22 +56,61 @@ class Gate0Controller(
         val state = preferences.snapshot()
         // Restoring the same selection is not a session change or a broadcast event.
         if (state.selectedPackages == packageNames) return true
-        if (state.desiredActive || !targetsAreEligible(packageNames)) return false
-
-        val stored = preferences.setSelectedPackages(packageNames)
-        if (stored) publishStateChange()
-        return stored
+        val token = preferences.readSelectionEdit().token ?: return false
+        return commitTargetSelection(token, packageNames) in
+            setOf(SelectionEditResult.SAVED, SelectionEditResult.UNCHANGED)
     }
 
-    fun pairZap(transientCanonicalRecord: ByteArray): Boolean =
-        zapStore.pair(transientCanonicalRecord)
+    /** Discovery/validation belongs on the caller's worker, never under the storage lock. */
+    fun commitTargetSelection(token: SelectionEditToken, packageNames: Set<String>): SelectionEditResult {
+        val draft = packageNames.toSet()
+        val current = preferences.readSelectionEdit()
+        if (current.error) return SelectionEditResult.STORAGE_FAILED
+        if (current.sessionRequested) return SelectionEditResult.ACTIVE_SESSION
+        if (current.recoveryRequired) return SelectionEditResult.RECOVERY_REQUIRED
+        if (current.token != token) return SelectionEditResult.CONFLICT
+        // An unchanged set may retain a missing target until the user explicitly removes it.
+        // Changed sets must still be eligible at Save, not merely at picker-open time.
+        if (current.selectedPackages != draft && !targetsAreEligible(draft)) {
+            return SelectionEditResult.INVALID_SELECTION
+        }
+        val result = preferences.commitSelectionEdit(token, draft)
+        if (result == SelectionEditResult.SAVED || result == SelectionEditResult.STORAGE_FAILED) {
+            publishStateChange()
+        }
+        return result
+    }
+
+    /** Legacy callers may only create the initial pairing. */
+    fun pairZap(transientCanonicalRecord: ByteArray): Boolean = pairInitialZap(transientCanonicalRecord)
+
+    fun prepareZapPairing(): ZapPairingToken? = preferences.prepareZapPairing()
+
+    /** The setup UI freezes this intent before explicit replacement confirmation and scanning. */
+    fun pairZap(transientCanonicalRecord: ByteArray, expectedToken: ZapPairingToken): Boolean = try {
+        zapStore.pair(transientCanonicalRecord, expectedToken)
+    } catch (_: Exception) {
+        false
+    }
+
+    /** Initial foreground pairing only; existing setup keeps its separate replacement action. */
+    fun pairInitialZap(transientCanonicalRecord: ByteArray): Boolean = try {
+        zapStore.pairInitial(transientCanonicalRecord)
+    } catch (_: Exception) {
+        false
+    }
 
     fun handleZap(
         transientCanonicalRecord: ByteArray,
         acceptedReadAlreadyHandled: Boolean,
         nowEpochMilliseconds: Long = System.currentTimeMillis(),
-        nowElapsedMilliseconds: Long = SystemClock.elapsedRealtime(),
+        nowElapsedMilliseconds: Long? = null,
     ): ZapInteraction {
+        val events = applicationContext as? FocusSessionEvents
+        val eventGeneration = runCatching { events?.focusEventGeneration() }.getOrNull()
+        val (stored, startToken) = preferences.withScheduleLock {
+            preferences.snapshot() to preferences.readSelectionEdit().token
+        }
         val classification = if (zapStore.isAuthorized(transientCanonicalRecord)) {
             PayloadClassification.AUTHORIZED
         } else {
@@ -72,7 +119,9 @@ class Gate0Controller(
         val readDecision = ZapReadRules.decide(classification, acceptedReadAlreadyHandled)
         if (!readDecision.mutationEligible) return ZapInteraction(readDecision, null)
 
-        val stored = preferences.snapshot()
+        if (!stored.desiredActive && !preferences.accountAllowsSessionStart())
+            return ZapInteraction(readDecision, null, accountRequired = true)
+
         val priorState = if (stored.desiredActive) SessionState.ACTIVE else SessionState.IDLE
         val targetsAreEligible = stored.selectedPackages.isNotEmpty() &&
             targetsAreEligible(stored.selectedPackages)
@@ -82,7 +131,7 @@ class Gate0Controller(
         val serviceReady = currentConsent && Gate0StateReconciler.isServiceReady(
             stored = stored,
             accessibilityEnabled = AccessibilityServiceStatus.isEnabled(applicationContext),
-            nowElapsedMilliseconds = nowElapsedMilliseconds,
+            nowElapsedMilliseconds = nowElapsedMilliseconds ?: SystemClock.elapsedRealtime(),
         )
         if (stored.desiredActive && !serviceReady) preferences.markHistoryInterrupted()
         val capability = if (serviceReady) {
@@ -99,58 +148,100 @@ class Gate0Controller(
             elapsedMilliseconds = elapsed,
         )
 
+        var completedSession: SessionHistoryEntry? = null
+        val writer = ValidatedSessionWriter(preferences, stored, startToken,
+            capabilityReady = { current -> Gate0StateReconciler.isServiceReady(
+                current, AccessibilityServiceStatus.isEnabled(applicationContext), SystemClock.elapsedRealtime(),
+            ) }, completed = { completedSession = it })
         val persistedDecision = SessionDecisionPersistence.apply(
             decision = sessionDecision,
             epochMilliseconds = nowEpochMilliseconds,
-            writer = preferences,
+            writer = writer,
             expectedSessionId = stored.activeSessionId,
         )
         // The service dismisses its overlay on this signal. Rejected/no-op reads
         // must leave it in place; failed writes still notify for safe recovery.
         if (persistedDecision.restrictionAction != RestrictionAction.NONE ||
-            persistedDecision != sessionDecision
+            writer.persistenceFailed
         ) {
             publishStateChange()
         }
-        return ZapInteraction(readDecision, persistedDecision, persistedDecision != sessionDecision)
+        if (!writer.persistenceFailed && persistedDecision == sessionDecision && eventGeneration != null) {
+            when (persistedDecision.restrictionAction) {
+                RestrictionAction.APPLY -> runCatching { events?.recordFocusEvent(eventGeneration, true) }
+                RestrictionAction.CLEAR -> runCatching { events?.recordFocusEvent(eventGeneration, false) }
+                else -> Unit
+            }
+        }
+        return ZapInteraction(
+            readDecision, persistedDecision, writer.persistenceFailed,
+            accountRequired = !stored.desiredActive && !preferences.accountAllowsSessionStart() &&
+                persistedDecision.restrictionAction != RestrictionAction.APPLY,
+            completedSession = completedSession.takeIf {
+                persistedDecision.restrictionAction == RestrictionAction.CLEAR &&
+                    persistedDecision == sessionDecision
+            },
+        )
     }
 
-    fun truth(nowElapsedMilliseconds: Long = SystemClock.elapsedRealtime()): Gate0Truth {
-        val stored = preferences.snapshot()
-        val enabled = AccessibilityServiceStatus.isEnabled(applicationContext)
-        if (stored.desiredActive && !Gate0StateReconciler.isServiceReady(stored, enabled, nowElapsedMilliseconds)) {
+    fun truth(nowElapsedMilliseconds: Long? = null): Gate0Truth {
+        val (stored, enabled, observedAt) = Gate0StateReconciler.observe(
+            readStored = preferences::snapshot,
+            readAccessibilityEnabled = { AccessibilityServiceStatus.isEnabled(applicationContext) },
+            readElapsedRealtime = SystemClock::elapsedRealtime,
+            nowElapsedMilliseconds = nowElapsedMilliseconds,
+        )
+        if (stored.desiredActive && !Gate0StateReconciler.isServiceReady(stored, enabled, observedAt)) {
             preferences.markHistoryInterrupted()
         }
         return Gate0StateReconciler.reconcile(
             stored = stored,
             accessibilityEnabled = enabled,
-            nowElapsedMilliseconds = nowElapsedMilliseconds,
+            nowElapsedMilliseconds = observedAt,
         )
     }
 
     fun startScheduled(occurrence: ScheduledOccurrence): ScheduleDispatchResult {
+        ScheduledEnforcement.recordReadiness(ScheduledEnforcement.ReadinessStatus.NOT_ATTEMPTED)
+        val events = applicationContext as? FocusSessionEvents
+        val eventGeneration = runCatching { events?.focusEventGeneration() }.getOrNull()
         val storedBefore = preferences.snapshot()
         val pending = preferences.loadScheduleExecutions().entries
             .find { it.scheduleId == occurrence.scheduleId }?.pending
-        val prepared = if (!storedBefore.desiredActive && pending == occurrence &&
+        val mayPrepare = !storedBefore.desiredActive && pending == occurrence &&
             hasAcceptedCurrentDisclosure() && !storedBefore.recoveryRequired &&
             !preferences.areSchedulesSuspended()
-        ) ScheduledEnforcement.prepareStart() else null
+        // Package-manager discovery can take longer than the short foreground lease.
+        // Finish it before requesting that lease and outside the preference lock.
+        // This inventory is per attempt, not a persisted eligibility/cache decision.
+        val launchablePackages = if (mayPrepare) runCatching {
+            loadLaunchablePackages()
+        }.getOrNull() else null
+        val prepared = if (launchablePackages != null) ScheduledEnforcement.prepareStart() else null
         val result = preferences.dispatchSchedule(occurrence) { stored, _ ->
             when {
                 !hasAcceptedCurrentDisclosure() -> ScheduleOutcomeCode.CONSENT_REQUIRED
                 preferences.areSchedulesSuspended() || stored.recoveryRequired -> ScheduleOutcomeCode.RECOVERY_REQUIRED
                 stored.zapDigest.isNullOrBlank() -> ScheduleOutcomeCode.ZAP_REQUIRED
-                !targetsAreEligible(stored.selectedPackages) -> ScheduleOutcomeCode.TARGET_UNAVAILABLE
+                launchablePackages == null ||
+                    !targetsAreEligible(stored.selectedPackages, launchablePackages) -> ScheduleOutcomeCode.TARGET_UNAVAILABLE
                 !ScheduleAlarmScheduler(applicationContext).hasExactAlarmAccess() -> ScheduleOutcomeCode.EXACT_ALARM_REQUIRED
-                !AccessibilityServiceStatus.isEnabled(applicationContext) ||
-                    prepared?.isStillReady() != true -> ScheduleOutcomeCode.CAPABILITY_UNAVAILABLE
+                !AccessibilityServiceStatus.isEnabled(applicationContext) -> {
+                    ScheduledEnforcement.recordReadiness(ScheduledEnforcement.ReadinessStatus.SERVICE_DISABLED)
+                    ScheduleOutcomeCode.CAPABILITY_UNAVAILABLE
+                }
+                prepared?.isStillReady() != true -> ScheduleOutcomeCode.CAPABILITY_UNAVAILABLE
                 else -> null
             }
         }
         // Skips and duplicates must leave an existing overlay untouched. A start can
         // now intercept the last observed foreground target without waiting for navigation.
-        if (result.started || result.persistenceFailed) ScheduledEnforcement.stateChanged()
+        if (result.started || result.persistenceFailed) {
+            ScheduledEnforcement.stateChanged()
+            SessionNotifications.refresh(applicationContext)
+        }
+        if (result.started && !result.persistenceFailed && eventGeneration != null)
+            runCatching { events?.recordFocusEvent(eventGeneration, true) }
         return result
     }
 
@@ -169,6 +260,7 @@ class Gate0Controller(
         }
 
     fun withdrawAndClear(): Boolean {
+        SessionNotifications.cancel(applicationContext)
         val localStateCleared = preferences.withScheduleLock {
             val preferencesCleared = preferences.clearForWithdrawal()
             val alarmsCleared = ScheduleAlarmScheduler(applicationContext).cancel()
@@ -192,10 +284,14 @@ class Gate0Controller(
             Intent(Gate0AccessibilityService.ACTION_STATE_CHANGED)
                 .setPackage(applicationContext.packageName),
         )
+        SessionNotifications.refresh(applicationContext)
     }
 
-    private fun targetsAreEligible(packageNames: Set<String>): Boolean {
-        val launchablePackages = launchableApps.load().mapTo(mutableSetOf()) { it.packageName }
+    private fun targetsAreEligible(
+        packageNames: Set<String>,
+        launchablePackages: Set<String> = loadLaunchablePackages(),
+    ): Boolean {
+        // Re-resolve protected system roles at validation, including scheduled commits.
         val protected = protectedPackages.resolve()
         return packageNames.all { packageName ->
             packageName in launchablePackages &&

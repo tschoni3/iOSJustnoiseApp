@@ -1,4 +1,6 @@
 import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     id("com.android.application")
@@ -17,12 +19,26 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1-integrated-dev"
+
+        // Cleanup belongs to the instrumentation test, after its emulator guard.
+        // Do not add clearPackageData: a runner would clear state before that guard.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
             isDebuggable = false
             isMinifyEnabled = false
+        }
+        create("cleanupCheck") {
+            // A separate disposable sandbox for owner-authorized cleanup checks.
+            // Reuse main/release sources, not the debug probe or tooling source set.
+            initWith(getByName("release"))
+            applicationIdSuffix = ".cleanupcheck"
+            versionNameSuffix = "-cleanup-check"
+            isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -79,10 +95,30 @@ val syncIntegratedResources = tasks.register<Sync>("syncIntegratedResources") {
         into("drawable-nodpi")
         rename { "justnoise_icon.png" }
     }
+    from(rootProject.projectDir.resolve("../../justnoiseradio/Assets.xcassets/Justnoise_logo_nav.imageset/Subtract.png")) {
+        into("drawable-nodpi")
+        rename { "justnoise_logo_nav.png" }
+    }
+    from(rootProject.projectDir.resolve("../../JN_video1.mp4")) {
+        into("raw")
+        rename { "jn_video1.mp4" }
+    }
+    from(rootProject.projectDir.resolve("../../JN_video2.mp4")) {
+        into("raw")
+        rename { "jn_video2.mp4" }
+    }
 }
 
 tasks.named("preBuild").configure {
     dependsOn(syncIntegratedResources)
+}
+
+tasks.withType<Test>().configureEach {
+    inputs.files(
+        layout.projectDirectory.file("build.gradle.kts"),
+        layout.projectDirectory.file("src/main/AndroidManifest.xml"),
+        fileTree("src/cleanupCheck"),
+    ).withPropertyName("cleanupBuildBoundary").withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 dependencies {
@@ -95,8 +131,14 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.core:core:1.16.0")
+    implementation("androidx.core:core:1.18.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation("junit:junit:4.13.2")
+
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }

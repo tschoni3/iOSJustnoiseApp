@@ -1,10 +1,26 @@
 # Mobile behavior contract v1
 
+Android production account-entry clarification (owner, September 9): sign-in or
+registration is required before product access and new manual/NFC/scheduled starts.
+A durably restored signed-in workspace remains usable offline, including expired
+credentials. Signed-out, restoring and deletion-pending states cannot start a new
+session; existing sessions always retain safe stop/recovery. Local unowned data is
+preserved, not silently adopted by an account. The Android-only fixture is
+`product/behavior/android-account-access.v1.json`; see `ANDROID_CONNECTED_RELEASE.md`
+for the transaction boundary. Published iOS and offline development apps are unchanged.
+
 Contract version: 1.4.0
 
 This document describes observable Justnoise behavior that should remain consistent across iOS and Android. It separates portable product rules from platform adapters. It characterizes the published iOS direction without turning framework quirks or unverified schedule behavior into permanent requirements.
 
 The rules below are the target contract. They are not a claim that the current iOS implementation already conforms. The rule-level audit later in this document keeps known gaps visible until native code and device evidence close them.
+
+September 9 Android-only extension: `ANDROID_CONNECTED_RELEASE.md` records the
+owner-approved Sign-in, PostHog and Now Bar scope. Live Updates now use the active
+mode name on user-enabled system surfaces and no ordinary notification fallback.
+This supersedes the older generic-notification-only statement below. iOS and the
+original portable fixtures remain unchanged; account/analytics runtime delivery
+is not yet complete and data isolation remains a prerequisite.
 
 ## Shared language
 
@@ -26,6 +42,40 @@ The rules below are the target contract. They are not a claim that the current i
 5. Platform selection tokens stay inside the platform adapter. Portable state stores stable product identifiers or an adapter-owned opaque selection reference.
 
 The `targetSelectionValidity` cases in `product/behavior/portable-fixtures.v1.json` are executable examples of rule 2. Both native domain-test suites must consume or faithfully map every case, including `website-only`.
+
+#### Approved Android named-mode extension — 2026-09-07
+
+The owner now includes real named modes in the Android internal-test MVP. This
+supersedes the earlier single-selection scope, not the shipped iOS implementation.
+[`android-modes.v1.json`](../product/behavior/android-modes.v1.json), extension
+version 1.0.0, contains framework-neutral examples exercised by Android's real mode
+rules and codec. It adds no iOS edits or claim that the existing iOS MODE-01 gap is
+closed. The original shared fixtures remain unchanged.
+
+- A local mode has a stable ID, revision, trimmed nonempty name (at most 60
+  characters) and up to 500 eligible Android app targets; the catalog holds at most
+  30 modes. New/edited modes require a nonempty selection. Installed-app eligibility
+  remains an Android adapter check, not a string-format rule.
+- Manual/direct Zap starts resolve the last explicitly selected mode. A missing or
+  empty mode fails truthfully; no first-mode fallback. Saving a mode does not select
+  it. A scheduled start resolves its own saved mode ID and never changes the user's
+  recent selection. Stops do not depend on a current mode lookup.
+- All mode mutations and explicit selection reject an active/requested session or
+  recovery state. Committed sessions retain their fixed target snapshot.
+- Deletion is prevented while any saved schedule references the mode, including
+  disabled schedules. Reassign or delete those schedules first. Deleting the recent
+  mode clears that reference; zero modes stay zero without repopulated defaults.
+- Migration runs once only when no catalog exists. An existing legacy selection,
+  including an explicitly empty one, becomes `local-default` / **Noise**, retaining
+  legacy schedule references and recent selection. No legacy key means an empty
+  catalog. Missing references or intentionally empty saved catalogs never trigger
+  fallback migration; initial setup may explicitly create the first Noise mode.
+- Mode IDs/names/targets and recent selection stay local and clear with withdrawal,
+  app-data clear or uninstall. History keeps its existing six-field schema; generic
+  notification content gains no mode name or selected-app list.
+
+These are implementation requirements, not evidence that persistence, device
+acceptance, signing or the internal-beta checkpoint has passed.
 
 ### Focus-session lifecycle
 
@@ -126,9 +176,11 @@ The implementation defaults from `ANDROID_SCHEDULE_PLAN.md` now have explicit
    notification state must derive from the same committed occurrence/session.
 
 Supported instants are integer Unix milliseconds from 0 through 253402300799999.
-The Android MVP references one stable local default selection; absence is
-`modeUnavailable`, while a resolved empty selection is `targetSelectionEmpty`.
-This adds no requirement for a mode-management UI. Pure Swift/Kotlin rules consume
+The original September 3 Android slice referenced one stable local default selection;
+the September 7 named-mode extension above preserves that legacy ID and lets new
+schedules reference their chosen mode. Absence is `modeUnavailable`, while a resolved
+empty selection is `targetSelectionEmpty`. The temporal rules themselves do not
+require mode-management UI. Pure Swift/Kotlin rules consume
 the same fixtures, but **the shipped iOS scheduler is not migrated**. Its current
 time/ownership behavior below remains a conformance gap, not implied parity.
 

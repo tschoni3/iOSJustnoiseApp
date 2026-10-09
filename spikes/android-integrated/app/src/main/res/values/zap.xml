@@ -1,0 +1,17 @@
+<resources>
+    <string name="zap_selected_apps">Selected apps</string>
+    <string name="zap_no_apps">Choose apps to block</string>
+    <string name="zap_schedules_accessibility">Schedules</string>
+    <string name="zap_history_accessibility">History</string>
+    <string name="zap_settings">Settings</string>
+    <string name="zap_session_help">Session help</string>
+    <string name="zap_open_setup">Open setup</string>
+    <string name="zap_cancel_scan">Cancel scan</string>
+    <string name="zap_recovery_title">Session needs attention</string>
+    <string name="zap_recovery_subtitle">Check setup</string>
+    <string name="zap_consent_needed">Review the Accessibility disclosure before enabling app blocking.</string>
+    <string name="zap_selection_needed">Choose the apps you want to block before starting a session.</string>
+    <string name="zap_pair_needed">Pair your physical Zap once on this Android phone.</string>
+    <string name="zap_permission_needed">Enable Justnoise manually in Android Accessibility settings.</string>
+    <string name="zap_recovery_needed">Blocking cannot be confirmed. Open setup to recover. If a session is still requested, you can scan your Zap to stop it.</string>
+</resources>

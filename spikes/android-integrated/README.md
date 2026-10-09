@@ -1,5 +1,106 @@
 # Justnoise Android integrated development shell
 
+## Current source checkpoint — 2026-09-06
+
+The owner-approved [iOS-style Play implementation](../../docs/ANDROID_PLAY_IMPLEMENTATION.md)
+now includes real onboarding/initial pairing, source-matched Zap/navigation,
+Compose Save/Cancel app selection, a worker-backed 90-day/year History calendar
+with day details, compact schedules with modal editing, grouped Settings and the
+real foreground session-completion sheet. Schedule runtime and
+current **v4** disclosure rules are unchanged. These screens use real adapters and
+preserved local records; their Preview/test fixtures never supply production data.
+
+Completion consumes only the exact newly committed stop receipt after at least 20
+minutes; direct background taps never open the sheet. Settings tutorial replay is
+read-only and privacy is explicitly draft. Native replacement pairing now requires
+confirmation and a one-shot atomic stale-state guard; initial pairing remains separate.
+
+The development ID remains `com.justnoise.androiddev`. Final iOS rendered/A16
+acceptance and signed Play packaging remain open. No owner-phone install, data
+cleanup, production promotion or upload was performed in this UI slice.
+The older source descriptions and dated evidence below
+are historical, not a claim that current source still lacks schedules or uses v3.
+
+## Disposable cleanup-check variant — 2026-09-07
+
+`cleanupCheck` uses the same real main sources and adapters in this module, under
+the separate install ID `com.justnoise.androiddev.cleanupcheck`. Its launcher is
+**Justnoise Cleanup Check** and its Accessibility label explicitly says
+**Justnoise Cleanup Check — disposable app blocking**. It does not copy, migrate,
+or clear the owner's development installation or pairing.
+
+The variant inherits release configuration, then enables debugging and local debug
+signing solely for scoped cleanup evidence. Its manifest is `testOnly`; it is not
+a Play upload candidate. It does not include the debug source set, Compose debug
+tooling, preview/probe activities, or the debug promoted-notification permission.
+Default debug and unsigned release identity/behavior remain unchanged.
+
+Direct NFC dispatch is deliberately disabled **only in this variant**, preventing
+it from competing for Home-screen tag taps. Pairing and foreground Scan still use
+the real NFC path; this variant cannot provide direct-dispatch acceptance evidence.
+Installing it does not enable Accessibility. Any later installation, permission
+setup, cleanup or removal requires separately coordinated owner authorization;
+only one Justnoise Accessibility service may be active during the exercise. Never
+run instrumentation or destructive cleanup on the owner's paired development app.
+
+Build and verify locally from this directory (no device actions), using the
+installed Android Studio JDK:
+
+```sh
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+  ../android-gate0/gradlew -p . :app:testDebugUnitTest :app:lintCleanupCheck :app:assembleCleanupCheck
+```
+
+Expected APK: `app/build/outputs/apk/cleanupCheck/app-cleanupCheck.apk`. An authorized
+test-only installation requires Android's explicit test-package install allowance.
+The pinned plugin configures the shared JVM suite for the debug variant, not a
+separate `testCleanupCheckUnitTest` task. `IntegratedCleanupBuildBoundaryTest` runs
+in that suite and guards source isolation; inspect the actual
+APK's package, test-only/debuggable flags, labels, disabled direct activity and
+permission/component boundary before installation. Build completion alone is not
+cleanup acceptance or an internal-beta GO. No cleanup device result is implied by
+this variant's existence.
+
+### Coordinated device exercise protocol
+
+September 8 execution evidence is recorded in
+[`evidence/a16-cleanup-2026-09-08/README.md`](evidence/a16-cleanup-2026-09-08/README.md).
+Withdrawal and uninstall/reinstall were exercised; the disposable copy has been
+removed, and the owner manually restored the regular service (verified connected
+and idle). The steps below
+remain the protocol, not a claim that every acceptance boundary is closed.
+
+1. Obtain the owner's go-ahead for this separate test installation and its later
+   deletion. Confirm the existing session is stopped and keep the Zap away.
+2. Confirm the connected device and exact package identity before every action.
+   Install only `com.justnoise.androiddev.cleanupcheck`, with explicit test-package
+   allowance. Never replace, uninstall, clear storage or run instrumentation on
+   `com.justnoise.androiddev`. No full private History export is part of this check.
+3. Before enabling the cleanup service, have the owner temporarily disable the
+   existing development service through Android Settings while idle. Then manually
+   enable only **Justnoise Cleanup Check — disposable app blocking** after its
+   own fresh disclosure/consent. Do not grant permission with ADB.
+4. Use only this app's foreground reader to pair the unchanged Zap and create a
+   small disposable selection, a future schedule and one completed test session.
+   Move the tag away before leaving the reader. The disabled direct entry means
+   this cannot close the pending direct-NFC/foreign-tag acceptance gaps.
+5. In this clearly labeled app, exercise withdrawal. Confirm truthful cleanup
+   feedback, idle/unpaired state, empty test History/schedules, no pending alarm
+   or stale blocker, and fresh unchecked consent. If cleanup is incomplete, record
+   the failure; do not credit an uninstall as proof that withdrawal succeeded.
+6. Recreate only minimal disposable setup as needed to check the user-controlled
+   uninstall route. Remove only the cleanup app, reinstall the same APK and confirm
+   idle state with fresh unchecked consent and no restored test pairing/data.
+7. Remove the disposable app when finished and, with owner coordination, re-enable
+   the original service. Verify the existing app's preserved setup through scoped
+   status/visible UI without exporting its data or starting another session.
+
+Do not batch permission changes, scans or deletion as unattended automation.
+Record the exact APK, each actual result and any setup/routing limitation; do not
+mark a signed-release check or internal-beta GO solely from this debug test build.
+
+## Earlier implementation and packaging evidence
+
 This disposable, one-module development app combines the reviewed Android Gate 0
 capability sources with a small native Compose Zap surface. It deliberately remains
 under `spikes/`; it is not the production Android application and does not change the

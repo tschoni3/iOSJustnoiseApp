@@ -16,6 +16,7 @@ data class ScheduleDraft(
     val enabled: Boolean,
     val timing: ScheduleTiming,
     val creationZoneId: String,
+    val modeReference: String? = null,
 )
 
 data class StoredSchedule(

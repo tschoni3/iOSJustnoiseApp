@@ -34,6 +34,31 @@ These files describe the intended target architecture. Existing iOS literals are
 
 ## Cross-platform change discipline
 
+Owner extension, 2026-09-09 (Sign-in, PostHog, Now Bar, "lets go"):
+implement the connected Android release described in `docs/ANDROID_CONNECTED_RELEASE.md`.
+The earlier account/analytics/Live Update exclusions no longer define the desired
+release. Keep the capability spike local-only; production integrations must be
+explicit, reviewed native adapters. iOS remains read-only. A production-only
+promoted-notification permission is authorized; do not add foreground-service,
+overlay, broad visibility or content-retrieval permissions for this feature.
+No automatic telemetry, owner-account mutation, phone installation or distribution
+is authorized by this source-implementation extension.
+
+Owner exception, 2026-09-08 ("jetzt bauen"): local production-identity packaging
+and signing in `android-app/` are authorized before internal-beta GO. Reuse the
+canonical Android sources; do not duplicate engines. This authorizes building
+only, not installation, upload or distribution. Both safety decisions remain HOLD
+and missing device evidence stays unverified. Replace the old directory-absence
+guard with production-layout verification; retain all capability checks.
+
+Subsequent owner approval, 2026-09-08 ("ok done" in reply to the explicit
+installation question): install the signed candidate separately on the owner's
+A16 and temporarily disable the development package for scoped release acceptance.
+Preserve all development data/pairing; no clearing/uninstalling or permission grants
+through ADB. The owner performs release pairing and Accessibility consent/enablement.
+This is not upload/distribution approval. Generic Gradle install tasks stay blocked;
+the approved device operation targets the identified A16 explicitly.
+
 - Start a portable behavior, copy, or visual-token change in the product contract, then update both native implementations in the same change once Android exists.
 - Keep stable identifiers, state transitions, validation rules, copy keys, placeholders, semantic colors, and test fixtures portable. Add or update a framework-neutral fixture before duplicating a rule in Swift and Kotlin.
 - Put framework types and permissions behind platform adapters. Apple `FamilyActivitySelection`, `ManagedSettings`, `DeviceActivity`, `CoreNFC`, and `ActivityKit` types must not enter portable models.
@@ -52,6 +77,13 @@ Status: **released and pinned** from backend `main` merge commit `d445e7a45025b5
 
 ## UI and design verification
 
+- On the owner's paired A16, do not run `uiautomator dump` or instrumentation,
+  including while idle or inspecting History. The legacy UI automation connection
+  can suppress Justnoise's Accessibility service and manufacture recovery warnings.
+  Use screenshots/recordings, observed-coordinate navigation when authorized, and
+  scoped passive diagnostics. Read the non-interfering inspection protocol in
+  `spikes/android-gate0/README.md` before any phone UI inspection. An ADB navigation
+  approval does not waive this existing test-isolation requirement.
 - Use SwiftUI previews for iOS components and Compose previews for Android components.
 - Add screenshot or golden tests for stable shared states when practical.
 - Storybook is not required. Adopt a separate component catalog only if native previews and visual tests no longer make component states discoverable.

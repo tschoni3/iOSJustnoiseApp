@@ -1,0 +1,30 @@
+
+com.justnoise.integrated.IntegratedHistoryActivityInstrumentationTest:...
+com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest:....
+Error in loadingSavingUncertaintyAndMissingConsentPreserveMutationRefusals(com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest):
+java.lang.AssertionError: Action performScrollTo() failed.
+Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'schedules-refresh')
+
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)
+	at androidx.compose.ui.test.ActionsKt.performScrollTo(Actions.kt:80)
+	at com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest.loadingSavingUncertaintyAndMissingConsentPreserveMutationRefusals(IntegratedScheduleUiInstrumentationTest.kt:165)
+.
+
+Time: 19.169
+There was 1 failure:
+1) loadingSavingUncertaintyAndMissingConsentPreserveMutationRefusals(com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest)
+java.lang.AssertionError: Action performScrollTo() failed.
+Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'schedules-refresh')
+
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)
+	at androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)
+	at androidx.compose.ui.test.ActionsKt.performScrollTo(Actions.kt:80)
+	at com.justnoise.integrated.IntegratedScheduleUiInstrumentationTest.loadingSavingUncertaintyAndMissingConsentPreserveMutationRefusals(IntegratedScheduleUiInstrumentationTest.kt:165)
+
+FAILURES!!!
+Tests run: 9,  Failures: 1
+
+

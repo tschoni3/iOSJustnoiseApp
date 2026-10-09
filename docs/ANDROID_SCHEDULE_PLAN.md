@@ -1,5 +1,11 @@
 # Android MVP schedule plan
 
+**Presentation update — 2026-09-06:** the owner-approved
+[Play implementation plan](ANDROID_PLAY_IMPLEMENTATION.md) adds iOS-source-style
+compact schedules and modal editing. The runtime/timing rules in this document
+remain unchanged. The old calendar/full-visual-parity scope exclusions at the end
+apply to the September 3 implementation slices, not the current approved UI plan.
+
 Status: **START/ZAP-STOP APPROVED — implementation in progress** (2026-09-03).
 
 Scope: the existing local Android MVP: select apps, real Zap sessions, schedules

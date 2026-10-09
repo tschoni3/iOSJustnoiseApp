@@ -2,6 +2,8 @@ package com.justnoise.integrated
 
 import com.justnoise.gate0.data.ScheduleDraft
 import com.justnoise.gate0.data.StoredSchedule
+import com.justnoise.gate0.data.StoredMode
+import com.justnoise.gate0.feature.ScheduleManagementSnapshot
 import com.justnoise.gate0.domain.PortableScheduleTimingRules
 import com.justnoise.gate0.domain.PortableWeekday
 import com.justnoise.gate0.domain.ScheduleTiming
@@ -16,6 +18,39 @@ import java.time.Instant
 class IntegratedScheduleEditorTest {
     private val now = epoch("2026-09-03T10:15:40Z")
     private val zone = "Europe/Berlin"
+
+    @Test
+    fun confirmedWithdrawalClearsStaleScheduleSuccessMessage() {
+        val cleared = IntegratedScheduleState(
+            snapshot = ScheduleManagementSnapshot(consentAccepted = false),
+            message = "Schedule saved.",
+        ).withoutRevokedConsentMessage()
+        assertNull(cleared.message)
+        assertTrue(requireNotNull(cleared.snapshot).schedules.isEmpty())
+    }
+
+    @Test
+    fun failedOrPendingReadDoesNotSilentlyDiscardSaveWarnings() {
+        for (snapshot in listOf(null, ScheduleManagementSnapshot(error = true))) {
+            val state = IntegratedScheduleState(
+                snapshot = snapshot, message = "A previous save may have completed.",
+                editor = namedEditor(), editorError = "Check storage and retry.",
+                mutationUncertain = true,
+            )
+            assertSame(state, state.withoutRevokedConsentMessage())
+        }
+    }
+
+    @Test
+    fun acceptedConsentPreservesSuccessAndRecoveryNotices() {
+        for (message in listOf("Schedule saved.", "Saved, but scheduling could not refresh.")) {
+            val state = IntegratedScheduleState(
+                snapshot = ScheduleManagementSnapshot(consentAccepted = true, recoveryRequired = true),
+                message = message,
+            )
+            assertSame(state, state.withoutRevokedConsentMessage())
+        }
+    }
 
     @Test
     fun editableDraftAcceptsChangesAndClearsItsValidationError() {
@@ -59,7 +94,7 @@ class IntegratedScheduleEditorTest {
 
     @Test
     fun newEditorDefaultsAboutOneHourAheadInNamedZone() {
-        val editor = IntegratedScheduleEditor.new(now, zone)
+        val editor = IntegratedScheduleEditor.new(now, zone, "mode-focus")
         assertNull(editor.id)
         assertNull(editor.expectedRevision)
         assertEquals("2026-09-03", editor.localDate)
@@ -75,7 +110,7 @@ class IntegratedScheduleEditorTest {
     @Test
     fun newDefaultMayCrossMidnightButUserPastDateIsNeverRolledForward() {
         val late = epoch("2026-09-03T23:40:00Z")
-        val editor = IntegratedScheduleEditor.new(late, "UTC").copy(name = "Focus")
+        val editor = IntegratedScheduleEditor.new(late, "UTC", "mode-focus").copy(name = "Focus")
         assertEquals("2026-09-04", editor.localDate)
         assertEquals(0, editor.hour)
         assertEquals(40, editor.minute)
@@ -132,7 +167,7 @@ class IntegratedScheduleEditorTest {
     @Test
     fun defaultDoesNotOfferTheSecondOverlapAsAFutureOneTime() {
         val duringOverlap = epoch("2026-10-25T00:30:00Z")
-        val editor = IntegratedScheduleEditor.new(duringOverlap, zone).copy(name = "Focus")
+        val editor = IntegratedScheduleEditor.new(duringOverlap, zone, "mode-focus").copy(name = "Focus")
         assertEquals(3, editor.hour)
         assertEquals(30, editor.minute)
         assertEquals(epoch("2026-10-25T02:30:00Z"), valid(editor, duringOverlap).timing.oneTimeEpochMilliseconds)
@@ -224,16 +259,77 @@ class IntegratedScheduleEditorTest {
     @Test
     fun supportedEpochEndDoesNotOverflowOrCreateAnUnavailableOccurrence() {
         val maximum = PortableScheduleTimingRules.MAXIMUM_EPOCH_MILLISECONDS
-        val editor = IntegratedScheduleEditor.new(maximum, "UTC").copy(name = "Focus")
+        val editor = IntegratedScheduleEditor.new(maximum, "UTC", "mode-focus").copy(name = "Focus")
         invalid(editor, maximum, "UTC")
         invalid(editor.copy(isRepeating = true, weekdays = setOf(PortableWeekday.FRIDAY)), maximum, "UTC")
-        invalid(IntegratedScheduleEditor.new(Long.MAX_VALUE, "UTC").copy(name = "Focus"), Long.MAX_VALUE, "UTC")
+        invalid(IntegratedScheduleEditor.new(Long.MAX_VALUE, "UTC", "mode-focus").copy(name = "Focus"), Long.MAX_VALUE, "UTC")
         val stored = stored(ScheduleTiming(oneTimeEpochMilliseconds = maximum), enabled = false).copy(creationZoneId = "UTC")
         val existing = IntegratedScheduleEditor.fromStored(stored, maximum, "UTC")
         assertEquals(maximum, valid(existing, maximum, "UTC").timing.oneTimeEpochMilliseconds)
     }
 
-    private fun namedEditor() = IntegratedScheduleEditor.new(now, zone).copy(name = "Focus")
+    @Test
+    fun newDraftUsesOnlyAnExplicitRecentModeAndOtherwiseRequiresChoice() {
+        val empty = IntegratedScheduleEditor.new(now, zone).copy(name = "Focus")
+        assertNull(empty.modeReference)
+        invalid(empty)
+        assertEquals(IntegratedScheduleModeProblem.REQUIRED, empty.modeProblem(listOf(mode("mode-other"))))
+        val chosen = IntegratedScheduleEditor.new(now, zone, "mode-focus").copy(name = "Focus")
+        assertEquals("mode-focus", valid(chosen).modeReference)
+        invalid(chosen.copy(modeReference = " "))
+    }
+
+    @Test
+    fun editingAndSavingRetainTheSchedulesOwnModeIndependentlyOfTheRecentMode() {
+        val stored = stored(ScheduleTiming(oneTimeEpochMilliseconds = now + 86_400_000L))
+            .copy(modeReference = "mode-schedule")
+        val editor = IntegratedScheduleEditor.fromStored(stored, now, zone)
+        assertEquals("mode-schedule", editor.modeReference)
+        val snapshot = ScheduleManagementSnapshot(modes = listOf(mode("mode-recent"), mode("mode-schedule")),
+            recentModeId = "mode-recent")
+        assertNull(editor.modeProblem(snapshot.modes))
+        assertEquals("mode-schedule", valid(editor.copy(name = "Renamed")).modeReference)
+        val changed = IntegratedScheduleState(editor = editor).withEditorChange(editor.copy(modeReference = "mode-recent"))
+        assertEquals("mode-recent", valid(requireNotNull(changed.editor)).modeReference)
+        assertEquals("mode-schedule", editor.modeReference)
+    }
+
+    @Test
+    fun missingAndEmptyModesNeverResolveToAnotherAvailableMode() {
+        val editor = namedEditor()
+        assertEquals(IntegratedScheduleModeProblem.UNAVAILABLE, editor.modeProblem(listOf(mode("mode-other"))))
+        assertEquals(IntegratedScheduleModeProblem.EMPTY,
+            editor.modeProblem(listOf(mode("mode-other"), mode("mode-focus").copy(selectedPackages = emptySet()))))
+        assertNull(editor.modeProblem(listOf(mode("mode-focus"))))
+        assertEquals("mode-focus", editor.modeReference)
+    }
+
+    @Test
+    fun setupChecksEachSchedulesModeNotRecentModeOrAnotherSchedulesTargets() {
+        val snapshot = ScheduleManagementSnapshot(
+            exactAlarmAccess = true, consentAccepted = true, zapPaired = true, accessibilityEnabled = true,
+            modes = listOf(mode("ready"), mode("empty").copy(selectedPackages = emptySet())), recentModeId = "empty",
+        )
+        assertFalse(snapshot.hasSetupGap("ready"))
+        assertTrue(snapshot.hasSetupGap("empty"))
+        assertTrue(snapshot.hasSetupGap("missing"))
+        assertTrue(snapshot.hasSetupGap(null))
+        assertFalse(snapshot.copy(recentModeId = null).hasSetupGap("ready"))
+        assertTrue(snapshot.copy(exactAlarmAccess = false).hasSetupGap("ready"))
+    }
+
+    @Test
+    fun lateModeChoiceCannotReplacePendingOrCancelledDraft() {
+        val editor = namedEditor()
+        val pending = IntegratedScheduleState(editor = editor, saving = true)
+        assertSame(pending, pending.withEditorChange(editor.copy(modeReference = "mode-other")))
+        val cancelled = IntegratedScheduleState()
+        assertSame(cancelled, cancelled.withEditorChange(editor.copy(modeReference = "mode-other")))
+    }
+
+    private fun mode(id: String) = StoredMode(id, 1L, id, setOf("synthetic.one"))
+
+    private fun namedEditor() = IntegratedScheduleEditor.new(now, zone, "mode-focus").copy(name = "Focus")
 
     private fun stored(timing: ScheduleTiming, enabled: Boolean = true) = StoredSchedule(
         id = "98bce997-1391-4cb8-8203-b36b76e993b8", revision = 7L,

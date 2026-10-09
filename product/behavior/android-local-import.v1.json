@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "scope": "Android local unowned data to one authenticated account; iOS unchanged",
+  "rules": [
+    "Offer after successful sign-in when unclaimed local data exists; defer without changing data; offer later in account settings.",
+    "Explicit consent is bound to the current authenticated account and workspace token; active sessions and deletion block import.",
+    "Preserve existing account data. Merge exact duplicate modes/schedules; remap conflicting IDs and schedule references deterministically.",
+    "Imported schedules are disabled and have no pending alarms; preserve historical receipts and high-water marks.",
+    "Retain the destination recent-mode choice; otherwise adopt the mapped explicitly selected local mode, never the first mode.",
+    "Stream all History rows, preserve UUIDs and metadata, accept identical retries, reject conflicting UUID contents without overwrite.",
+    "Durably claim one destination before copying. A pending transfer blocks product access and account switching until retry succeeds.",
+    "Clear local source only after destination History is committed. Publish merged configuration and completion atomically; never import twice or into another account.",
+    "No network, analytics event, credentials, pairing, permission or iOS mutation is part of import. No cloud sync."
+  ],
+  "cases": ["empty", "defer", "merge", "id-collision", "repeat", "other-account", "history-conflict", "interrupted-retry", "active-session", "stale-consent", "schedule-disabled", "capacity"]
+}
