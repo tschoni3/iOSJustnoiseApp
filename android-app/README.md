@@ -8,8 +8,14 @@ production application ID and exact Android auth callback. Supabase now allows t
 new callback while retaining the existing iOS and prior Android redirects. All 470
 production tests, release lint (0 errors, 74 warnings, 2 hints), product contracts,
 full pre-device verification, 44 artifact-verifier regressions, signer/package/
-permission boundaries, APK alignment and AAB/native checks pass. It is not installed;
-use an eventual Play internal-track install for one fresh identity/setup smoke test.
+permission boundaries, APK alignment and AAB/native checks pass. Google Play
+accepted this exact AAB as release **1.0.0 (1) – Internal** for app
+`4972093831482851244` on internal track `4701314183475386469`. The track is active,
+and the owner reported the Play-installed A16 smoke test successful. The
+`verification.json` file inside the immutable candidate directory records the
+earlier build-time distribution/device boundary; the later Play result above and
+`evidence/final-closure-audit-2026-09-20.md` are authoritative for distribution
+status. Do not repeat the unchanged hardware flows.
 
 Previous installed candidate, September 20:
 **`build/candidates/1.0.0-1-8dc7ba54/`**.
