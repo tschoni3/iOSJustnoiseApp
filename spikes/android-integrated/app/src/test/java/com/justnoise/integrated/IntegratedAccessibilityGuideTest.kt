@@ -67,8 +67,9 @@ class IntegratedAccessibilityGuideTest {
         assertTrue(setup.contains("style = IntegratedGuidanceTypography.disclosure"))
         val activation = source.substringAfter("fun IntegratedActivationSurface(")
             .substringBefore("fun IntegratedNfcScanDialog(")
-        assertFalse(activation.contains("first_run_activation_body"))
+        assertTrue(activation.contains("first_run_activation_body"))
         assertTrue(activation.contains("first_run_activation_title"))
+        assertTrue(activation.contains("first_run_watch_how_it_works"))
         assertTrue(activation.contains("FirstRunStatus(status")) // Keep real errors actionable.
         val activity = File(app, "src/main/java/com/justnoise/integrated/MainActivity.kt").readText()
         val cancel = activity.substringAfter("private fun cancelInitialScan() {")

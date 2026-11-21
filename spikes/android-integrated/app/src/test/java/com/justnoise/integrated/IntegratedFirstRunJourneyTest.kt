@@ -12,14 +12,20 @@ class IntegratedFirstRunJourneyTest {
 
     @Test fun freshJourneyCannotReachProductBeforeAccountAndBlockingFactsAreReady() {
         assertEquals(IntegratedFirstRunRoute.ONBOARDING, IntegratedFirstRunRules.route(fresh))
-        val tutorial = fresh.copy(tutorialCompleted = true)
-        assertEquals(IntegratedFirstRunRoute.ACTIVATION, IntegratedFirstRunRules.route(tutorial))
-        val paired = tutorial.copy(zapPaired = true)
+        assertEquals(IntegratedFirstRunRoute.FIRST_MODE,
+            IntegratedFirstRunRules.route(fresh, IntegratedFirstRunRoute.FIRST_MODE))
+        val afterMode = fresh.copy(tutorialCompleted = true)
+        assertEquals(IntegratedFirstRunRoute.ACTIVATION, IntegratedFirstRunRules.route(afterMode))
+        val paired = afterMode.copy(zapPaired = true)
         assertEquals(IntegratedFirstRunRoute.MAIN, IntegratedFirstRunRules.route(paired))
         assertTrue(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.MAIN, 0))
         assertFalse(IntegratedAccountAccess(ready = true, signedIn = true)
             .blocksRoute(IntegratedFirstRunRoute.MAIN, 0))
+        assertFalse(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.FIRST_MODE, 0))
+        assertFalse(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.ACTIVATION, 0))
         assertTrue(IntegratedFirstRunRules.needsBlockingSetup(paired, false, false))
+        assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(
+            IntegratedFirstRunRoute.MAIN, false, false, true))
         assertEquals(IntegratedPermissionStep.BLOCKING,
             IntegratedPermissionFlow.next(false, false, true, false))
         // Agreeing to disclosure cannot substitute for enabling the system service.
@@ -44,18 +50,23 @@ class IntegratedFirstRunJourneyTest {
         val finishSetup = activity.substringAfter("private fun finishPermissionSetup()")
             .substringBefore("private fun skipScheduleSetup()")
         assertFalse(finishSetup.contains("modes.open()"))
-        assertFalse(activity.contains("showingFirstModeSetup"))
+        assertFalse(finishSetup.contains("openModes()"))
         assertTrue(activity.contains("disclosureAccepted, accessibilityEnabled"))
         val refresh = activity.substringAfter("private fun refreshTruth()")
             .substringBefore("private fun beginOneShotScan(")
         assertTrue(refresh.contains("accessibilityEnabled = AccessibilityServiceStatus.isEnabled(this)"))
+        assertTrue(activity.contains("maybeOpenRequiredAccount()"))
+        assertTrue(activity.contains("shouldHoldRequiredAccount"))
     }
 
     @Test fun coldReturnAfterPairingRetainsMissingPermissionGateInsteadOfReplayingEducation() {
         val paired = fresh.copy(tutorialCompleted = true, zapPaired = true)
-        for (restored in listOf(null, IntegratedFirstRunRoute.ONBOARDING, IntegratedFirstRunRoute.MAIN)) {
+        for (restored in listOf(null, IntegratedFirstRunRoute.ONBOARDING, IntegratedFirstRunRoute.FIRST_MODE,
+            IntegratedFirstRunRoute.MAIN)) {
             assertEquals(IntegratedFirstRunRoute.MAIN, IntegratedFirstRunRules.route(paired, restored))
             assertTrue(IntegratedFirstRunRules.needsBlockingSetup(paired, true, false))
+            assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(
+                IntegratedFirstRunRoute.MAIN, false, false, true))
             assertEquals(IntegratedPermissionStep.BLOCKING,
                 IntegratedPermissionFlow.next(true, false, true, false))
         }

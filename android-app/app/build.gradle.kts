@@ -40,8 +40,8 @@ android {
         applicationId = "shop.justnoise.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.0.19"
+        versionCode = 22
+        versionName = "1.0.20"
     }
     signingConfigs {
         create("upload") {
@@ -114,6 +114,7 @@ val artwork = tasks.register<Sync>("syncReleaseArtwork") {
     }
     from(repository.resolve("JN_video1.mp4")) { into("raw"); rename { "jn_video1.mp4" } }
     from(repository.resolve("JN_video2.mp4")) { into("raw"); rename { "jn_video2.mp4" } }
+    from(repository.resolve("JN_onboarding_intro.mp4")) { into("raw"); rename { "jn_onboarding_intro.mp4" } }
 }
 tasks.named("preBuild").configure { dependsOn(artwork) }
 tasks.withType<Test>().configureEach {

@@ -17,7 +17,7 @@ ARTWORK = (
     "justnoiseradio/Assets.xcassets/zap_button.imageset/zap_button.png",
     "justnoiseradio/Assets.xcassets/Icon.imageset/Instagram post - 4.png",
     "justnoiseradio/Assets.xcassets/Justnoise_logo_nav.imageset/Subtract.png",
-    "JN_video1.mp4", "JN_video2.mp4",
+    "JN_video1.mp4", "JN_video2.mp4", "JN_onboarding_intro.mp4",
 )
 REFERENCE_INPUTS = (
     "justnoiseradio/Features/NFC/NFCViewModel.swift", "AGENTS.md", ".gitignore",

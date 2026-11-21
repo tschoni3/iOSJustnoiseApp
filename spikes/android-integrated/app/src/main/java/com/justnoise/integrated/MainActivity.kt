@@ -29,6 +29,7 @@ import androidx.lifecycle.Lifecycle
 import com.justnoise.gate0.R
 import com.justnoise.gate0.app.MainActivity as Gate0SetupActivity
 import com.justnoise.gate0.data.Gate0Preferences
+import com.justnoise.gate0.data.ModeRules
 import com.justnoise.gate0.data.StoredGate0State
 import com.justnoise.gate0.domain.SessionTransition
 import com.justnoise.gate0.domain.ZapReadOutcome
@@ -66,7 +67,7 @@ class MainActivity : ComponentActivity() {
     private var showingSchedules by mutableStateOf(false)
     private var showingSettings by mutableStateOf(false)
     private var settingsPage by mutableStateOf(IntegratedSettingsPage.MAIN)
-    private var tutorialReplayPage by mutableStateOf<Int?>(null)
+    private var showingHowItWorksReplay by mutableStateOf(false)
     private var settingsMessage by mutableStateOf<String?>(null)
     private var notificationsEnabled by mutableStateOf(false)
     private var liveUpdateStatus by mutableStateOf(SessionLiveUpdateStatus.UNSUPPORTED)
@@ -75,7 +76,8 @@ class MainActivity : ComponentActivity() {
     private var emergencySessionId by mutableStateOf<String?>(null)
     private var completionState by mutableStateOf(IntegratedCompletionState())
     private var firstRunRoute by mutableStateOf(IntegratedFirstRunRoute.MAIN)
-    private var onboardingPage by mutableStateOf(0)
+    private var firstModeSaveRequested = false
+    private var zapScanGuideSeen by mutableStateOf(false)
     private var onboardingSaveBusy by mutableStateOf(false)
     private var onboardingSaveError by mutableStateOf<String?>(null)
     private var initialZapPaired by mutableStateOf(false)
@@ -121,8 +123,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         controller = Gate0Controller(this)
         preferences = Gate0Preferences(this)
-        firstSessionGuideDismissed = getSharedPreferences("justnoise_installation_guidance", MODE_PRIVATE)
-            .getBoolean("first_session_guide_dismissed_v1", false)
+        val guidance = getSharedPreferences("justnoise_installation_guidance", MODE_PRIVATE)
+        firstSessionGuideDismissed = guidance.getBoolean("first_session_guide_dismissed_v1", false)
+        zapScanGuideSeen = guidance.getBoolean("zap_scan_guide_seen_v1", false)
         alarmAccessEnabled = ScheduleAlarmScheduler(this).hasExactAlarmAccess()
         val initialStored = preferences.snapshot()
         val initialFacts = firstRunFacts(initialStored)
@@ -146,7 +149,6 @@ class MainActivity : ComponentActivity() {
                 it.name == savedInstanceState?.getString(FIRST_RUN_ROUTE_KEY)
             },
         )
-        onboardingPage = IntegratedFirstRunRules.page(savedInstanceState?.getInt(ONBOARDING_PAGE_KEY) ?: 0)
         if (savedInstanceState?.getBoolean(ONBOARDING_SAVE_FAILED_KEY) == true && !initialFacts.tutorialCompleted) {
             onboardingSaveError = getString(R.string.first_run_save_failed)
         }
@@ -156,8 +158,7 @@ class MainActivity : ComponentActivity() {
         settingsPage = IntegratedSettingsPage.entries.firstOrNull {
             it.name == savedInstanceState?.getString(SETTINGS_PAGE_KEY)
         } ?: IntegratedSettingsPage.MAIN
-        tutorialReplayPage = savedInstanceState?.getInt(TUTORIAL_REPLAY_PAGE_KEY, -1)
-            ?.takeIf { it in 0..1 }
+        showingHowItWorksReplay = savedInstanceState?.getBoolean(TUTORIAL_REPLAY_KEY) == true
         @Suppress("DEPRECATION")
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         installedVersion = "${packageInfo.versionName.orEmpty()} (${packageInfo.longVersionCode})"
@@ -167,7 +168,7 @@ class MainActivity : ComponentActivity() {
             showingSettings = false
         }
         if (showingSettings) { showingHistory = true; showingSchedules = false }
-        if (!showingSettings) tutorialReplayPage = null
+        if (!showingSettings) showingHowItWorksReplay = false
         if (showingSchedules) showingHistory = false
         schedules = ViewModelProvider(this)[IntegratedScheduleViewModel::class.java]
         schedules.initialize(savedInstanceState?.getBundle(SCHEDULE_STATE_KEY))
@@ -189,7 +190,13 @@ class MainActivity : ComponentActivity() {
             JustnoiseIntegratedTheme {
                 val accountHost = application as? IntegratedAccountHost
                 val access = accountHost?.accountAccess?.collectAsState()?.value
-                if (access != null && access.blocksRoute(firstRunRoute, accountViewGeneration)) {
+                val holdAccount = IntegratedFirstRunRules.shouldHoldRequiredAccount(
+                    firstRunRoute, showingAccessibilitySetup, showingScheduleSetup,
+                    IntegratedFirstRunRules.needsBlockingSetup(
+                        firstRunFacts(preferences.snapshot()), disclosureAccepted, accessibilityEnabled,
+                    ),
+                )
+                if (access != null && access.blocksRoute(firstRunRoute, accountViewGeneration) && !holdAccount) {
                     LaunchedEffect(access) {
                         if (access.productAllowed) {
                             // Clearing cancels old workers and discards every retained draft/
@@ -202,7 +209,7 @@ class MainActivity : ComponentActivity() {
                             history.initialize(null)
                             completionState = IntegratedCompletionState()
                             showingHistory = false; showingSchedules = false; showingSettings = false
-                            tutorialReplayPage = null
+                            showingHowItWorksReplay = false
                             refreshTruth()
                             accountViewGeneration = access.generation
                         }
@@ -221,19 +228,19 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = showingAccessibilitySetup || showingScheduleSetup || showingHistory || showingSchedules || showingSettings ||
                     completionState.visibleEntry != null || modes.state.visible || screenState.isScanning ||
                     firstRunRoute == IntegratedFirstRunRoute.ACTIVATION ||
-                    (firstRunRoute == IntegratedFirstRunRoute.ONBOARDING && onboardingPage > 0)
+                    firstRunRoute == IntegratedFirstRunRoute.FIRST_MODE ||
+                    showingHowItWorksReplay
                 ) {
                     when {
                         completionState.visibleEntry != null -> completionState = completionState.dismiss()
+                        showingHowItWorksReplay -> showingHowItWorksReplay = false
                         showingAccessibilitySetup -> deferBlockingSetup()
                         showingScheduleSetup -> skipScheduleSetup()
+                        firstRunRoute == IntegratedFirstRunRoute.FIRST_MODE -> leaveFirstModeSetup()
                         firstRunRoute == IntegratedFirstRunRoute.ACTIVATION -> {
                             if (screenState.isScanning) cancelInitialScan()
                             else if (initialZapPaired) continueAfterPairing()
                             else finish()
-                        }
-                        firstRunRoute == IntegratedFirstRunRoute.ONBOARDING -> {
-                            if (!onboardingSaveBusy) onboardingPage = 0
                         }
                         modes.state.visible -> if (modes.state.editor != null) modes.cancelEditor() else modes.dismiss()
                         screenState.isScanning -> cancelSessionScan()
@@ -245,11 +252,30 @@ class MainActivity : ComponentActivity() {
                 }
                 if (firstRunRoute == IntegratedFirstRunRoute.ONBOARDING) {
                     IntegratedOnboardingSurface(
-                        page = onboardingPage,
                         busy = onboardingSaveBusy,
                         errorMessage = onboardingSaveError,
-                        onPageChange = { if (!onboardingSaveBusy) onboardingPage = IntegratedFirstRunRules.page(it) },
                         onContinue = ::advanceOnboarding,
+                    )
+                } else if (firstRunRoute == IntegratedFirstRunRoute.FIRST_MODE) {
+                    LaunchedEffect(firstRunRoute, modes.state.visible, modes.state.loading, modes.state.editor, modes.state.canMutate) {
+                        if (!modes.state.visible && !modes.state.saving) modes.open()
+                        else if (modes.state.visible && !modes.state.loading && modes.state.editor == null && modes.state.canMutate) {
+                            val existing = modes.state.catalog?.modes?.firstOrNull {
+                                ModeRules.validName(it.name) && ModeRules.validTargets(it.selectedPackages)
+                            }
+                            if (existing != null) modes.edit(existing.id) else modes.newMode()
+                        }
+                    }
+                    LaunchedEffect(modes.state.savedVersion, modes.state.saving, modes.state.catalog) {
+                        maybeCompleteFirstMode()
+                    }
+                    IntegratedFirstModeSetupSurface(
+                        state = modes.state,
+                        onName = modes::changeName,
+                        onToggle = modes::toggle,
+                        onSave = ::saveFirstMode,
+                        onReload = modes::reload,
+                        onBack = ::leaveFirstModeSetup,
                     )
                 } else if (firstRunRoute == IntegratedFirstRunRoute.ACTIVATION) {
                     IntegratedActivationSurface(
@@ -259,9 +285,9 @@ class MainActivity : ComponentActivity() {
                         onScan = ::beginInitialPairing,
                         onCancelScan = ::cancelInitialScan,
                         onContinueToSetup = ::continueAfterPairing,
-                        continueLabel = if (accountHost != null && access?.productAllowed != true)
-                            "Continue to sign in" else null,
                         onPurchaseZap = ::openZapStore,
+                        hasSeenGuide = zapScanGuideSeen,
+                        onGuideSeen = ::markZapScanGuideSeen,
                     )
                 } else if (showingAccessibilitySetup) {
                     IntegratedAccessibilitySetupSurface(
@@ -305,20 +331,22 @@ class MainActivity : ComponentActivity() {
                     IntegratedScheduleSetupSurface(accessibilitySetupError,
                         ::enableScheduleAccessFromSetup, ::skipScheduleSetup)
                 } else if (screenState.truth == Gate0Truth.ZAP_REQUIRED) {
-                    IntegratedActivationSurface(screenState.isScanning, initialZapPaired,
-                        screenState.transientStatus, ::beginInitialPairing, ::cancelInitialScan,
-                        ::continueAfterPairing, onPurchaseZap = ::openZapStore)
-                } else if (showingSettings && tutorialReplayPage != null) {
-                    IntegratedOnboardingSurface(
-                        page = tutorialReplayPage ?: 0,
-                        busy = false,
-                        errorMessage = null,
-                        onPageChange = { tutorialReplayPage = IntegratedFirstRunRules.page(it) },
-                        onContinue = {
-                            if (tutorialReplayPage == 0) tutorialReplayPage = 1 else tutorialReplayPage = null
-                        },
-                        replaying = true,
-                        onClose = { tutorialReplayPage = null },
+                    IntegratedActivationSurface(
+                        isScanning = screenState.isScanning,
+                        isPaired = initialZapPaired,
+                        status = screenState.transientStatus,
+                        onScan = ::beginInitialPairing,
+                        onCancelScan = ::cancelInitialScan,
+                        onContinueToSetup = ::continueAfterPairing,
+                        onPurchaseZap = ::openZapStore,
+                        hasSeenGuide = zapScanGuideSeen,
+                        onGuideSeen = ::markZapScanGuideSeen,
+                    )
+                } else if (showingSettings && showingHowItWorksReplay) {
+                    IntegratedHowItWorksGuide(
+                        continueLabel = R.string.first_session_guide_continue,
+                        onContinue = { showingHowItWorksReplay = false },
+                        onDismiss = { showingHowItWorksReplay = false },
                     )
                 } else if (showingSettings) {
                     IntegratedSettingsSurface(
@@ -337,7 +365,7 @@ class MainActivity : ComponentActivity() {
                         onDone = ::closeSettings,
                         onBackFromPrivacy = ::backFromSettings,
                         onOpenSetup = ::openSetup,
-                        onShowTutorial = { tutorialReplayPage = 0 },
+                        onShowTutorial = { showingHowItWorksReplay = true },
                         onShowPrivacy = { settingsPage = IntegratedSettingsPage.PRIVACY },
                         onShowMore = { settingsPage = IntegratedSettingsPage.ADVANCED },
                         onReviewLocalData = ::openSetup,
@@ -392,15 +420,6 @@ class MainActivity : ComponentActivity() {
                         onCancelScan = ::cancelSessionScan,
                         onLongPressZap = ::handleLongPressZap,
                     )
-                    if (IntegratedFirstSessionGuideRules.shouldShow(firstSessionGuideDismissed,
-                            screenState.truth, screenState.desiredActive, screenState.isScanning,
-                            modes.state.visible || completionState.visibleEntry != null)) {
-                        IntegratedFirstSessionGuide(
-                            needsMode = screenState.truth == Gate0Truth.TARGET_REQUIRED,
-                            onChooseMode = { dismissFirstSessionGuide(); openModes() },
-                            onDismiss = ::dismissFirstSessionGuide,
-                        )
-                    }
                 }
                 if (modes.state.visible && firstRunRoute == IntegratedFirstRunRoute.MAIN) {
                     IntegratedModeSheet(
@@ -479,6 +498,15 @@ class MainActivity : ComponentActivity() {
     private fun maybeOpenRequiredAccount(returnedToHost: Boolean = false) {
         val host = application as? IntegratedAccountHost ?: return
         val access = host.accountAccess.value
+        if (IntegratedFirstRunRules.shouldHoldRequiredAccount(
+                firstRunRoute, showingAccessibilitySetup, showingScheduleSetup,
+                IntegratedFirstRunRules.needsBlockingSetup(
+                    firstRunFacts(preferences.snapshot()), disclosureAccepted, accessibilityEnabled,
+                ),
+            )
+        ) {
+            return
+        }
         if (firstRunRoute == IntegratedFirstRunRoute.MAIN &&
             lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && access.ready && !access.signedIn &&
             promptedAccountGeneration != access.generation) {
@@ -506,13 +534,12 @@ class MainActivity : ComponentActivity() {
         outState.putLong(PROMPTED_ACCOUNT_GENERATION_KEY, promptedAccountGeneration)
         outState.putBoolean(REQUIRED_ACCOUNT_OPENED_KEY, requiredAccountOpened)
         outState.putBoolean(REQUIRED_ACCOUNT_PAUSED_KEY, requiredAccountHostPaused)
-        outState.putInt(ONBOARDING_PAGE_KEY, onboardingPage)
         outState.putBoolean(ONBOARDING_SAVE_FAILED_KEY, onboardingSaveError != null)
         outState.putBoolean(HISTORY_ROUTE_KEY, showingHistory)
         outState.putBoolean(SCHEDULE_ROUTE_KEY, showingSchedules)
         outState.putBoolean(SETTINGS_ROUTE_KEY, showingSettings)
         outState.putString(SETTINGS_PAGE_KEY, settingsPage.name)
-        outState.putInt(TUTORIAL_REPLAY_PAGE_KEY, tutorialReplayPage ?: -1)
+        outState.putBoolean(TUTORIAL_REPLAY_KEY, showingHowItWorksReplay)
         outState.putBundle(SCHEDULE_STATE_KEY, schedules.saveInstanceState())
         outState.putBundle(HISTORY_STATE_KEY, history.saveInstanceState())
         super.onSaveInstanceState(outState)
@@ -726,13 +753,7 @@ class MainActivity : ComponentActivity() {
         accessibilitySetupError = null
         refreshTruth()
         schedules.load()
-    }
-
-    private fun dismissFirstSessionGuide() {
-        // Installation-owned education only. Never alter pairing/account/session data.
-        firstSessionGuideDismissed = true
-        getSharedPreferences("justnoise_installation_guidance", MODE_PRIVATE).edit()
-            .putBoolean("first_session_guide_dismissed_v1", true).apply()
+        maybeOpenRequiredAccount()
     }
 
     private fun skipScheduleSetup() {
@@ -801,7 +822,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun closeSettings() {
-        tutorialReplayPage = null
+        showingHowItWorksReplay = false
         showingSettings = false
         settingsPage = IntegratedSettingsPage.MAIN
         refreshTruth()
@@ -810,7 +831,7 @@ class MainActivity : ComponentActivity() {
 
     private fun backFromSettings() {
         when {
-            tutorialReplayPage != null -> tutorialReplayPage = null
+            showingHowItWorksReplay -> showingHowItWorksReplay = false
             settingsPage == IntegratedSettingsPage.PRIVACY -> settingsPage = IntegratedSettingsPage.ADVANCED
             settingsPage == IntegratedSettingsPage.ADVANCED -> settingsPage = IntegratedSettingsPage.MAIN
             else -> closeSettings()
@@ -867,11 +888,33 @@ class MainActivity : ComponentActivity() {
 
     private fun advanceOnboarding() {
         if (onboardingSaveBusy || firstRunRoute != IntegratedFirstRunRoute.ONBOARDING) return
-        if (onboardingPage == 0) {
-            onboardingPage = 1
-            return
+        firstRunRoute = IntegratedFirstRunRoute.FIRST_MODE
+    }
+
+    private fun leaveFirstModeSetup() {
+        if (onboardingSaveBusy) return
+        firstModeSaveRequested = false
+        modes.dismiss()
+        firstRunRoute = IntegratedFirstRunRoute.ONBOARDING
+    }
+
+    private fun saveFirstMode() {
+        if (onboardingSaveBusy || firstRunRoute != IntegratedFirstRunRoute.FIRST_MODE) return
+        firstModeSaveRequested = true
+        if (modes.state.reloadRequired) modes.reload() else modes.save()
+    }
+
+    private fun maybeCompleteFirstMode() {
+        if (!firstModeSaveRequested || firstRunRoute != IntegratedFirstRunRoute.FIRST_MODE || modes.state.saving) return
+        val editor = modes.state.editor
+        val saved = modes.state.catalog?.modes.orEmpty().any { mode ->
+            ModeRules.validName(mode.name) && ModeRules.validTargets(mode.selectedPackages) &&
+                (editor == null || editor.id == null || editor.id == mode.id)
         }
-        persistOnboardingCompletion()
+        if (saved) {
+            firstModeSaveRequested = false
+            persistOnboardingCompletion()
+        }
     }
 
     private fun persistOnboardingCompletion() {
@@ -884,12 +927,19 @@ class MainActivity : ComponentActivity() {
                 onboardingSaveBusy = false
                 if (saved) {
                     onboardingSaveError = null
+                    modes.dismiss()
                     refreshTruth()
                 } else {
                     onboardingSaveError = getString(R.string.first_run_save_failed)
                 }
             }
         }
+    }
+
+    private fun markZapScanGuideSeen() {
+        zapScanGuideSeen = true
+        getSharedPreferences("justnoise_installation_guidance", MODE_PRIVATE).edit()
+            .putBoolean("zap_scan_guide_seen_v1", true).apply()
     }
 
     private fun leaveFirstRun() {
@@ -976,7 +1026,7 @@ class MainActivity : ComponentActivity() {
                 showingScheduleSetup = false
                 scheduleSetupPending = false
                 showingSettings = false
-                tutorialReplayPage = null
+                showingHowItWorksReplay = false
                 showingHistory = false
                 history.onBackground()
             }
@@ -1171,7 +1221,7 @@ class MainActivity : ComponentActivity() {
         const val SCHEDULE_STATE_KEY = "schedule_screen_state"
         const val SETTINGS_ROUTE_KEY = "showing_settings"
         const val SETTINGS_PAGE_KEY = "settings_page"
-        const val TUTORIAL_REPLAY_PAGE_KEY = "tutorial_replay_page"
+        const val TUTORIAL_REPLAY_KEY = "how_it_works_replay"
         const val FIRST_RUN_ROUTE_KEY = "first_run_route"
         const val ACCESSIBILITY_SETUP_ROUTE_KEY = "showing_accessibility_setup"
         const val SCHEDULE_SETUP_ROUTE_KEY = "showing_schedule_setup"
@@ -1180,7 +1230,6 @@ class MainActivity : ComponentActivity() {
         const val PROMPTED_ACCOUNT_GENERATION_KEY = "prompted_account_generation"
         const val REQUIRED_ACCOUNT_OPENED_KEY = "required_account_opened"
         const val REQUIRED_ACCOUNT_PAUSED_KEY = "required_account_paused"
-        const val ONBOARDING_PAGE_KEY = "onboarding_page"
         const val ONBOARDING_SAVE_FAILED_KEY = "onboarding_save_failed"
     }
 }

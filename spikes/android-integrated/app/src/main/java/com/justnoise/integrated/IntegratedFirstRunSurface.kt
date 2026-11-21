@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,25 +23,32 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,114 +74,273 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
 import com.justnoise.gate0.R
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.distinctUntilChanged
+import com.justnoise.gate0.data.ModeRules
+import com.justnoise.gate0.feature.AppSelectionChoice
 
 /** Presentation only: the owner persists progress and performs every NFC action. */
 @Composable
 fun IntegratedOnboardingSurface(
-    page: Int,
     busy: Boolean,
     errorMessage: String?,
-    onPageChange: (Int) -> Unit,
     onContinue: () -> Unit,
-    replaying: Boolean = false,
-    onClose: (() -> Unit)? = null,
 ) {
     FirstRunSystemBars(lightSurface = false)
-    val selectedPage = page.coerceIn(0, 1)
-    val pager = rememberPagerState(initialPage = selectedPage, pageCount = { 2 })
-    val latestPage by rememberUpdatedState(selectedPage)
-    val latestPageChange by rememberUpdatedState(onPageChange)
-    LaunchedEffect(selectedPage) {
-        if (pager.currentPage != selectedPage) pager.scrollToPage(selectedPage)
-    }
-    LaunchedEffect(pager) {
-        snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { settled ->
-            if (settled != latestPage) latestPageChange(settled)
-        }
-    }
-    BackHandler(enabled = selectedPage > 0 && !busy) { onPageChange(selectedPage - 1) }
-
-    BoxWithConstraints(
+    Column(
         Modifier.fillMaxSize().background(Color.Black)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        val footerHeightLimit = maxHeight / 2
-        Column(Modifier.fillMaxSize()) {
-            FirstRunTitleBar(
-                title = stringResource(R.string.first_run_how_to_use),
-                foreground = Color.White,
-                onBack = if (selectedPage > 0 && !busy) ({ onPageChange(0) }) else onClose,
+        FirstRunTitleBar(
+            title = stringResource(R.string.first_run_how_to_use),
+            foreground = Color.White,
+        )
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Spacer(Modifier.weight(1f))
+            Image(
+                painterResource(R.drawable.zap_button),
+                contentDescription = null,
+                modifier = Modifier.size(200.dp),
+                contentScale = ContentScale.Fit,
             )
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                val pageHeight = maxHeight
-                HorizontalPager(
-                    state = pager,
-                    userScrollEnabled = !busy,
-                    modifier = Modifier.fillMaxSize(),
-                ) { index ->
-                    Column(
-                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                            .heightIn(min = pageHeight).padding(vertical = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterVertically),
-                    ) {
-                        if (index == 0) {
-                            Image(painterResource(R.drawable.zap_button), contentDescription = null,
-                                modifier = Modifier.size(200.dp), contentScale = ContentScale.Fit)
-                            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(stringResource(R.string.first_run_select_apps), color = Color.White,
-                                    fontSize = 34.sp, lineHeight = 41.sp, fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 24.dp).semantics { heading() })
-                                Text(stringResource(R.string.first_run_select_apps_body), color = Color(0xFF98989D),
-                                    fontSize = 17.sp, lineHeight = 24.sp, textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 30.dp))
-                            }
-                        } else {
-                            Text(stringResource(R.string.first_run_stay_focused), color = Color.White,
-                                fontSize = 34.sp, lineHeight = 41.sp, fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 24.dp).semantics { heading() })
-                            IntegratedOnboardingMedia(
-                                videoResource = R.raw.jn_video2,
-                                isActive = index == pager.settledPage && !pager.isScrollInProgress && !busy,
-                                description = stringResource(R.string.first_run_focus_video),
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-                                    .height(250.dp).clip(RoundedCornerShape(12.dp)),
-                            )
-                            Text(stringResource(R.string.first_run_stay_focused_body), color = Color(0xFF98989D),
-                                fontSize = 17.sp, lineHeight = 24.sp, textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 30.dp))
-                        }
-                    }
-                }
-            }
             Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = footerHeightLimit)
-                    .verticalScroll(rememberScrollState()).padding(bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(top = 24.dp),
             ) {
-                FirstRunPageControls(selectedPage, busy, onPageChange)
-                if (!errorMessage.isNullOrBlank()) {
-                    FirstRunStatus(errorMessage, Color(0xFFFFB4AB), Modifier.padding(horizontal = 30.dp))
-                }
-                FirstRunPrimaryButton(
-                    title = stringResource(
-                        if (replaying && selectedPage == 1) R.string.first_run_replay_done
-                        else if (selectedPage == 0) R.string.first_run_get_started
-                        else R.string.first_run_start_activating,
-                    ),
-                    busy = busy,
-                    onClick = onContinue,
-                    modifier = Modifier.padding(horizontal = 30.dp).padding(top = 10.dp),
+                Text(
+                    stringResource(R.string.first_run_select_apps),
+                    color = Color.White,
+                    fontSize = 34.sp,
+                    lineHeight = 41.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    stringResource(R.string.first_run_select_apps_body),
+                    color = Color(0xFF98989D),
+                    fontSize = 17.sp,
+                    lineHeight = 24.sp,
+                    textAlign = TextAlign.Center,
                 )
             }
+            Spacer(Modifier.weight(1f))
+        }
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (!errorMessage.isNullOrBlank()) {
+                FirstRunStatus(errorMessage, Color(0xFFFFB4AB), Modifier.padding(bottom = 10.dp))
+            }
+            FirstRunPrimaryButton(
+                title = stringResource(R.string.first_run_get_started),
+                busy = busy,
+                onClick = onContinue,
+            )
         }
     }
 }
+
+@Composable
+fun IntegratedFirstModeSetupSurface(
+    state: IntegratedModeState,
+    onName: (String) -> Unit,
+    onToggle: (String, Boolean) -> Unit,
+    onSave: () -> Unit,
+    onReload: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val editor = state.editor
+    val canSave = state.canSave
+    FirstRunSystemBars(lightSurface = false)
+    Column(
+        Modifier.fillMaxSize().background(Color.Black)
+            .windowInsetsPadding(WindowInsets.safeDrawing),
+    ) {
+        FirstRunTitleBar(
+            title = stringResource(R.string.first_run_mode_title),
+            foreground = Color.White,
+            onBack = onBack,
+        )
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            item {
+                Text(
+                    stringResource(R.string.first_run_mode_headline),
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    lineHeight = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
+                )
+                Text(
+                    stringResource(R.string.first_run_mode_body),
+                    color = Color(0xFF98989D),
+                    fontSize = 17.sp,
+                    lineHeight = 24.sp,
+                    modifier = Modifier.padding(bottom = 24.dp),
+                )
+                Text(
+                    stringResource(R.string.first_run_mode_name),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                OutlinedTextField(
+                    value = editor?.name.orEmpty(),
+                    onValueChange = onName,
+                    enabled = state.canMutate,
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.integrated_mode_name_hint)) },
+                    isError = editor != null && editor.name.isNotEmpty() && !ModeRules.validName(editor.name),
+                    supportingText = if (editor != null && editor.name.isNotEmpty() && !ModeRules.validName(editor.name)) {
+                        { Text(stringResource(R.string.integrated_mode_invalid_name, ModeRules.MAX_NAME_LENGTH)) }
+                    } else null,
+                    modifier = Modifier.fillMaxWidth().testTag("first-mode-name"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        disabledTextColor = Color(0xFF98989D),
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color(0xFF48484A),
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color(0xFF98989D),
+                        cursorColor = Color.White,
+                        focusedPlaceholderColor = Color(0xFF98989D),
+                        unfocusedPlaceholderColor = Color(0xFF98989D),
+                    ),
+                )
+                Text(
+                    stringResource(R.string.first_run_mode_choose_apps),
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+                )
+                Text(
+                    stringResource(R.string.first_run_mode_apps_footer),
+                    color = Color(0xFF98989D),
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                if (editor != null && editor.packages.isNotEmpty()) {
+                    Text(
+                        pluralStringResource(R.plurals.integrated_mode_app_count, editor.packages.size, editor.packages.size),
+                        color = Color(0xFF98989D),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+            }
+            if (state.loading) {
+                item {
+                    CircularProgressIndicator(
+                        Modifier.padding(24.dp).size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                    )
+                }
+            } else if (editor != null) {
+                items(state.choices, key = { it.packageName }) { choice ->
+                    FirstModeAppRow(choice, choice.packageName in editor.packages, state.canMutate, onToggle)
+                }
+            }
+            if (state.problem != null) {
+                item {
+                    Text(
+                        firstModeProblemText(state.problem),
+                        color = Color(0xFFFFB4AB),
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+                }
+            }
+            if (state.catalog?.sessionRequested == true) {
+                item {
+                    Text(
+                        stringResource(R.string.first_run_mode_session_active),
+                        color = Color(0xFFFFB4AB),
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+                }
+            }
+        }
+        FirstRunPrimaryButton(
+            title = stringResource(if (state.saving) R.string.integrated_mode_saving else if (state.reloadRequired) R.string.integrated_mode_reload else R.string.first_run_mode_save),
+            busy = state.loading || state.saving || (!state.reloadRequired && !canSave),
+            onClick = if (state.reloadRequired) onReload else onSave,
+            modifier = Modifier.padding(24.dp),
+        )
+    }
+}
+
+@Composable
+private fun FirstModeAppRow(
+    choice: AppSelectionChoice,
+    checked: Boolean,
+    editable: Boolean,
+    onToggle: (String, Boolean) -> Unit,
+) {
+    val enabled = editable && (choice.available || checked)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("first-mode-app:${choice.packageName}")
+            .toggleable(value = checked, enabled = enabled, role = Role.Checkbox) { onToggle(choice.packageName, it) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                choice.label?.takeIf(String::isNotBlank) ?: choice.packageName,
+                color = if (enabled) Color.White else Color(0xFF98989D),
+                fontSize = 16.sp,
+            )
+            if (!choice.available) {
+                Text(
+                    stringResource(R.string.integrated_mode_unavailable_app),
+                    color = Color(0xFF98989D),
+                    fontSize = 13.sp,
+                )
+            }
+        }
+        Checkbox(
+            checked = checked,
+            onCheckedChange = null,
+            enabled = enabled,
+            colors = CheckboxDefaults.colors(
+                checkedColor = Color.White,
+                checkmarkColor = Color.Black,
+                uncheckedColor = Color(0xFF98989D),
+                disabledCheckedColor = Color(0xFF98989D),
+            ),
+        )
+    }
+}
+
+@Composable
+private fun firstModeProblemText(problem: IntegratedModeProblem): String = when (problem) {
+    IntegratedModeProblem.INVALID_NAME ->
+        stringResource(R.string.integrated_mode_invalid_name, ModeRules.MAX_NAME_LENGTH)
+    IntegratedModeProblem.LOAD_FAILED -> stringResource(R.string.integrated_mode_load_failed)
+    IntegratedModeProblem.STORAGE_FAILED -> stringResource(R.string.integrated_mode_storage_failed)
+    IntegratedModeProblem.ACTIVE_SESSION -> stringResource(R.string.first_run_mode_session_active)
+    IntegratedModeProblem.RECOVERY_REQUIRED -> stringResource(R.string.integrated_mode_recovery)
+    IntegratedModeProblem.INVALID_SELECTION -> stringResource(R.string.integrated_mode_invalid_selection)
+    IntegratedModeProblem.REFERENCED_BY_SCHEDULE -> stringResource(R.string.integrated_mode_referenced)
+    IntegratedModeProblem.CONFLICT -> stringResource(R.string.integrated_mode_conflict)
+    IntegratedModeProblem.REMOVAL_ONLY -> stringResource(R.string.integrated_mode_missing_apps)
+    IntegratedModeProblem.MODE_UNAVAILABLE -> stringResource(R.string.integrated_mode_not_found)
+    IntegratedModeProblem.LIMIT_REACHED -> stringResource(R.string.integrated_mode_limit)
+}
+
 
 @Composable
 fun IntegratedActivationSurface(
@@ -184,12 +351,18 @@ fun IntegratedActivationSurface(
     onCancelScan: () -> Unit,
     onContinueToSetup: () -> Unit,
     onPurchaseZap: () -> Unit,
+    hasSeenGuide: Boolean,
+    onGuideSeen: () -> Unit,
     continueLabel: String? = null,
 ) {
     val background = if (isPaired) Color.Black else Color.White
     val foreground = if (isPaired) Color.White else Color.Black
     FirstRunSystemBars(lightSurface = !isPaired)
     BackHandler(enabled = isScanning) { onCancelScan() }
+    var showGuide by remember { mutableStateOf(!hasSeenGuide && !isPaired) }
+    LaunchedEffect(hasSeenGuide, isPaired) {
+        if (!hasSeenGuide && !isPaired) showGuide = true
+    }
 
     BoxWithConstraints(
         Modifier.fillMaxSize().background(background).windowInsetsPadding(WindowInsets.safeDrawing),
@@ -234,8 +407,9 @@ fun IntegratedActivationSurface(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 16.dp).semantics { heading() },
                     )
-                    if (isPaired) Text(
-                        text = stringResource(R.string.first_run_connected_body),
+                    Text(
+                        text = stringResource(if (isPaired) R.string.first_run_connected_body
+                            else R.string.first_run_activation_body),
                         color = foreground.copy(alpha = 0.8f),
                         fontSize = 17.sp,
                         lineHeight = 24.sp,
@@ -256,6 +430,17 @@ fun IntegratedActivationSurface(
                         continueLabel ?: stringResource(R.string.first_run_continue_setup), false, onContinueToSetup,
                     )
                 } else {
+                    TextButton(
+                        onClick = { showGuide = true },
+                        enabled = !isScanning,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.first_run_watch_how_it_works),
+                            color = foreground,
+                            fontSize = 17.sp,
+                        )
+                    }
                     TextButton(onClick = onPurchaseZap, enabled = !isScanning) {
                         Text(
                             stringResource(R.string.first_run_purchase_zap),
@@ -268,6 +453,20 @@ fun IntegratedActivationSurface(
                 }
             }
         }
+    }
+    if (showGuide && !isPaired) {
+        IntegratedHowItWorksGuide(
+            continueLabel = R.string.first_session_guide_done,
+            onContinue = {
+                onGuideSeen()
+                showGuide = false
+                if (!isScanning) onScan()
+            },
+            onDismiss = {
+                onGuideSeen()
+                showGuide = false
+            },
+        )
     }
     if (isScanning) IntegratedNfcScanDialog(onCancelScan)
 }
@@ -527,29 +726,6 @@ private fun FirstRunTitleBar(title: String, foreground: Color, onBack: (() -> Un
             fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 80.dp, vertical = 16.dp).semantics { heading() },
         )
-    }
-}
-
-@Composable
-private fun FirstRunPageControls(page: Int, busy: Boolean, onPageChange: (Int) -> Unit) {
-    // The visual dots keep iOS spacing; two non-overlapping 48 dp targets sit over them.
-    Box(Modifier.width(96.dp).height(48.dp).selectableGroup(), contentAlignment = Alignment.Center) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(2) { index ->
-                Box(Modifier.size(10.dp).background(if (index == page) Color.White else Color(0xFF48484A), CircleShape))
-            }
-        }
-        Row(Modifier.fillMaxSize()) {
-            repeat(2) { index ->
-                val label = stringResource(R.string.first_run_page, index + 1, 2)
-                Box(
-                    Modifier.weight(1f).fillMaxHeight().selectable(
-                        selected = index == page, enabled = !busy, role = Role.Tab,
-                        onClick = { onPageChange(index) },
-                    ).semantics { contentDescription = label },
-                )
-            }
-        }
     }
 }
 

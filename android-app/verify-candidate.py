@@ -66,8 +66,8 @@ def main():
         raise ValueError("Unexpected release APK identity or artifact count")
     version_code = elements[0].get("versionCode")
     version_name = elements[0].get("versionName")
-    if version_code != 21 or version_name != "1.0.19":
-        raise ValueError("Expected Play update 1.0.19 (21)")
+    if version_code != 22 or version_name != "1.0.20":
+        raise ValueError("Expected Play update 1.0.20 (22)")
     report = {"application_id": "shop.justnoise.app", "version_code": version_code, "version_name": version_name,
               "sha256": hashes, "upload_certificate_sha256": pin,
               "local_artifact_checks": "PASS", "device_acceptance": "NOT RUN",
