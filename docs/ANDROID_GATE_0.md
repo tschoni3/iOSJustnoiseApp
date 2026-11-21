@@ -8,6 +8,11 @@ below is superseded for this build-only work. Installation, upload and distribut
 remain blocked; no physical result or safety decision changes. The production root
 must reuse the canonical sources and pass replacement layout/package checks.
 
+November 21 owner decision: one runtime dependency, BouncyCastle
+`org.bouncycastle:bcprov-jdk18on`, is permitted for Ed25519 verification of
+issuer-signed JNZ1 Zaps, and the NFC tag UID may be read in memory only for that
+check. See `docs/ANDROID_NFC_ACTIVATION.md`. No other dependency or data use changes.
+
 ## Decision to make
 
 Prove that Justnoise can provide a reliable, understandable, and Google Play-policy-compatible restriction experience on ordinary personally owned Android phones. The full Android product/public launch remains gated by the complete matrix. Under the owner's 2026-09-02 lean-delivery decision, a constrained internal beta may proceed through the smaller checkpoint below without claiming a full Gate 0 PASS.

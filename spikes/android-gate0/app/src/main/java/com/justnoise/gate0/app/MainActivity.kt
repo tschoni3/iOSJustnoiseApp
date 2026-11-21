@@ -186,7 +186,12 @@ class MainActivity : Activity() {
                 ScanPurpose.PAIR -> {
                     val pairingToken = activePairingToken
                     val paired = foregroundInteractionClaimed && pairingToken != null &&
-                        controller.pairZap(transientCanonicalRecord, pairingToken)
+                        controller.pairZap(
+                            transientCanonicalRecord,
+                            pairingToken,
+                            transientUid = acceptedResult.transientUid,
+                            recordCount = acceptedResult.recordCount,
+                        )
                     showTransientStatus(
                         when {
                             !foregroundInteractionClaimed -> R.string.status_direct_duplicate_ignored
@@ -202,6 +207,8 @@ class MainActivity : Activity() {
                             controller.handleZap(
                                 transientCanonicalRecord = transientCanonicalRecord,
                                 acceptedReadAlreadyHandled = false,
+                                transientUid = acceptedResult.transientUid,
+                                recordCount = acceptedResult.recordCount,
                             )
                         } catch (_: Exception) {
                             null
@@ -566,7 +573,7 @@ class MainActivity : Activity() {
 
     private fun NdefReadResult.clearSensitiveData() {
         if (this is NdefReadResult.Accepted) {
-            transientCanonicalRecord.fill(0)
+            clear()
         }
     }
 

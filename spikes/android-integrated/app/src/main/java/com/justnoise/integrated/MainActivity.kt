@@ -1050,7 +1050,11 @@ class MainActivity : ComponentActivity() {
                 is NdefReadResult.Accepted -> when {
                     !foregroundInteractionClaimed -> R.string.status_direct_duplicate_ignored
                     token.purpose == IntegratedScanPurpose.PAIR_INITIAL -> {
-                        if (controller.pairInitialZap(result.transientCanonicalRecord)) R.string.first_run_pair_success
+                        if (controller.pairInitialZap(
+                                result.transientCanonicalRecord,
+                                transientUid = result.transientUid,
+                                recordCount = result.recordCount,
+                            )) R.string.first_run_pair_success
                         else R.string.first_run_pair_failed
                     }
                     else -> sessionToggleStatus(result)
@@ -1070,6 +1074,8 @@ class MainActivity : ComponentActivity() {
             controller.handleZap(
                 transientCanonicalRecord = result.transientCanonicalRecord,
                 acceptedReadAlreadyHandled = false,
+                transientUid = result.transientUid,
+                recordCount = result.recordCount,
             )
         } catch (_: Exception) {
             null
@@ -1138,7 +1144,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun NdefReadResult.clearSensitiveData() {
-        if (this is NdefReadResult.Accepted) transientCanonicalRecord.fill(0)
+        if (this is NdefReadResult.Accepted) clear()
     }
 
     private fun selectedAppsLabel(packages: Set<String>): String? {

@@ -77,8 +77,9 @@ recreating a screen. This does not create another account or transmit those fiel
 
 Justnoise temporarily reads the Zap's NFC Text record to pair it or check a tap.
 It stores a keyed digest used to recognize the paired text, with a non-exportable
-key held by Android Keystore. Raw NFC text is not stored or logged, and the tag's
-hardware identifier is not read. Pairing remains until you replace it or remove
+key held by Android Keystore. Raw NFC text is not stored or logged. The tag's
+hardware identifier (UID) is read only in memory, to check that a registered Zap's
+signature belongs to that chip, and is never stored, logged or sent. Pairing remains until you replace it or remove
 the app's local data. A canceled replacement keeps your current pairing.
 
 ## Sessions and History

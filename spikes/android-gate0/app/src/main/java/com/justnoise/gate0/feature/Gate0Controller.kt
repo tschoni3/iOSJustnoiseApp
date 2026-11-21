@@ -94,16 +94,25 @@ class Gate0Controller(
     fun prepareZapPairing(): ZapPairingToken? = preferences.prepareZapPairing()
 
     /** The setup UI freezes this intent before explicit replacement confirmation and scanning. */
-    fun pairZap(transientCanonicalRecord: ByteArray, expectedToken: ZapPairingToken): Boolean = try {
-        ZapCompatibilityLabels.isRecognized(transientCanonicalRecord) &&
+    fun pairZap(
+        transientCanonicalRecord: ByteArray,
+        expectedToken: ZapPairingToken,
+        transientUid: ByteArray = ByteArray(0),
+        recordCount: Int = 1,
+    ): Boolean = try {
+        ZapCompatibilityLabels.isRecognized(transientCanonicalRecord, transientUid, recordCount) &&
             zapStore.pair(transientCanonicalRecord, expectedToken)
     } catch (_: Exception) {
         false
     }
 
     /** Initial foreground pairing only; existing setup keeps its separate replacement action. */
-    fun pairInitialZap(transientCanonicalRecord: ByteArray): Boolean = try {
-        ZapCompatibilityLabels.isRecognized(transientCanonicalRecord) &&
+    fun pairInitialZap(
+        transientCanonicalRecord: ByteArray,
+        transientUid: ByteArray = ByteArray(0),
+        recordCount: Int = 1,
+    ): Boolean = try {
+        ZapCompatibilityLabels.isRecognized(transientCanonicalRecord, transientUid, recordCount) &&
             zapStore.pairInitial(transientCanonicalRecord)
     } catch (_: Exception) {
         false
@@ -112,6 +121,8 @@ class Gate0Controller(
     fun handleZap(
         transientCanonicalRecord: ByteArray,
         acceptedReadAlreadyHandled: Boolean,
+        transientUid: ByteArray = ByteArray(0),
+        recordCount: Int = 1,
         nowEpochMilliseconds: Long = System.currentTimeMillis(),
         nowElapsedMilliseconds: Long? = null,
     ): ZapInteraction {
@@ -121,7 +132,7 @@ class Gate0Controller(
             preferences.snapshot() to preferences.readSelectionEdit().token
         }
         val classification = if (ZapCompatibilityLabels.allowsSessionRead(
-                recognized = ZapCompatibilityLabels.isRecognized(transientCanonicalRecord),
+                recognized = ZapCompatibilityLabels.isRecognized(transientCanonicalRecord, transientUid, recordCount),
                 paired = zapStore.isAuthorized(transientCanonicalRecord),
                 sessionRequested = stored.desiredActive,
             )) {

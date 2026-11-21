@@ -152,6 +152,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.core:core:1.18.0")
+    // Owner decision 2026-11-21: the single crypto dependency for JNZ1 Zap verification.
+    // Ed25519 is not in the Android 12-13 platform; BouncyCastle is used directly
+    // (Ed25519Signer), never registered as a JCA provider. AES-GCM stays on JCA.
+    implementation("org.bouncycastle:bcprov-jdk18on:1.87")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }

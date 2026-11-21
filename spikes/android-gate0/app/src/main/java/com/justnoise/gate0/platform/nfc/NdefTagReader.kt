@@ -91,7 +91,10 @@ object NdefTagReader {
             ndef.connect()
             val message = ndef.ndefMessage
                 ?: return NdefReadResult.Rejected(NdefReadFailure.EMPTY_NDEF_MESSAGE)
-            NdefMessageParser.parseSingleStrictTextRecord(message)
+            when (val parsed = NdefMessageParser.parseSingleStrictTextRecord(message)) {
+                is NdefReadResult.Accepted -> parsed.copy(transientUid = transientUid(tag))
+                is NdefReadResult.Rejected -> parsed
+            }
         } catch (_: TagLostException) {
             NdefReadResult.Rejected(NdefReadFailure.TAG_LOST)
         } catch (_: FormatException) {
@@ -110,13 +113,32 @@ object NdefTagReader {
             }
         }
     }
+
+    /**
+     * Owner decision 2026-11-21: the chip UID is read only to verify UID-bound JNZ1
+     * registrations. It is copied into caller-owned memory that is zeroed after the
+     * scan, and is never persisted, logged, sent to analytics or the network.
+     */
+    private fun transientUid(tag: Tag): ByteArray = try {
+        tag.id?.copyOf() ?: ByteArray(0)
+    } catch (_: RuntimeException) {
+        ByteArray(0)
+    }
 }
 
 sealed interface NdefReadResult {
     data class Accepted(
         val transientCanonicalRecord: ByteArray,
         val recordCount: Int,
-    ) : NdefReadResult
+        /** Transient 7-byte NFC UID for JNZ1 verification; empty when unavailable. */
+        val transientUid: ByteArray = ByteArray(0),
+    ) : NdefReadResult {
+        /** Zeroes the transient record and UID copies after the scan has been handled. */
+        fun clear() {
+            transientCanonicalRecord.fill(0)
+            transientUid.fill(0)
+        }
+    }
 
     data class Rejected(
         val reason: NdefReadFailure,

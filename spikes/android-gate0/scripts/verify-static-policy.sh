@@ -232,8 +232,27 @@ done
 
 reject_literal 'android.util.Log' "$MAIN_SOURCE"
 reject_literal 'println(' "$MAIN_SOURCE"
-reject_literal 'tag.id' "$MAIN_SOURCE"
+# Owner decision 2026-11-21: the NFC UID may be read only by NdefTagReader, only to
+# verify UID-bound JNZ1 Zap registrations, held in memory and zeroed after the scan.
+# It must never be persisted, logged, or sent to analytics or the network.
 reject_literal 'tag.getId' "$MAIN_SOURCE"
+uid_readers="$(grep -F -R -l -- 'tag.id' "$MAIN_SOURCE" || true)"
+[[ "$uid_readers" == "$NDEF_READER_SOURCE" ]] \
+    || fail "the NFC UID may only be read in $NDEF_READER_SOURCE (found: ${uid_readers:-none})"
+require_literal 'tag.id?.copyOf()' "$NDEF_READER_SOURCE"
+require_literal 'transientUid.fill(0)' "$NDEF_READER_SOURCE"
+for uid_sink in transientUid physicalUid; do
+    for sink_source in \
+        "$MAIN_SOURCE/com/justnoise/gate0/data" \
+        "$REPOSITORY_ROOT/spikes/android-shared/src/main/kotlin" \
+        "$REPOSITORY_ROOT/android-app/app/src/main/java"; do
+        [[ -d "$sink_source" ]] || continue
+        reject_literal "$uid_sink" "$sink_source"
+    done
+done
+require_literal 'org.bouncycastle:bcprov-jdk18on' "$SPIKE_ROOT/app/build.gradle.kts"
+reject_literal 'Security.addProvider' "$MAIN_SOURCE"
+reject_literal 'Security.insertProviderAt' "$MAIN_SOURCE"
 require_literal '"com.android.vending"' "$MAIN_SOURCE/com/justnoise/gate0/platform/discovery/ProtectedPackageResolver.kt"
 require_literal '"com.sec.android.app.samsungapps"' "$MAIN_SOURCE/com/justnoise/gate0/platform/discovery/ProtectedPackageResolver.kt"
 require_literal '<string name="shield_open_justnoise">Be Right Back</string>' "$SPIKE_ROOT/app/src/main/res/values/strings.xml"

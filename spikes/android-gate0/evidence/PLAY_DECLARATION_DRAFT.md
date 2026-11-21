@@ -339,7 +339,8 @@ active, for recovery when the foreground state is unknown. It is removed on
 successful stop, a manual start, withdrawal, app-data clear or uninstall, and is
 not included in completed History.
 NFC Text data is processed temporarily, not saved or logged; the tag's hardware
-identifier is not read. Configuration uses private app storage, and the digest's
+identifier is read only in memory to check a registered Zap and is never saved,
+logged or sent. Configuration uses private app storage, and the digest's
 non-exportable key is managed by Android Keystore. Configuration is not claimed to
 be wholly encrypted. The app excludes its data from Android backup and transfer;
 this is not a guarantee about every manufacturer's restore behavior.

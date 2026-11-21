@@ -2,7 +2,10 @@ package com.justnoise.gate0.platform.nfc
 
 import java.security.MessageDigest
 
-/** Shipped iOS compatibility labels, not cryptographic proof of genuine hardware. */
+/**
+ * Shipped iOS compatibility labels (not cryptographic proof of genuine hardware) plus
+ * issuer-signed, UID-bound JNZ1 registrations mirrored from iOS `ZapScanAuthorization`.
+ */
 object ZapCompatibilityLabels {
     private val recognizedDigests = setOf(
         "6ae5313f83a60a156c78ee7dea6251759ee552d82055ba990b0983a2a9d77dec",
@@ -10,7 +13,23 @@ object ZapCompatibilityLabels {
         "8fad2d4ae45e105490d4f5d06c5475e9c1ab76007233edce3a353506a83e69b8",
     )
 
-    fun isRecognized(canonicalRecord: ByteArray): Boolean {
+    /**
+     * A JNZ1 credential is recognized only as the tag's single NDEF record and only when
+     * its issuer signature binds it to [physicalUid], the 7-byte UID read from this tap.
+     * The UID is caller-owned transient memory and is never retained here.
+     */
+    fun isRecognized(
+        canonicalRecord: ByteArray,
+        physicalUid: ByteArray = ByteArray(0),
+        recordCount: Int = 1,
+        trust: RegisteredZap = RegisteredZap.bundled,
+    ): Boolean {
+        val credential = NdefTextPayloadParser.decodeRegisteredCredentialText(canonicalRecord)
+        if (credential != null) return recordCount == 1 && trust.accepts(credential, physicalUid)
+        return isLegacyLabel(canonicalRecord)
+    }
+
+    private fun isLegacyLabel(canonicalRecord: ByteArray): Boolean {
         if (canonicalRecord.size < 4) return false
         val payload = canonicalRecord.copyOfRange(2, canonicalRecord.size)
         val validated = NdefTextPayloadParser.parseCanonicalStrictUtf8Record(

@@ -107,8 +107,8 @@ class DirectNfcActivity : Activity() {
                 return
             }
 
-            val transientCanonicalRecord =
-                (result as NdefReadResult.Accepted).transientCanonicalRecord
+            val accepted = result as NdefReadResult.Accepted
+            val transientCanonicalRecord = accepted.transientCanonicalRecord
             if (!ProcessDirectNfcMutationGate.tryClaim(SystemClock.elapsedRealtime())) {
                 finishWithStatus(R.string.status_direct_duplicate_ignored)
                 return
@@ -117,6 +117,8 @@ class DirectNfcActivity : Activity() {
                 controller.handleZap(
                     transientCanonicalRecord = transientCanonicalRecord,
                     acceptedReadAlreadyHandled = false,
+                    transientUid = accepted.transientUid,
+                    recordCount = accepted.recordCount,
                 )
             } catch (_: Exception) {
                 null
@@ -178,7 +180,7 @@ class DirectNfcActivity : Activity() {
     }
 
     private fun NdefReadResult.clearSensitiveData() {
-        if (this is NdefReadResult.Accepted) transientCanonicalRecord.fill(0)
+        if (this is NdefReadResult.Accepted) clear()
     }
 
     companion object {

@@ -58,7 +58,7 @@ class ZapCompatibilityLabelsTest {
     }
     @Test fun `initial and replacement pairing and common session path all apply label guard`() {
         val source = File(root, "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/feature/Gate0Controller.kt").readText()
-        assertEquals(3, Regex("ZapCompatibilityLabels.isRecognized\\(transientCanonicalRecord\\)").findAll(source).count())
+        assertEquals(3, Regex("ZapCompatibilityLabels.isRecognized\\(transientCanonicalRecord, transientUid, recordCount\\)").findAll(source).count())
         assertTrue(source.contains("ZapCompatibilityLabels.allowsSessionRead("))
     }
 }

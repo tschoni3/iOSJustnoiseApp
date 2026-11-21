@@ -93,6 +93,30 @@ The future profile should preserve iOS readability. An Android-only AAR may be a
 
 ## Authorization decision still required
 
+November 21 owner decision ("wenn das der beste approach ist lets go"): Android
+accepts issuer-signed JNZ1 Zaps from the Zap Station, mirroring iOS
+`RegisteredZap.swift` and `ZapScanAuthorization.swift` in
+`platform/nfc/RegisteredZap.kt`. A JNZ1 credential is recognized only when it is the
+tag's single NDEF record, decodes as UTF-8 or (earlier station builds) UTF-16 with
+BOM or big-endian default, is at most 256 UTF-8 bytes, uses strict padded base64,
+and its 64-byte Ed25519 signature over `JustNoise/Zap/1` + the 7-byte chip UID +
+nonce/ciphertext/tag verifies, followed by AES-GCM decryption (AAD = binding) to
+`justnoise.zap.activation.v1`. Legacy labels keep the strict UTF-8 digest rules
+below. To check the binding, `NdefTagReader` now reads `Tag.id` (reversing the
+earlier "tag identifier is not read" rule): the UID is copied into a transient
+buffer passed with the canonical record to pairing and toggle verification and
+zeroed with it afterwards; it is never persisted, logged, sent to analytics or the
+network, and is not part of the HMAC digest. `verify-static-policy.sh` permits
+`tag.id` only in `NdefTagReader.kt`. Ed25519 verification uses BouncyCastle
+`bcprov-jdk18on` directly (`Ed25519Signer`, no JCA provider registration), the
+one dependency added for this, because Android 12-13 lacks a platform Ed25519
+verifier; AES-GCM uses the platform JCA. Release builds do not minify, so no R8
+keep rules are required; revisit if minification is enabled. Public trust lives in
+`platform/nfc/ZapTrust.kt` and `scripts/verify-product-contracts.sh` rejects drift
+from `justnoiseradio/Features/NFC/ZapTrust.json`. Exact-record HMAC pairing and
+stop-only escape are unchanged. Physical A16 acceptance with a station-written Zap
+is still required.
+
 October 10 owner clarification: Android now gates both initial/replacement pairing
 and new NFC session starts against the unchanged shipped iOS compatibility labels.
 The native configuration stores their text SHA-256 fingerprints and validates the

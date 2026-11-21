@@ -16,7 +16,7 @@ The canonical decision criteria remain in [`../../docs/ANDROID_GATE_0.md`](../..
 - Foreground-only, one-shot NFC reader mode for one NDEF message containing exactly one bounded UTF-8 NDEF Text record. Non-Text auxiliary records are allowed; multiple Text records are rejected as ambiguous.
 - A narrow unlocked-device `ACTION_NDEF_DISCOVERED` candidate for legacy Text Zaps. It requires and re-reads a live `EXTRA_TAG`; copied `EXTRA_NDEF_MESSAGES` alone can never mutate session state.
 - A lifecycle generation guard invalidates an armed or in-flight scan on pause, cancellation, or replacement. Reader mode is disabled after tag I/O and before any accepted state mutation.
-- Android Keystore HMAC-SHA256 pairing. Only the digest is stored; tag IDs and raw NDEF records are not stored or logged.
+- Android Keystore HMAC-SHA256 pairing. Only the digest is stored; tag IDs and raw NDEF records are not stored or logged. Since 2026-11-21 the tag UID is read in memory only, to verify issuer-signed JNZ1 Zaps (see `docs/ANDROID_NFC_ACTIVATION.md`).
 - An Accessibility service subscribed only to `TYPE_WINDOW_STATE_CHANGED`, with window-content retrieval disabled and no accessibility flags.
 - Exact membership of the transient event `packageName` in the active-session target snapshot; the blocked surface names the matched foreground app.
 - A Justnoise-owned `TYPE_ACCESSIBILITY_OVERLAY` with visible Home, Justnoise, Accessibility-settings, and App-info escape routes.
