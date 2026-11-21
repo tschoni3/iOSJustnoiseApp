@@ -79,13 +79,7 @@ enum ZapReadPolicy {
         record: ZapNDEFRecordInput,
         authorizedPayloads: Set<String>
     ) -> ZapPayloadClassification {
-        guard
-            record.typeNameFormat == .wellKnown,
-            record.type == Data([0x54]),
-            let text = decodeNDEFTextPayload(record.payload)
-        else {
-            return .malformed
-        }
+        guard let text = decodedText(record) else { return .malformed }
 
         return authorizedPayloads.contains(text) ? .authorized : .unauthorized
     }
@@ -136,20 +130,10 @@ enum ZapReadPolicy {
         return firstFailure ?? ZapReadDecision(outcome: .invalid, mutationEligible: false)
     }
 
-    private static func decodeNDEFTextPayload(_ payload: Data) -> String? {
-        guard let statusByte = payload.first else { return nil }
-        guard statusByte & 0xC0 == 0 else { return nil }
-
-        let languageCodeLength = Int(statusByte & 0x3F)
-        guard languageCodeLength > 0 else { return nil }
-        let textStartIndex = 1 + languageCodeLength
-        guard payload.count > textStartIndex else { return nil }
-
-        let textData = payload.dropFirst(textStartIndex)
-        guard let text = String(data: Data(textData), encoding: .utf8), !text.isEmpty else {
-            return nil
-        }
-
+    static func decodedText(_ record: ZapNDEFRecordInput, allowsUTF16: Bool = false) -> String? {
+        guard record.typeNameFormat == .wellKnown, record.type == ZapTextPayload.type,
+              let text = ZapTextPayload.decode(record.payload, allowsUTF16: allowsUTF16),
+              !text.isEmpty else { return nil }
         return text
     }
 }

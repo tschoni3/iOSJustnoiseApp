@@ -1,0 +1,381 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1430995929C5DEE3A7176F15 /* StationTagContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2704487AEAAF060CE7621043 /* StationTagContent.swift */; };
+		1A1B87857A323057E0A06AA5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 060A35766A5BD90228B5603D /* Assets.xcassets */; };
+		65E56CB3401E547F956841A6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B20ADC9E9DFA8C9154EF7DE0 /* Foundation.framework */; };
+		744732307D639300381585A5 /* ZapStationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8C9EE1C79B58F9AC7AB766 /* ZapStationView.swift */; };
+		78064DE05CAEE7447772278D /* ZapStationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E82E982A499E45AA8FC7FB6 /* ZapStationApp.swift */; };
+		91B3BAAA9CACFF1C013E13E7 /* ZapWorkshopConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B81A6EBABD6BE937B1B6926 /* ZapWorkshopConnection.swift */; };
+		D53FCFDDD88FD6FE7DD63B26 /* ZapTrust.json in Resources */ = {isa = PBXBuildFile; fileRef = 117A9BACB23FA53DB7600D12 /* ZapTrust.json */; };
+		D6B35C0B27E67AC3BAA12476 /* RegisteredZap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22328C259F44AE7817D07763 /* RegisteredZap.swift */; };
+		E6B19C8967C3B94F946DFE2D /* ZapTextPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 230E5DFA5FC15B9E36141D56 /* ZapTextPayload.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		060A35766A5BD90228B5603D /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		117A9BACB23FA53DB7600D12 /* ZapTrust.json */ = {isa = PBXFileReference; includeInIndex = 1; path = ZapTrust.json; sourceTree = "<group>"; };
+		22328C259F44AE7817D07763 /* RegisteredZap.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RegisteredZap.swift; sourceTree = "<group>"; };
+		230E5DFA5FC15B9E36141D56 /* ZapTextPayload.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZapTextPayload.swift; sourceTree = "<group>"; };
+		2704487AEAAF060CE7621043 /* StationTagContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StationTagContent.swift; sourceTree = "<group>"; };
+		555B004825823D5AFCC9E353 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5E82E982A499E45AA8FC7FB6 /* ZapStationApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZapStationApp.swift; sourceTree = "<group>"; };
+		6B81A6EBABD6BE937B1B6926 /* ZapWorkshopConnection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZapWorkshopConnection.swift; sourceTree = "<group>"; };
+		7F8C9EE1C79B58F9AC7AB766 /* ZapStationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ZapStationView.swift; sourceTree = "<group>"; };
+		B20ADC9E9DFA8C9154EF7DE0 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		D6A8C53544E59E9B406DD66A /* ZapStation.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ZapStation.entitlements; sourceTree = "<group>"; };
+		FAD02B3EFB930CB3BE81B8A0 /* ZapStation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZapStation.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2741ED15D6CAF8623C2B3585 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65E56CB3401E547F956841A6 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		03291F7CA2F90394E3711A69 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FAD02B3EFB930CB3BE81B8A0 /* ZapStation.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		12958DE66621FF645B81D629 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CBF79C0D7CA598590A8A5449 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9A3258D1F2213F36D70FF06B /* Shared verification */ = {
+			isa = PBXGroup;
+			children = (
+				22328C259F44AE7817D07763 /* RegisteredZap.swift */,
+				117A9BACB23FA53DB7600D12 /* ZapTrust.json */,
+				230E5DFA5FC15B9E36141D56 /* ZapTextPayload.swift */,
+			);
+			name = "Shared verification";
+			path = ../justnoiseradio/Features/NFC;
+			sourceTree = "<group>";
+		};
+		CBF79C0D7CA598590A8A5449 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				B20ADC9E9DFA8C9154EF7DE0 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		FCF1BCEC667F1987141F8553 = {
+			isa = PBXGroup;
+			children = (
+				03291F7CA2F90394E3711A69 /* Products */,
+				12958DE66621FF645B81D629 /* Frameworks */,
+				5E82E982A499E45AA8FC7FB6 /* ZapStationApp.swift */,
+				7F8C9EE1C79B58F9AC7AB766 /* ZapStationView.swift */,
+				6B81A6EBABD6BE937B1B6926 /* ZapWorkshopConnection.swift */,
+				9A3258D1F2213F36D70FF06B /* Shared verification */,
+				060A35766A5BD90228B5603D /* Assets.xcassets */,
+				555B004825823D5AFCC9E353 /* Info.plist */,
+				D6A8C53544E59E9B406DD66A /* ZapStation.entitlements */,
+				2704487AEAAF060CE7621043 /* StationTagContent.swift */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EA21433FF95C5672AB8BF7C0 /* ZapStation */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 17AB5D625D9F26CC43E88FBA /* Build configuration list for PBXNativeTarget "ZapStation" */;
+			buildPhases = (
+				20C6AC1849C1243FC82B7DA5 /* Sources */,
+				2741ED15D6CAF8623C2B3585 /* Frameworks */,
+				6DD5A84C54E25C5C2E82C2BE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ZapStation;
+			productName = ZapStation;
+			productReference = FAD02B3EFB930CB3BE81B8A0 /* ZapStation.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1EB8852A1BAF180EE65BB9B5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					EA21433FF95C5672AB8BF7C0 = {
+						DevelopmentTeam = Z8H8N23UT2;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.NearFieldCommunicationTagReading = {
+								enabled = 1;
+							};
+						};
+					};
+				};
+			};
+			buildConfigurationList = 4A5F009F43ED6E379D25982D /* Build configuration list for PBXProject "ZapStation" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = FCF1BCEC667F1987141F8553;
+			minimizedProjectReferenceProxies = 0;
+			productRefGroup = 03291F7CA2F90394E3711A69 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EA21433FF95C5672AB8BF7C0 /* ZapStation */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6DD5A84C54E25C5C2E82C2BE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D53FCFDDD88FD6FE7DD63B26 /* ZapTrust.json in Resources */,
+				1A1B87857A323057E0A06AA5 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		20C6AC1849C1243FC82B7DA5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				78064DE05CAEE7447772278D /* ZapStationApp.swift in Sources */,
+				744732307D639300381585A5 /* ZapStationView.swift in Sources */,
+				91B3BAAA9CACFF1C013E13E7 /* ZapWorkshopConnection.swift in Sources */,
+				D6B35C0B27E67AC3BAA12476 /* RegisteredZap.swift in Sources */,
+				1430995929C5DEE3A7176F15 /* StationTagContent.swift in Sources */,
+				E6B19C8967C3B94F946DFE2D /* ZapTextPayload.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		05B67C37C063B5710A187633 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		2442BF8E21970E1C6EB8CC70 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		26464DFC26B282F672ECAE3D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ZapStation.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.zapstation;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		43029CA342AA0ADF6BA6599A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ZapStation.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.zapstation;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		17AB5D625D9F26CC43E88FBA /* Build configuration list for PBXNativeTarget "ZapStation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				43029CA342AA0ADF6BA6599A /* Release */,
+				26464DFC26B282F672ECAE3D /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A5F009F43ED6E379D25982D /* Build configuration list for PBXProject "ZapStation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2442BF8E21970E1C6EB8CC70 /* Debug */,
+				05B67C37C063B5710A187633 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1EB8852A1BAF180EE65BB9B5 /* Project object */;
+}
