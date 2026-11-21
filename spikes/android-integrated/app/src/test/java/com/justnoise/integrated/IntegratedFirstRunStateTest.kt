@@ -131,7 +131,24 @@ class IntegratedFirstRunStateTest {
         assertEquals(IntegratedFirstRunRoute.MAIN,
             IntegratedFirstRunRules.route(fresh.copy(existingSetup = true), IntegratedFirstRunRoute.ONBOARDING))
         assertEquals(IntegratedFirstRunRoute.MAIN,
+            IntegratedFirstRunRules.route(fresh.copy(existingSetup = true)))
+        // An in-progress first-mode save writes selectedPackages before the tutorial
+        // flag; that must not be treated as a legacy skip to Home.
+        assertEquals(IntegratedFirstRunRoute.FIRST_MODE,
             IntegratedFirstRunRules.route(fresh.copy(existingSetup = true), IntegratedFirstRunRoute.FIRST_MODE))
+    }
+
+    @Test fun `saving first mode cannot skip Connect your Zap until a Zap is paired`() {
+        val midSave = fresh.copy(existingSetup = true)
+        assertEquals(IntegratedFirstRunRoute.FIRST_MODE,
+            IntegratedFirstRunRules.route(midSave, IntegratedFirstRunRoute.FIRST_MODE))
+        val afterMode = midSave.copy(tutorialCompleted = true)
+        for (restored in listOf(null, IntegratedFirstRunRoute.ONBOARDING,
+            IntegratedFirstRunRoute.FIRST_MODE, IntegratedFirstRunRoute.ACTIVATION,
+            IntegratedFirstRunRoute.MAIN)) {
+            assertEquals(IntegratedFirstRunRoute.ACTIVATION,
+                IntegratedFirstRunRules.route(afterMode, restored))
+        }
     }
 
     @Test fun `active and recovery routes override every restored introduction`() {
@@ -142,8 +159,8 @@ class IntegratedFirstRunStateTest {
         }
     }
 
-    @Test fun `rotation after skip preserves normal app route without setting pairing or consent`() {
-        assertEquals(IntegratedFirstRunRoute.MAIN,
+    @Test fun `unpaired tutorial completion always shows Connect your Zap including stale MAIN`() {
+        assertEquals(IntegratedFirstRunRoute.ACTIVATION,
             IntegratedFirstRunRules.route(fresh.copy(tutorialCompleted = true), IntegratedFirstRunRoute.MAIN))
         assertEquals(IntegratedFirstRunRoute.ACTIVATION,
             IntegratedFirstRunRules.route(fresh.copy(tutorialCompleted = true)))

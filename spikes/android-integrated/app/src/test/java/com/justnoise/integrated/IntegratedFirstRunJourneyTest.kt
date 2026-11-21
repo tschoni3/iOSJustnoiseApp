@@ -14,8 +14,12 @@ class IntegratedFirstRunJourneyTest {
         assertEquals(IntegratedFirstRunRoute.ONBOARDING, IntegratedFirstRunRules.route(fresh))
         assertEquals(IntegratedFirstRunRoute.FIRST_MODE,
             IntegratedFirstRunRules.route(fresh, IntegratedFirstRunRoute.FIRST_MODE))
-        val afterMode = fresh.copy(tutorialCompleted = true)
+        val afterMode = fresh.copy(tutorialCompleted = true, existingSetup = true)
         assertEquals(IntegratedFirstRunRoute.ACTIVATION, IntegratedFirstRunRules.route(afterMode))
+        assertEquals(IntegratedFirstRunRoute.ACTIVATION,
+            IntegratedFirstRunRules.route(afterMode, IntegratedFirstRunRoute.MAIN))
+        assertEquals(IntegratedFirstRunRoute.FIRST_MODE,
+            IntegratedFirstRunRules.route(fresh.copy(existingSetup = true), IntegratedFirstRunRoute.FIRST_MODE))
         val paired = afterMode.copy(zapPaired = true)
         assertEquals(IntegratedFirstRunRoute.MAIN, IntegratedFirstRunRules.route(paired))
         assertTrue(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.MAIN, 0))

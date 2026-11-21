@@ -29,13 +29,17 @@ object IntegratedFirstRunRules {
                 IntegratedFirstRunRoute.MAIN
             }
         }
-        // Existing disclosure or session history is not reset by the new introduction.
-        // A first mode saved during this run also writes a selection; that must still
-        // continue to pairing when onboarding was just completed.
-        if (facts.existingSetup && !facts.tutorialCompleted) return IntegratedFirstRunRoute.MAIN
-        if (restored == IntegratedFirstRunRoute.MAIN) return IntegratedFirstRunRoute.MAIN
+        // Unpaired after first-mode completion: iOS always shows NFCActivationView
+        // until isActivated, including after process death or a stale MAIN restore.
+        // 1.0.21 skipped this because saving the first mode writes selectedPackages
+        // (existingSetup=true) before the tutorial flag is persisted; refreshTruth
+        // then routed to MAIN, and `restored == MAIN` kept skipping Connect your Zap.
         if (facts.tutorialCompleted) return IntegratedFirstRunRoute.ACTIVATION
+        // Keep an in-progress first-mode screen even after that package write.
         if (restored == IntegratedFirstRunRoute.FIRST_MODE) return IntegratedFirstRunRoute.FIRST_MODE
+        // Existing disclosure or session history is not reset by the new introduction.
+        if (facts.existingSetup) return IntegratedFirstRunRoute.MAIN
+        if (restored == IntegratedFirstRunRoute.MAIN) return IntegratedFirstRunRoute.MAIN
         return IntegratedFirstRunRoute.ONBOARDING
     }
 

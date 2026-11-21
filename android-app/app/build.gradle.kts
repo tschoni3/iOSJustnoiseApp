@@ -40,8 +40,8 @@ android {
         applicationId = "shop.justnoise.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.0.21"
+        versionCode = 24
+        versionName = "1.0.22"
     }
     signingConfigs {
         create("upload") {
