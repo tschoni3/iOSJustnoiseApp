@@ -1186,6 +1186,30 @@ for relative in filter(None, tracked):
     if path.is_file():
         contract_files.append(path)
 
+# Registered (JNZ1) Zap trust is shipped by both apps and must not drift.
+ios_trust = json.loads((root / "justnoiseradio/Features/NFC/ZapTrust.json").read_text(encoding="utf-8"))
+android_trust_source = (
+    root / "spikes/android-gate0/app/src/main/java/com/justnoise/gate0/platform/nfc/ZapTrust.kt"
+).read_text(encoding="utf-8")
+if set(ios_trust) != {"verificationKey", "contentKey"}:
+    fail("ZapTrust.json must contain only the public verificationKey and contentKey")
+for ios_key, kotlin_name in (("verificationKey", "VERIFICATION_KEY"), ("contentKey", "CONTENT_KEY")):
+    if f'const val {kotlin_name} = "{ios_trust[ios_key]}"' not in android_trust_source:
+        fail(f"Android ZapTrust.{kotlin_name} differs from justnoiseradio/Features/NFC/ZapTrust.json")
+registered_zap = json.loads((root / "product/behavior/registered-zap.v1.json").read_text(encoding="utf-8"))
+if registered_zap.get("schemaVersion") != 1:
+    fail("registered-zap.v1.json must use schemaVersion 1")
+for trust_name, trust in (("testTrust", registered_zap["testTrust"]),
+                          ("issuerScriptVector", registered_zap["issuerScriptVector"]["trust"])):
+    if trust == ios_trust or trust["verificationKey"] == ios_trust["verificationKey"]:
+        fail(f"registered-zap.v1.json {trust_name} must be a disposable test issuer, not production trust")
+registered_ids = [case["id"] for case in registered_zap["cases"]]
+if len(registered_ids) != len(set(registered_ids)):
+    fail("registered-zap.v1.json case identifiers must be unique")
+for required_case in ("valid-utf8", "wrong-uid", "tampered-signature", "utf16-le-bom", "utf16-be-default", "legacy-plus-jnz1"):
+    if required_case not in registered_ids:
+        fail(f"registered-zap.v1.json is missing case {required_case}")
+
 stale_references = ("Features" + "  /", "Justnoise" + "Widget/")
 for path in contract_files:
     if path.suffix not in {".md", ".json", ".sh", ".yml", ".yaml"} and path.name != "AGENTS.md":
