@@ -45,7 +45,7 @@ internal class AccountCoordinator(
     fun closeProductAccess() = products.closeAccountSessionStarts()
     fun denyProductAccess() = products.denyAccountSessionStarts()
 
-    fun restore(): AccountResult = guarded { reconcile() }
+    fun restore(): AccountResult = guarded { adoptOnboardingLocalData(reconcile()) }
 
     fun localImportOffer(): LocalDataImportOffer = journal.withAccountLock {
         val auth = journal.snapshot()
@@ -78,7 +78,7 @@ internal class AccountCoordinator(
         val staged = stage(LocalWorkspaceId.parse(session.accountId))
         if (staged != null) return@guarded staged
         if (!journal.acceptSignIn(expected, session)) return@guarded stale()
-        finish(journal.snapshot())
+        adoptOnboardingLocalData(finish(journal.snapshot()))
     }
 
     fun signOut(expected: AuthOperationToken): AccountResult = guarded {
@@ -185,6 +185,27 @@ internal class AccountCoordinator(
             state.recoveryRequired -> AccountResult(AccountOutcome.RECOVERY_REQUIRED)
             else -> null
         }
+    }
+
+    /**
+     * First-run modes are written to the LOCAL workspace before required sign-in.
+     * KEEP_SEPARATE normally leaves them there until an explicit import, which made
+     * the mode created in "Create your first mode" disappear from Home after login.
+     * If onboarding already completed and the signed-in workspace is still empty,
+     * adopt that local first mode (and its selection) automatically, like iOS.
+     */
+    private fun adoptOnboardingLocalData(result: AccountResult): AccountResult {
+        if (result.outcome != AccountOutcome.READY || result.view == null) return result
+        if (!products.hasCompletedOnboarding()) return result
+        val catalog = runCatching { products.loadModes() }.getOrNull() ?: return result
+        if (catalog.error || catalog.modes.isNotEmpty()) return result
+        val auth = journal.snapshot()
+        if (auth.phase != AuthPhase.SIGNED_IN) return result
+        val offer = products.localDataImportOffer(LocalWorkspaceId.parse(requireNotNull(auth.accountId)))
+        val token = offer.token ?: return result
+        if (!offer.shouldPrompt) return result
+        products.importLocalData(token)
+        return finish(journal.snapshot())
     }
 
     private fun guarded(action: () -> AccountResult): AccountResult = journal.withAccountLock {
