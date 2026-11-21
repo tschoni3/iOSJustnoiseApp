@@ -30,6 +30,20 @@ struct ModesView: View {
 
                 Spacer(minLength: 8)
 
+                if nfcViewModel.modes.isEmpty {
+                    ContentUnavailableView(
+                        "Create your first mode",
+                        systemImage: "slider.horizontal.3",
+                        description: Text("Choose a name and the apps you want to block.")
+                    )
+                    Button("Create your first mode") { isCreatingNewMode = true }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.bottom, 24)
+                        .sheet(isPresented: $isCreatingNewMode) {
+                            CreateModeView(isPresented: $isCreatingNewMode)
+                                .environmentObject(nfcViewModel)
+                        }
+                } else {
                 // Mode Picker with edit button overlay
                 ZStack(alignment: .trailing) {
                     Picker("Select Mode", selection: $temporarySelectedModeIndex) {
@@ -60,6 +74,7 @@ struct ModesView: View {
                 bottomDistributedBlock()
                     .frame(height: bottomBlockHeight)
                     .padding(.bottom, 20)
+                }
             }
             .navigationTitle("Select Mode")
             .navigationBarTitleDisplayMode(.inline)

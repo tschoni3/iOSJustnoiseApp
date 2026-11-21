@@ -791,3 +791,13 @@ final class ScheduleStoreCharacterizationTests: XCTestCase {
         XCTAssertNotNil(legacyDefaults.data(forKey: SharedKeys.legacySchedulesKey))
     }
 }
+
+final class LegacyModePresetTests: XCTestCase {
+    func testOnlyOriginalUnconfiguredPresetsQualifyForRemoval() throws {
+        let focusID = try XCTUnwrap(UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB"))
+        XCTAssertTrue(Mode(id: focusID, name: "Focus").isUnusedLegacyPreset)
+        XCTAssertFalse(Mode(id: focusID, name: "My focus").isUnusedLegacyPreset)
+        XCTAssertFalse(Mode(name: "Focus").isUnusedLegacyPreset)
+        XCTAssertFalse(Mode(name: "Sleep").isUnusedLegacyPreset)
+    }
+}

@@ -248,8 +248,8 @@ struct ContentView: View {
     
 
 
-    enum TourPhase { case basic, extendedPreStart, extendedRunning, extendedPostStop, extendedFinished, none }
-    @State private var tourPhase: TourPhase = .basic
+    enum TourPhase { case extendedPreStart, extendedRunning, extendedPostStop, extendedFinished, none }
+    @State private var tourPhase: TourPhase = .none
     @State private var showStartFirstSessionPrompt = false
     @State private var wasBlocked = false
     
@@ -325,12 +325,7 @@ struct ContentView: View {
                 marks: setToShow,
                 frames: frames,
                 onFinish: {
-                    if tourPhase == .basic {
-                        hasCompletedCoachMarks = true
-                        showStartFirstSessionPrompt = true
-                    } else {
-                        showCoachMarks = false
-                    }
+                    showCoachMarks = false
                 }
             )
         }
@@ -344,9 +339,8 @@ struct ContentView: View {
         }
         .onChange(of: hasCompletedCoachMarks) { _, newValue in
             if newValue == false && !nfcViewModel.isAppsBlocked {
-                tourPhase = .basic
-                coachStep = 0
-                showCoachMarks = true
+                hasCompletedCoachMarks = true
+                showStartFirstSessionPrompt = true
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .didReceiveDeepLink)) { note in
@@ -718,17 +712,6 @@ private extension ContentView {
 private enum CoachMarksFactory {
     static func marks(for phase: ContentView.TourPhase) -> [CoachMark] {
         switch phase {
-        case .basic:
-            return [
-                CoachMark(targetID: "scan", title: "Tap to Start/Stop",
-                          message: "This is your Zap button. Tap to start focus, tap again to end.",
-                          padding: 8, offset: CGSize(width: 0, height: 20)),
-                CoachMark(targetID: "mode", title: "Choose a Mode",
-                          message: "Pick which apps/sites you want blocked before you start."),
-                CoachMark(targetID: "schedule", title: "Schedules",
-                          message: "Plan automatic focus sessions. Set start times and modes, and we’ll block for you.",
-                          offset: CGSize(width: 0, height: 6))
-            ]
         case .extendedPreStart:
             return [
                 CoachMark(targetID: "mode", title: "Pick a Mode",
@@ -756,9 +739,8 @@ private extension ContentView {
         updateAuthorizationStatus()
         if authorizationStatus != .approved { requestAuthorization() }
         if !hasCompletedCoachMarks && !nfcViewModel.isAppsBlocked {
-            tourPhase = .basic
-            coachStep = 0
-            showCoachMarks = true
+            hasCompletedCoachMarks = true
+            showStartFirstSessionPrompt = true
         }
         startAppGroupMirror() //
         nfcViewModel.checkNoiseRewindAvailability()

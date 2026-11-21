@@ -23,7 +23,7 @@ enum AppError: LocalizedError, Identifiable {
             return "Connection to Zap failed. Try holding it closer."
         case .invalidNFCTag:
             logError("Invalid or malformed NFC Tag scanned.")
-            return "This isn’t your Zap. Please use your linked device."
+            return "Hold one JustNoise Zap against your iPhone and try again."
         case .invalidModeSelection:
             logError("Invalid mode selection.")
             return "Select a mode before starting your session."
@@ -32,7 +32,7 @@ enum AppError: LocalizedError, Identifiable {
             return "Something went wrong. Please try again."
         case .unauthorizedNFCTag:
             logError("Unauthorized NFC Tag scanned.")
-            return "This Zap isn’t linked to your account."
+            return "This Zap was not recognized. Scan a registered JustNoise Zap."
         case .nfcNotAvailable:
             logError("NFC is not available on this device.")
             return "Your phone doesn’t support Zap scanning."

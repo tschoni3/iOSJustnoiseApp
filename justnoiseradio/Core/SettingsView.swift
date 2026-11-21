@@ -16,7 +16,7 @@ struct SettingsView: View {
     
     @AppStorage("userName") var userName: String = ""
     @AppStorage("userLanguage") var userLanguage: String = "Auto detect"
-    @AppStorage("hasCompletedCoachMarks") private var hasCompletedCoachMarks: Bool = false
+    @State private var showIntroduction = false
     @AppStorage("showPostSessionJournalPrompt") private var showPostSessionJournalPrompt: Bool = true
     
     @State private var showEmergencyConfirm = false
@@ -96,11 +96,14 @@ struct SettingsView: View {
                 // 3) ONBOARDING
                 Section(header: Text("ONBOARDING")) {
                     Button {
-                        hasCompletedCoachMarks = false
-                        presentationMode.wrappedValue.dismiss()
+                        showIntroduction = true
                     } label: {
-                        Label("Re-run Onboarding Tour", systemImage: "sparkles")
+                        Label("Watch introduction", systemImage: "play.circle")
                     }
+                }
+
+                .fullScreenCover(isPresented: $showIntroduction) {
+                    OnboardingVideoOverlay()
                 }
 
                 // 4) SUPPORT

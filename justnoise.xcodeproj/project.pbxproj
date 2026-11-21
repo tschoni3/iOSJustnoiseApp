@@ -22,16 +22,10 @@
 		32D48D292D42F47A0057C8AA /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32D48D282D42F47A0057C8AA /* ManagedSettingsUI.framework */; };
 		32D48D312D42F47A0057C8AA /* ShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 32D48D242D42F4790057C8AA /* ShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		32F603272CD9E1E3000222C5 /* JustNoiseWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A4B001012F00000100000001 /* JN_onboarding_intro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A4B001022F00000100000001 /* JN_onboarding_intro.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		A10000072F00000100000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 323C09E32CC504200094A28A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 323C09EA2CC504200094A28A;
-			remoteInfo = justnoiseradio;
-		};
 		32A08ACA2EB7402C00832674 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 323C09E32CC504200094A28A /* Project object */;
@@ -53,6 +47,13 @@
 			remoteGlobalIDString = 32F603132CD9E1E2000222C5;
 			remoteInfo = JustNoiseWidgetExtension;
 		};
+		A10000072F00000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 323C09E32CC504200094A28A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 323C09EA2CC504200094A28A;
+			remoteInfo = justnoiseradio;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -72,7 +73,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A10000022F00000100000001 /* justnoiseradioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = justnoiseradioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		321413C02EB488AD004998BD /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		323C09EB2CC504200094A28A /* justnoiseradio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = justnoiseradio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3299258E2F25FC1500A8060D /* AppIconJN.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIconJN.icon; sourceTree = "<group>"; };
@@ -86,6 +86,8 @@
 		32D48D282D42F47A0057C8AA /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JustNoiseWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		32F603342CD9E237000222C5 /* JustNoiseWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = JustNoiseWidgetExtension.entitlements; sourceTree = "<group>"; };
+		A10000022F00000100000001 /* justnoiseradioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = justnoiseradioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A4B001022F00000100000001 /* JN_onboarding_intro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = JN_onboarding_intro.mp4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -135,11 +137,6 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A10000032F00000100000001 /* justnoiseradioTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = justnoiseradioTests;
-			sourceTree = "<group>";
-		};
 		323C09ED2CC504200094A28A /* justnoiseradio */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -174,16 +171,14 @@
 			path = JustNoiseWidget;
 			sourceTree = "<group>";
 		};
+		A10000032F00000100000001 /* justnoiseradioTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = justnoiseradioTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A10000052F00000100000001 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		323C09E82CC504200094A28A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -220,6 +215,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000052F00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -234,6 +236,7 @@
 				32A08AAC2EB6308D00832674 /* JustNoiseFocusMonitor */,
 				32D48D252D42F4790057C8AA /* Frameworks */,
 				323C09EC2CC504200094A28A /* Products */,
+				A4B001022F00000100000001 /* JN_onboarding_intro.mp4 */,
 				32BD0C262D662AA700A46265 /* JN_video1.mp4 */,
 				32BD0C272D662AA700A46265 /* JN_video2.mp4 */,
 				32BD0C282D662AA700A46265 /* JN_video3.mp4 */,
@@ -267,29 +270,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A10000012F00000100000001 /* justnoiseradioTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A100000B2F00000100000001 /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */;
-			buildPhases = (
-				A10000042F00000100000001 /* Sources */,
-				A10000052F00000100000001 /* Frameworks */,
-				A10000062F00000100000001 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A10000082F00000100000001 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				A10000032F00000100000001 /* justnoiseradioTests */,
-			);
-			name = justnoiseradioTests;
-			packageProductDependencies = (
-			);
-			productName = justnoiseradioTests;
-			productReference = A10000022F00000100000001 /* justnoiseradioTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		323C09EA2CC504200094A28A /* justnoiseradio */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 323C0A0F2CC504210094A28A /* Build configuration list for PBXNativeTarget "justnoiseradio" */;
@@ -385,6 +365,29 @@
 			productReference = 32F603142CD9E1E2000222C5 /* JustNoiseWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		A10000012F00000100000001 /* justnoiseradioTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A100000B2F00000100000001 /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */;
+			buildPhases = (
+				A10000042F00000100000001 /* Sources */,
+				A10000052F00000100000001 /* Frameworks */,
+				A10000062F00000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000082F00000100000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000032F00000100000001 /* justnoiseradioTests */,
+			);
+			name = justnoiseradioTests;
+			packageProductDependencies = (
+			);
+			productName = justnoiseradioTests;
+			productReference = A10000022F00000100000001 /* justnoiseradioTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -395,10 +398,6 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					A10000012F00000100000001 = {
-						CreatedOnToolsVersion = 26.0;
-						TestTargetID = 323C09EA2CC504200094A28A;
-					};
 					323C09EA2CC504200094A28A = {
 						CreatedOnToolsVersion = 16.0;
 					};
@@ -410,6 +409,10 @@
 					};
 					32F603132CD9E1E2000222C5 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					A10000012F00000100000001 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 323C09EA2CC504200094A28A;
 					};
 				};
 			};
@@ -442,13 +445,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A10000062F00000100000001 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		323C09E92CC504200094A28A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -456,6 +452,7 @@
 				32BD0C292D662AA700A46265 /* JN_video2.mp4 in Resources */,
 				32BD0C2A2D662AA700A46265 /* JN_video3.mp4 in Resources */,
 				3299258F2F25FC1500A8060D /* AppIconJN.icon in Resources */,
+				A4B001012F00000100000001 /* JN_onboarding_intro.mp4 in Resources */,
 				32BD0C2B2D662AA700A46265 /* JN_video1.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -481,16 +478,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
-		A10000042F00000100000001 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
+		A10000062F00000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
 		323C09E72CC504200094A28A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -519,14 +516,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000042F00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A10000082F00000100000001 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
-			targetProxy = A10000072F00000100000001 /* PBXContainerItemProxy */;
-		};
 		32A08ACB2EB7402C00832674 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 32A08AA92EB6308D00832674 /* JustNoiseFocusMonitor */;
@@ -542,47 +541,14 @@
 			target = 32F603132CD9E1E2000222C5 /* JustNoiseWidget */;
 			targetProxy = 32F603252CD9E1E3000222C5 /* PBXContainerItemProxy */;
 		};
+		A10000082F00000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 323C09EA2CC504200094A28A /* justnoiseradio */;
+			targetProxy = A10000072F00000100000001 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		A10000092F00000100000001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z8H8N23UT2;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
-			};
-			name = Debug;
-		};
-		A100000A2F00000100000001 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z8H8N23UT2;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
-			};
-			name = Release;
-		};
 		323C0A0D2CC504210094A28A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -716,7 +682,7 @@
 				CODE_SIGN_ENTITLEMENTS = justnoiseradio/justnoiseradio.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = justnoiseradio/Info.plist;
@@ -737,7 +703,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -760,7 +726,7 @@
 				CODE_SIGN_ENTITLEMENTS = justnoiseradio/justnoiseradio.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = justnoiseradio/Info.plist;
@@ -781,7 +747,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -801,7 +767,7 @@
 				CODE_SIGN_ENTITLEMENTS = JustNoiseFocusMonitor/JustNoiseFocusMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = Z8H8N23UT2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JustNoiseFocusMonitor/Info.plist;
@@ -813,7 +779,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseFocusMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -836,7 +802,7 @@
 				CODE_SIGN_ENTITLEMENTS = JustNoiseFocusMonitor/JustNoiseFocusMonitor.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = Z8H8N23UT2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JustNoiseFocusMonitor/Info.plist;
@@ -848,7 +814,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseFocusMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -871,7 +837,7 @@
 				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ShieldConfigurationExtension;
@@ -883,7 +849,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.ShieldConfigurationExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -904,7 +870,7 @@
 				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ShieldConfigurationExtension;
@@ -916,7 +882,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.ShieldConfigurationExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -938,7 +904,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = JustNoiseWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JustNoiseWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = JustNoiseWidget;
@@ -949,7 +915,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -970,7 +936,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = JustNoiseWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = JustNoiseWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = JustNoiseWidget;
@@ -981,7 +947,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradio.JustNoiseWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -995,18 +961,47 @@
 			};
 			name = Release;
 		};
+		A10000092F00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
+			};
+			name = Debug;
+		};
+		A100000A2F00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z8H8N23UT2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = stilltschoni.justnoiseradioTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/justnoiseradio.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/justnoiseradio";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A100000B2F00000100000001 /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A10000092F00000100000001 /* Debug */,
-				A100000A2F00000100000001 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		323C09E62CC504200094A28A /* Build configuration list for PBXProject "justnoise" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1048,6 +1043,15 @@
 			buildConfigurations = (
 				32F603282CD9E1E3000222C5 /* Debug */,
 				32F603292CD9E1E3000222C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A100000B2F00000100000001 /* Build configuration list for PBXNativeTarget "justnoiseradioTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000092F00000100000001 /* Debug */,
+				A100000A2F00000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

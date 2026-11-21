@@ -110,17 +110,6 @@ struct JustNoiseApp: App {
             }
                 .preferredColorScheme(.dark)
                 .onAppear {
-                Task {
-                    let center = AuthorizationCenter.shared
-                    if center.authorizationStatus != .approved {
-                        do { try await center.requestAuthorization(for: .individual) } catch {}
-                    }
-
-                    print(center.authorizationStatus == .approved
-                          ? "✅ ScreenTime authorization granted"
-                          : "❌ ScreenTime authorization denied or not approved")
-                }
-
                 Task { await subscriptionManager.updateSubscriptionStatus() }
 
                 if LocalAccountDataCleaner().hasPendingCleanup == false {
