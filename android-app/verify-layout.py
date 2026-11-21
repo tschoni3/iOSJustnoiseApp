@@ -10,8 +10,8 @@ root = Path(__file__).resolve().parent
 build = (root / "app/build.gradle.kts").read_text()
 required = (
     'applicationId = "shop.justnoise.app"',
-    'versionCode = 20',
-    'versionName = "1.0.18"',
+    'versionCode = 21',
+    'versionName = "1.0.19"',
     'isDebuggable = false',
     'signingConfig = signingConfigs.getByName("upload")',
     'JUSTNOISE_SIGNING_PROPERTIES',
