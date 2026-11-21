@@ -47,13 +47,16 @@ object IntegratedFirstRunRules {
         !facts.sessionRequested && !facts.recoveryRequired &&
         (!disclosureAccepted || !accessibilityEnabled)
 
-    /** Required sign-in waits until Android permission setup is finished. */
+    /** Required sign-in waits until first-run education, pairing, and Android permission setup finish. */
     fun shouldHoldRequiredAccount(
         route: IntegratedFirstRunRoute,
         showingAccessibilitySetup: Boolean,
         showingScheduleSetup: Boolean,
         needsBlockingSetup: Boolean,
-    ): Boolean = showingAccessibilitySetup || showingScheduleSetup ||
+    ): Boolean = route == IntegratedFirstRunRoute.ONBOARDING ||
+        route == IntegratedFirstRunRoute.FIRST_MODE ||
+        route == IntegratedFirstRunRoute.ACTIVATION ||
+        showingAccessibilitySetup || showingScheduleSetup ||
         (route == IntegratedFirstRunRoute.MAIN && needsBlockingSetup)
 }
 

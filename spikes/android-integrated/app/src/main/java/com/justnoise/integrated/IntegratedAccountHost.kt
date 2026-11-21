@@ -8,10 +8,13 @@ data class IntegratedAccountAccess(val ready: Boolean = false, val generation: L
     val signedIn: Boolean = false) {
     val productAllowed: Boolean get() = ready && signedIn
 
-    /** iOS-style order: introduction, first mode and physical pairing before required sign-in. */
+    /**
+     * iOS-style order: introduction, first mode and physical pairing stay visible even
+     * while account restoration is still running. Required sign-in only blocks MAIN.
+     */
     fun blocksRoute(route: IntegratedFirstRunRoute, loadedGeneration: Long): Boolean =
-        !ready || (route == IntegratedFirstRunRoute.MAIN &&
-            (!productAllowed || loadedGeneration != generation))
+        route == IntegratedFirstRunRoute.MAIN &&
+            (!ready || !productAllowed || loadedGeneration != generation)
 }
 interface IntegratedAccountHost {
     val accountAccess: StateFlow<IntegratedAccountAccess>

@@ -114,7 +114,11 @@ class IntegratedFirstRunStateTest {
             IntegratedFirstRunRoute.MAIN, false, true, false))
         assertFalse(IntegratedFirstRunRules.shouldHoldRequiredAccount(
             IntegratedFirstRunRoute.MAIN, false, false, false))
-        assertFalse(IntegratedFirstRunRules.shouldHoldRequiredAccount(
+        assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(
+            IntegratedFirstRunRoute.ONBOARDING, false, false, false))
+        assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(
+            IntegratedFirstRunRoute.FIRST_MODE, false, false, false))
+        assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(
             IntegratedFirstRunRoute.ACTIVATION, false, false, false))
     }
 

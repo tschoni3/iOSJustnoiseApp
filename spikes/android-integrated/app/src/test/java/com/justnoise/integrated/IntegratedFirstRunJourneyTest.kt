@@ -19,10 +19,20 @@ class IntegratedFirstRunJourneyTest {
         val paired = afterMode.copy(zapPaired = true)
         assertEquals(IntegratedFirstRunRoute.MAIN, IntegratedFirstRunRules.route(paired))
         assertTrue(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.MAIN, 0))
+        assertTrue(IntegratedAccountAccess().blocksRoute(IntegratedFirstRunRoute.MAIN, 0))
         assertFalse(IntegratedAccountAccess(ready = true, signedIn = true)
             .blocksRoute(IntegratedFirstRunRoute.MAIN, 0))
-        assertFalse(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.FIRST_MODE, 0))
-        assertFalse(IntegratedAccountAccess(ready = true).blocksRoute(IntegratedFirstRunRoute.ACTIVATION, 0))
+        // Account restoration must not replace Welcome / first mode / Connect your Zap
+        // with the "Opening sign in" spinner the way 1.0.20 did.
+        for (route in listOf(
+            IntegratedFirstRunRoute.ONBOARDING,
+            IntegratedFirstRunRoute.FIRST_MODE,
+            IntegratedFirstRunRoute.ACTIVATION,
+        )) {
+            assertFalse(IntegratedAccountAccess().blocksRoute(route, 0))
+            assertFalse(IntegratedAccountAccess(ready = true).blocksRoute(route, 0))
+            assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(route, false, false, false))
+        }
         assertTrue(IntegratedFirstRunRules.needsBlockingSetup(paired, false, false))
         assertTrue(IntegratedFirstRunRules.shouldHoldRequiredAccount(
             IntegratedFirstRunRoute.MAIN, false, false, true))
