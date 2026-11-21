@@ -1050,12 +1050,20 @@ required_document_fragments = {
         'assertEquals("1.5.0"',
     ),
     "justnoiseradio/Core/ContentView.swift": (
-        'title: "Tap to Start/Stop"',
-        'message: "This is your Zap button. Tap to start focus, tap again to end."',
-        'title: "Choose a Mode"',
-        'message: "Pick which apps/sites you want blocked before you start."',
-        'title: "Schedules"',
-        'message: "Plan automatic focus sessions. Set start times and modes, and we’ll block for you."',
+        # November 4: iOS removes the basic tour; Android prototype retains it.
+        'private var tourPhase: TourPhase = .none',
+        'title: "Pick a Mode"',
+        'title: "Start Your Session"',
+    ),
+    "justnoiseradio/Features/Onboarding/OnboardingView.swift": (
+        'struct OnboardingVideoOverlay: View',
+        'forResource: "JN_onboarding_intro"',
+        'struct FirstModeSetupView: View',
+        'nfcViewModel.selectedMode = mode',
+    ),
+    "justnoiseradio/Features/Onboarding/NFCActivationView.swift": (
+        '.fullScreenCover(isPresented: $showIntroduction',
+        'guard scanAfterIntroduction else { return }',
     ),
     "scripts/verify-android-predevice-readiness.sh": (
         '"$REPOSITORY_ROOT/android-app/verify-layout.py"',

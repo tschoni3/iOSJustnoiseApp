@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.time.Duration.Companion.seconds
 
-internal enum class ProviderFailure { INVALID_INPUT, REJECTED, UNAVAILABLE, INVALID_RESPONSE }
+internal enum class ProviderFailure { INVALID_INPUT, REJECTED, UNAVAILABLE, INVALID_RESPONSE, SERVER_ERROR, RATE_LIMITED }
 internal class AccountProviderException(val failure: ProviderFailure) : Exception("Account request failed: $failure")
 
 /** Only transient session data; no automatic account publication or credential writes. */
@@ -151,8 +151,14 @@ internal class SupabaseAccountProvider(
             throw cancelled
         } catch (failure: AccountProviderException) {
             throw failure
-        } catch (_: RestException) {
-            throw AccountProviderException(ProviderFailure.REJECTED)
+        } catch (failure: RestException) {
+            // Classify only the HTTP status. SDK error bodies/headers can contain
+            // email addresses, credentials or internal mail-provider configuration.
+            throw AccountProviderException(when (failure.statusCode) {
+                429 -> ProviderFailure.RATE_LIMITED
+                in 500..599 -> ProviderFailure.SERVER_ERROR
+                else -> ProviderFailure.REJECTED
+            })
         } catch (_: Exception) {
             // Never expose SDK exception text/body/headers, which can contain credentials.
             throw AccountProviderException(ProviderFailure.UNAVAILABLE)

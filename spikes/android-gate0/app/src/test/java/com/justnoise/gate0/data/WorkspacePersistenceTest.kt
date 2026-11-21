@@ -73,6 +73,25 @@ class WorkspacePersistenceTest {
         assertFalse(archive.contains("service_heartbeat"))
     }
 
+    @Test fun emergencyUnlocksBelongToInstallationAndSurviveAccountSwitchAndErasure() {
+        setup("synthetic.local")
+        assertTrue(store.startSession(100_000L))
+        assertTrue(store.emergencyUnzap(104_000L, requireNotNull(store.snapshot().activeSessionId)).succeeded)
+        assertEquals(4, store.emergencyUnlocksRemaining())
+        switchTo(A)
+        assertEquals(4, store.emergencyUnlocksRemaining())
+        switchTo(B)
+        assertEquals(4, store.emergencyUnlocksRemaining())
+        switchTo(A)
+        val token = leaveAccountForErasure()
+        assertTrue(store.eraseAccountWorkspace(token, A))
+        assertTrue(store.completeWorkspaceSwitch(token))
+        assertEquals(4, store.emergencyUnlocksRemaining())
+        raw.all.filterKeys { it.startsWith("workspace_profile_v1_") }.values.forEach {
+            assertFalse(it.toString().contains("emergency_unlocks"))
+        }
+    }
+
     @Test fun durableHandoffBlocksHydrationPairingStartsAndAlarmsUntilAcknowledged() {
         setup("synthetic.local")
         val oldToken = store.loadModes().token!!

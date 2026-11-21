@@ -1,4 +1,21 @@
 <resources>
+    <string name="integrated_settings_account_group">ACCOUNT</string>
+    <string name="integrated_settings_account">Your account</string>
+    <string name="integrated_settings_zap_group">YOUR ZAP</string>
+    <string name="integrated_settings_help_group">HELP</string>
+    <string name="integrated_settings_more_group">MORE</string>
+    <string name="integrated_settings_more">More settings</string>
+    <string name="integrated_settings_device_group">DEVICE</string>
+    <string name="integrated_emergency_remaining">Unlocks left: %1$d</string>
+    <string name="integrated_emergency_group">EMERGENCY</string>
+    <string name="integrated_emergency_title">Emergency Unzap</string>
+    <string name="integrated_emergency_body">Lost your Zap? %1$d emergency unlocks left.</string>
+    <string name="integrated_emergency_action">Use Emergency Unzap</string>
+    <string name="integrated_emergency_confirm_title">End this session?</string>
+    <string name="integrated_emergency_confirm_body">This uses one emergency unlock. %1$d left.</string>
+    <string name="integrated_emergency_confirm">Unzap now</string>
+    <string name="integrated_emergency_cancel">Cancel</string>
+    <string name="integrated_emergency_failed">Could not end this session. Try again or use your Zap.</string>
     <string name="integrated_settings_title">Settings</string>
     <string name="integrated_settings_done">Done</string>
     <string name="integrated_settings_back">Back</string>
@@ -18,7 +35,7 @@
     <string name="integrated_settings_support_email" translatable="false">hello@justnoise.shop</string>
     <string name="integrated_settings_support_detail">Questions or feedback? Email Justnoise Media. No app data is attached automatically.</string>
     <string name="integrated_settings_email_support">Email support</string>
-    <string name="integrated_settings_email_unavailable">Could not open an email app. Press and hold the address above to copy it, then email us from your browser or another device.</string>
+    <string name="integrated_settings_email_unavailable">No email app? Copy this address to contact us.</string>
     <string name="integrated_settings_app_info">Android app settings</string>
     <string name="integrated_settings_app_info_detail">Open App info for Android recovery controls. Nothing changes until you act there.</string>
     <string name="integrated_settings_about_group">ABOUT JUSTNOISE</string>

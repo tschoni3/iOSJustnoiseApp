@@ -105,9 +105,9 @@ History's gear opens **Settings**. **Blocking & Zap setup** provides setup/recov
 **Privacy Policy** opens the notice. Tutorial replay does not reset your pairing.
 **Review local-data removal** only opens setup; it does not itself erase anything.
 
-Normal Home and Back should remain usable. **Keep going** on the blocker returns
-to Justnoise; it does not end the session. If needed, use **Go Home**, **Disable
-Accessibility**, or **App info / Force Stop**. Disabling Accessibility leaves local
+Normal Home and Back should remain usable. **Be Right Back** on the blocker returns
+to Android Home; it does not end the session. Recovery is in Justnoise Settings or
+Android Settings, not on the blocker. Disabling Accessibility leaves local
 data intact. Withdrawal/clear storage/uninstall can remove pairing, schedules and
 History, so use them only when you intend to delete that installation's data.
 Never call an emergency number as a test.

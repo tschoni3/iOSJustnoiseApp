@@ -2,15 +2,14 @@ package com.justnoise.integrated
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
-import android.widget.Button
-import android.widget.CheckBox
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -21,11 +20,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
+import androidx.lifecycle.Lifecycle
 import com.justnoise.gate0.R
 import com.justnoise.gate0.app.MainActivity as SetupActivity
 import com.justnoise.gate0.data.Gate0Preferences
 import com.justnoise.gate0.data.HmacZapStore
 import com.justnoise.gate0.feature.Gate0Controller
+import com.justnoise.gate0.platform.restriction.AccessibilityServiceStatus
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -150,18 +151,18 @@ class IntegratedFirstRunInstrumentationTest {
     }
 
     @Test
-    fun existingLegacyPairSkipsEducationWithoutReplacingPairOrGrantingConsent() {
+    fun existingLegacyPairSkipsEducationAndOpensBlockingSetupWithoutGrantingConsent() {
         withSyntheticZap { record ->
             assertTrue(Gate0Controller(context).pairZap(record))
             assertFalse(preferences.hasCompletedOnboarding())
             val before = preferences.snapshot()
             launchActualActivity()
-            compose.waitUntil(timeoutMillis = 5_000) {
-                compose.onAllNodesWithTag("zap-main").fetchSemanticsNodes().isNotEmpty()
-            }
+            waitForText(text(R.string.first_run_blocking_title))
 
             compose.onNodeWithText(text(R.string.first_run_how_to_use)).assertDoesNotExist()
             compose.onNodeWithText(text(R.string.first_run_activate_zap)).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.first_run_blocking_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_agree_open_settings)).assertIsDisplayed()
             assertEquals(before, preferences.snapshot())
             assertTrue(HmacZapStore(preferences).isAuthorized(record))
             assertFalse(preferences.hasCompletedOnboarding())
@@ -170,7 +171,7 @@ class IntegratedFirstRunInstrumentationTest {
     }
 
     @Test
-    fun pairedConfirmationRequiresExplicitContinueBeforeOpeningUncheckedSetup() {
+    fun pairedConfirmationRequiresExplicitContinueBeforeOpeningBlockingSetup() {
         launchActualActivity()
         advanceToSecondPage()
         completeTutorial()
@@ -185,15 +186,73 @@ class IntegratedFirstRunInstrumentationTest {
             assertNoConsentOrSessionGrant(expectPaired = true)
 
             compose.onNodeWithText(text(R.string.first_run_continue_setup)).performClick()
-            compose.waitUntil(timeoutMillis = 5_000) { resumedSetupActivity() != null }
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                val setup = requireNotNull(resumedSetupActivityOnMain())
-                assertFalse(setup.findViewById<CheckBox>(R.id.consentCheckbox).isChecked)
-                assertFalse(setup.findViewById<Button>(R.id.accessibilitySettingsButton).isEnabled)
-            }
+            waitForText(text(R.string.first_run_blocking_title))
+            compose.onNodeWithText(text(R.string.first_run_blocking_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_agree_open_settings)).assertIsDisplayed()
+            assertNull("Blocking setup stays inside onboarding", resumedSetupActivity())
             assertTrue(HmacZapStore(preferences).isAuthorized(record))
             assertNoConsentOrSessionGrant(expectPaired = true)
         }
+    }
+
+    @Test
+    fun decliningRequiredBlockingExitsAndRelaunchStillRequiresConsent() {
+        withSyntheticZap { record ->
+            preparePairedWithoutMode(record)
+            val before = preferences.snapshot()
+            launchActualActivity()
+            waitForText(text(R.string.first_run_blocking_title))
+            captureZapEvidence("required-blocking-before-consent")
+            compose.onNodeWithText(text(R.string.first_run_blocking_not_now)).performClick()
+            compose.waitUntil(timeoutMillis = 5_000) {
+                requireNotNull(scenario).state == Lifecycle.State.DESTROYED
+            }
+            assertEquals(before, preferences.snapshot())
+            requireNotNull(scenario).close()
+            scenario = null
+            launchActualActivity()
+            waitForText(text(R.string.first_run_agree_open_settings))
+            compose.onNodeWithText(text(R.string.first_run_blocking_title)).assertIsDisplayed()
+            assertFalse(Gate0Controller(context).hasAcceptedCurrentDisclosure())
+            assertFalse(preferences.snapshot().desiredActive)
+        }
+    }
+
+    @Test
+    fun returningFromSettingsWithoutEnablingDoesNotCompleteBlockingSetup() {
+        withSyntheticZap { record ->
+            preparePairedWithoutMode(record)
+            launchActualActivity()
+            waitForText(text(R.string.first_run_agree_open_settings))
+            compose.onNodeWithText(text(R.string.first_run_agree_open_settings)).performClick()
+            compose.waitUntil(timeoutMillis = 5_000) {
+                Gate0Controller(context).hasAcceptedCurrentDisclosure()
+            }
+            // Return to the real activity without touching any system permission switch.
+            context.startActivity(Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            waitForText(text(R.string.first_run_open_android_settings))
+            compose.onNodeWithText(text(R.string.first_run_blocking_title)).assertIsDisplayed()
+            captureZapEvidence("blocking-return-without-system-grant")
+            assertEquals(accessibilityServicesBefore,
+                accessibilitySetting(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES))
+            // The instrumentation's UiAutomation can change the global enabled bit.
+            // The product gate depends on this specific service, never that bit alone.
+            assertFalse(AccessibilityServiceStatus.isEnabled(context))
+            assertFalse(preferences.snapshot().desiredActive)
+            assertFalse(preferences.snapshot().serviceConnected)
+            assertTrue(preferences.snapshot().selectedPackages.isEmpty())
+            assertNull(preferences.snapshot().recentModeId)
+            assertTrue(HmacZapStore(preferences).isAuthorized(record))
+        }
+    }
+
+    private fun preparePairedWithoutMode(record: ByteArray) {
+        check(emulatorGuardPassed)
+        assertTrue(preferences.completeOnboarding())
+        assertTrue(Gate0Controller(context).pairInitialZap(record))
+        assertTrue(preferences.snapshot().selectedPackages.isEmpty())
+        assertNull(preferences.snapshot().recentModeId)
     }
 
     private fun launchActualActivity() {

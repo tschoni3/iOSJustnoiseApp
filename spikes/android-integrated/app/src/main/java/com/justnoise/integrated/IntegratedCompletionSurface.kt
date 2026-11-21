@@ -1,24 +1,17 @@
 package com.justnoise.integrated
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,21 +39,8 @@ fun IntegratedCompletionSurface(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color.White,
-        contentColor = Color.Black,
-        // A confirmed stop returns to dark idle Zap. The sheet owns a separate
-        // window, so its white lower surface must not darken the status icons above it.
-        properties = ModalBottomSheetProperties(
-            isAppearanceLightStatusBars = false,
-            isAppearanceLightNavigationBars = true,
-        ),
-        dragHandle = {
-            Box(Modifier.padding(top = 8.dp, bottom = 16.dp).width(42.dp).height(5.dp)
-                .background(Color.Black.copy(alpha = .18f), RoundedCornerShape(50)))
-        },
+    IntegratedStableSheet(
+        mayDismiss = true, onDismiss = onDismiss, tag = "completion-modal", heightFraction = null,
     ) {
         CompletionContent(entry, onDismiss, modifier)
     }

@@ -14,13 +14,13 @@
     <string name="integrated_mode_apps_help">Each mode has its own app selection. System and safety apps cannot be selected.</string>
     <string name="integrated_mode_missing_apps">Unavailable or protected saved apps can only be removed.</string>
     <string name="integrated_mode_unavailable_app">Unavailable · remove only</string>
-    <string name="integrated_mode_empty">Create a mode, choose its apps, then select it for your next Zap.</string>
+    <string name="integrated_mode_empty">Create a mode and choose the apps you want to block.</string>
     <string name="integrated_mode_no_apps">No apps selected · edit to set up</string>
     <string name="integrated_mode_no_recent">Choose a mode for your next Zap.</string>
     <string name="integrated_mode_recent_help">Your next Zap uses the mode you select here. Scheduled sessions use their own saved mode.</string>
     <string name="integrated_mode_save">Save</string>
     <string name="integrated_mode_saving">Saving…</string>
-    <string name="integrated_mode_save_help">Saving does not change your selected mode. Select its row after saving to use it for your next Zap.</string>
+    <string name="integrated_mode_save_help">Saving a new mode selects it. Editing a mode keeps your current selection.</string>
     <string name="integrated_mode_loading">Loading modes and apps…</string>
     <string name="integrated_mode_reload">Reload saved modes</string>
     <string name="integrated_mode_reload_title">Discard this draft?</string>
@@ -43,4 +43,6 @@
         <item quantity="one">%d app</item>
         <item quantity="other">%d apps</item>
     </plurals>
+    <string name="integrated_mode_list_title">Select Mode</string>
+    <string name="integrated_mode_list_prompt">What do you want to make space for?</string>
 </resources>

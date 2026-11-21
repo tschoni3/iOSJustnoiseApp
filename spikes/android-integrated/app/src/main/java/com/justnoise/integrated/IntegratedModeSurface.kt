@@ -6,20 +6,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -27,15 +24,11 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,7 +53,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.justnoise.androidcontract.JustnoiseContract
 import com.justnoise.gate0.R
 import com.justnoise.gate0.data.ModeRules
 import com.justnoise.gate0.data.ModeSnapshot
@@ -90,24 +82,16 @@ fun IntegratedModeSheet(
 ) {
     if (!state.visible) return
     val mayDismiss by rememberUpdatedState(!state.saving)
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden || mayDismiss })
     var confirmingDelete by remember(state.editor?.id) { mutableStateOf(false) }
     var confirmingReload by remember { mutableStateOf(false) }
-    ModalBottomSheet(
-        onDismissRequest = { if (mayDismiss) onDismiss() }, sheetState = sheet,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = Color.White, contentColor = Color.Black,
-        contentWindowInsets = { WindowInsets.safeDrawing },
-        properties = ModalBottomSheetProperties(isAppearanceLightStatusBars = false,
-            isAppearanceLightNavigationBars = true, shouldDismissOnBackPress = mayDismiss),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFC6C6C8)) },
+    IntegratedStableSheet(
+        mayDismiss = mayDismiss, onDismiss = onDismiss, tag = "modes-sheet",
     ) {
         ModeSheetContent(state, onSelect, onNew, onEdit, onName, onToggle, onSave,
             onDelete = { confirmingDelete = true }, onCancelEditor = onCancelEditor,
             onReload = { if (state.editor?.hasChanges == true) confirmingReload = true else onReload() },
             onDismiss = onDismiss,
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.93f).imePadding().testTag("modes-sheet"))
+            modifier = Modifier.fillMaxSize())
     }
     if (confirmingDelete && state.editor?.id != null) {
         ModeConfirmation(
@@ -153,7 +137,7 @@ internal fun ModeSheetContent(
                 modifier = Modifier.heightIn(min = 48.dp).testTag("mode-cancel")) {
                 Text(stringResource(R.string.integrated_mode_cancel), color = ModeBlue)
             }
-            Text(if (editor == null) JustnoiseContract.text("mode.list.title") else stringResource(
+            Text(if (editor == null) stringResource(R.string.integrated_mode_list_title) else stringResource(
                 if (editor.id == null) R.string.integrated_mode_new else R.string.integrated_mode_edit_title),
                 color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center, modifier = Modifier.weight(1f).semantics { heading() })
@@ -178,7 +162,7 @@ internal fun ModeSheetContent(
             } }
             if (editor == null && !state.loading) {
                 item {
-                    Text(JustnoiseContract.text("mode.list.prompt"), color = Color.Black, fontSize = 31.sp,
+                    Text(stringResource(R.string.integrated_mode_list_prompt), color = Color.Black, fontSize = 31.sp,
                         lineHeight = 37.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp))
                 }
@@ -199,6 +183,7 @@ internal fun ModeSheetContent(
                 item {
                     OutlinedTextField(value = editor.name, onValueChange = onName, enabled = state.canMutate,
                         label = { Text(stringResource(R.string.integrated_mode_name)) }, singleLine = true,
+                        placeholder = { Text(stringResource(R.string.integrated_mode_name_hint)) },
                         isError = editor.name.isNotEmpty() && !ModeRules.validName(editor.name),
                         supportingText = if (editor.name.isNotEmpty() && !ModeRules.validName(editor.name)) {
                             { Text(stringResource(R.string.integrated_mode_invalid_name, ModeRules.MAX_NAME_LENGTH)) }

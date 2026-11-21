@@ -45,6 +45,19 @@ data class IntegratedHistoryState(
 
 /** UI-only calendar geometry. It never derives or rewrites stored session duration. */
 internal object IntegratedHistoryGridRules {
+    data class YearLayout(val columns: Int, val rows: Int, val cellSizeDp: Float)
+
+    /** All days fit the measured remaining viewport, including leap years. */
+    fun yearLayout(dayCount: Int, widthDp: Float, heightDp: Float): YearLayout {
+        require(dayCount in 1..366)
+        val width = widthDp.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
+        val height = heightDp.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: 0f
+        return (1..dayCount).map { columns ->
+            val rows = (dayCount + columns - 1) / columns
+            YearLayout(columns, rows, minOf(width / columns, height / rows))
+        }.maxBy { it.cellSizeDp }
+    }
+
     fun columns(window: HistoryWindow, availableWidthDp: Float): Int {
         val accessibleColumns = floor((availableWidthDp.coerceAtLeast(0f) + 6f) / 54f).toInt().coerceAtLeast(1)
         return if (window == HistoryWindow.NINETY_DAYS) minOf(4, accessibleColumns) else accessibleColumns

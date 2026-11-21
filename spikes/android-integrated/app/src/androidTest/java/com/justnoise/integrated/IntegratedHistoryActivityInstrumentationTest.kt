@@ -215,7 +215,10 @@ class IntegratedHistoryActivityInstrumentationTest {
     }
 
     private fun openDay(date: LocalDate) {
-        compose.onNodeWithTag("history-calendar").performScrollToKey(date.toEpochDay())
+        var window = HistoryWindow.NINETY_DAYS
+        withModel { window = it.state.window }
+        if (window == HistoryWindow.NINETY_DAYS)
+            compose.onNodeWithTag("history-calendar").performScrollToKey(date.toEpochDay())
         compose.onNodeWithTag("history-day-$date").assertIsDisplayed().performClick()
         compose.onNodeWithTag("history-day-dialog").assertIsDisplayed()
         withModel { assertEquals(date, it.state.selectedDate) }

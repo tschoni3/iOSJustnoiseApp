@@ -115,6 +115,8 @@ class IntegratedSettingsActivityInstrumentationTest {
         compose.onNodeWithTag("settings-privacy-main").assertIsDisplayed()
         compose.onNodeWithTag("privacy-draft-banner").assertIsDisplayed()
         pressBack()
+        compose.onNodeWithTag("settings-advanced-main").assertIsDisplayed()
+        pressBack()
         compose.onNodeWithTag("settings-main").assertIsDisplayed()
         pressBack()
         awaitHistory(HistoryWindow.NINETY_DAYS)
@@ -172,9 +174,9 @@ class IntegratedSettingsActivityInstrumentationTest {
             instrumentation.runOnMainSync { nativeSetup?.finish() }
             nativeSetup = null
             compose.waitUntil(timeoutMillis = 10_000) {
-                compose.onAllNodesWithTag("settings-main").fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodesWithTag("settings-advanced-main").fetchSemanticsNodes().isNotEmpty()
             }
-            compose.onNodeWithTag("settings-main").assertIsDisplayed()
+            compose.onNodeWithTag("settings-advanced-main").assertIsDisplayed()
             assertAuthorityAndRowsUnchanged(before)
         } finally {
             instrumentation.removeMonitor(monitor)
@@ -198,6 +200,11 @@ class IntegratedSettingsActivityInstrumentationTest {
     }
 
     private fun clickSettingsRow(tag: String) {
+        if (tag in setOf("settings-privacy", "settings-local-data", "settings-setup", "settings-app-info") &&
+            compose.onAllNodesWithTag("settings-main").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-more"))
+            compose.onNodeWithTag("settings-more").performClick()
+        }
         compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag(tag))
         compose.onNodeWithTag(tag).assertIsDisplayed().performClick()
     }

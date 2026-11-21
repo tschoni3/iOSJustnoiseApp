@@ -19,6 +19,8 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -54,6 +56,8 @@ class IntegratedSettingsUiInstrumentationTest {
     private var version by mutableStateOf("0.1-instrumentation-fixture")
     private var message by mutableStateOf<String?>(null)
     private var emailCanOpen = true
+    private var emergencySession by mutableStateOf<String?>(null)
+    private var emergencyUnlocks by mutableStateOf(5)
     private val events = mutableListOf<String>()
 
     @Before
@@ -80,6 +84,10 @@ class IntegratedSettingsUiInstrumentationTest {
                                     onReviewLocalData = { events += "review-local-data" },
                                     onOpenAppInfo = { events += "app-info" },
                                     onComposeSupportEmail = { events += "email"; emailCanOpen },
+                                    emergencySessionId = emergencySession,
+                                    emergencyUnlocks = emergencyUnlocks,
+                                    onEmergencyUnzap = { events += "emergency:$it" },
+                                    onShowMore = { events += "more"; page = IntegratedSettingsPage.ADVANCED },
                                 )
                             }
                         }
@@ -100,10 +108,17 @@ class IntegratedSettingsUiInstrumentationTest {
     fun renderingHasNoSideEffectAndRowsOnlyDispatchNamedNavigationCallbacks() {
         assertEvents()
         compose.onNodeWithTag("settings-main").assertIsDisplayed()
-        listOf("Delete Account", "Sign out", "Replace Zap", "Use Emergency Unzap", "Subscription").forEach {
+        listOf("Delete Account", "Sign out", "Replace Zap", "Subscription").forEach {
             compose.onNodeWithText(it).assertDoesNotExist()
         }
-        val rows = listOf("settings-setup" to "setup", "settings-tutorial" to "tutorial",
+        scrollMainTo("settings-tutorial")
+        compose.onNodeWithTag("settings-tutorial").performClick()
+        assertEvents("tutorial")
+        compose.onNodeWithTag("settings-setup").assertDoesNotExist()
+        scrollMainTo("settings-more")
+        compose.onNodeWithTag("settings-more").performClick()
+        assertEvents("more")
+        val rows = listOf("settings-setup" to "setup",
             "settings-privacy" to "privacy", "settings-local-data" to "review-local-data", "settings-app-info" to "app-info")
         rows.forEach { (tag, event) ->
             scrollMainTo(tag)
@@ -116,12 +131,36 @@ class IntegratedSettingsUiInstrumentationTest {
         captureZapEvidence("fixture-grouped-settings")
     }
 
+    @Test fun emergencyRequiresActiveSessionAndExplicitConfirmationAndCancelDoesNothing() {
+        scrollMainTo("settings-emergency")
+        compose.onNodeWithTag("settings-emergency").assertIsNotEnabled()
+        compose.runOnIdle { emergencySession = "fixture-session" }
+        compose.onNodeWithTag("settings-emergency").assertIsEnabled().performClick()
+        assertEvents()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEvents()
+        compose.onNodeWithTag("settings-emergency").performClick()
+        compose.onNodeWithTag("emergency-confirm").performClick()
+        assertEvents("emergency:fixture-session")
+        compose.runOnIdle { emergencyUnlocks = 0 }
+        compose.onNodeWithTag("settings-emergency").assertIsNotEnabled()
+    }
+
+    @Test fun emergencyConfirmationCannotApplyToANewSession() {
+        compose.runOnIdle { emergencySession = "first" }
+        scrollMainTo("settings-emergency")
+        compose.onNodeWithTag("settings-emergency").performClick()
+        compose.runOnIdle { emergencySession = "second" }
+        compose.onNodeWithTag("emergency-confirm").assertIsNotEnabled()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEvents()
+    }
+
     @Test
     fun supportHasExplicitEmailActionAndCopyableFallbackWithoutSideEffectsOnRender() {
         compose.runOnIdle { enlarged = true }
-        scrollMainTo("support-address")
         assertEvents()
-        compose.onNodeWithTag("support-address").assertIsDisplayed()
+        compose.onNodeWithTag("support-address").assertDoesNotExist()
         assertEquals("hello@justnoise.shop", context.getString(R.string.integrated_settings_support_email))
         compose.runOnIdle { emailCanOpen = false }
         scrollMainTo("support-email")
@@ -129,6 +168,8 @@ class IntegratedSettingsUiInstrumentationTest {
         assertEvents("email")
         scrollMainTo("support-email-unavailable")
         compose.onNodeWithTag("support-email-unavailable").assertIsDisplayed()
+        scrollMainTo("support-address")
+        compose.onNodeWithTag("support-address").assertIsDisplayed()
         captureZapEvidence("fixture-support-email-fallback-font200")
         compose.runOnIdle { emailCanOpen = true }
         scrollMainTo("support-email")
@@ -155,11 +196,11 @@ class IntegratedSettingsUiInstrumentationTest {
     @Test
     fun installedVersionIsSuppliedByHostAndFailureRemainsVisibleWithoutStartingAnAction() {
         scrollMainTo("settings-version")
-        compose.onNodeWithText("0.1-instrumentation-fixture").assertIsDisplayed()
+        compose.onNodeWithTag("settings-version").assertTextContains("0.1-instrumentation-fixture")
         compose.onNodeWithTag("settings-version").assertHasNoClickAction()
         compose.runOnIdle { version = ""; message = "Android could not open app settings." }
         scrollMainTo("settings-version")
-        compose.onNodeWithText(context.getString(R.string.integrated_settings_version_unavailable)).assertIsDisplayed()
+        compose.onNodeWithTag("settings-version").assertTextContains(context.getString(R.string.integrated_settings_version_unavailable))
         scrollMainTo("settings-message")
         compose.onNodeWithText("Android could not open app settings.").assertIsDisplayed()
         assertEvents()
@@ -199,7 +240,13 @@ class IntegratedSettingsUiInstrumentationTest {
     @Test
     fun compactTwoHundredPercentTextKeepsEverySettingsRowAndPrivacyBackReachable() {
         compose.runOnIdle { enlarged = true }
-        listOf("settings-setup", "settings-tutorial", "settings-privacy", "settings-local-data", "settings-app-info").forEach {
+        listOf("settings-emergency", "settings-live-update", "settings-tutorial", "support-email", "settings-more").forEach {
+            scrollMainTo(it)
+            compose.onNodeWithTag(it).assertIsDisplayed()
+        }
+        compose.onNodeWithTag("settings-more").performClick()
+        assertEvents("more")
+        listOf("settings-setup", "settings-privacy", "settings-local-data", "settings-app-info").forEach {
             scrollMainTo(it)
             compose.onNodeWithTag(it).assertIsDisplayed().assertHasClickAction()
         }

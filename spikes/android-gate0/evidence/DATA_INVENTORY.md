@@ -2,6 +2,17 @@
 
 Status: draft for technical, privacy, and Google Play policy review
 
+October 11 session shortcuts: `emergency_unlocks_remaining_v1` is one integer
+in private `gate0_local_state` preferences, initially five, clamped to 0..5.
+It belongs to the installation, not a workspace; account deletion/switching and
+consent withdrawal retain it. A confirmed Emergency Unzap decrements it in the
+same commit as active-state removal and the existing completion outbox. Failed
+writes restore both. Uninstall/app-data clear removes it; no replenishment or
+network/analytics field is added. The confirmation stores only an existing session
+UUID in the current Android UI saved state, never app targets or NFC data.
+Long-press start reuses the same session storage and existing bounded start event;
+it collects no new data and does not grant any permission.
+
 September 19 scheduled-start diagnosis: the process holds one current readiness
 health enum (for example main-thread timeout, unknown foreground, expired lease,
 or ready). Android's read-only service dump exposes only that allowlisted enum.

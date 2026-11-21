@@ -19,12 +19,16 @@ import com.justnoise.gate0.domain.SessionDecision
 import com.justnoise.gate0.domain.SessionDecisionPersistence
 import com.justnoise.gate0.domain.SessionReducer
 import com.justnoise.gate0.domain.SessionState
+import com.justnoise.gate0.domain.SessionShortcutRules
+import com.justnoise.gate0.domain.LongPressStartDecision
+import com.justnoise.gate0.domain.ZapReadOutcome
 import com.justnoise.gate0.domain.ZapReadDecision
 import com.justnoise.gate0.domain.ZapReadRules
 import com.justnoise.gate0.platform.discovery.LauncherAppRepository
 import com.justnoise.gate0.platform.discovery.ProtectedPackagePolicy
 import com.justnoise.gate0.platform.discovery.ProtectedPackageResolver
 import com.justnoise.gate0.platform.notification.SessionNotifications
+import com.justnoise.gate0.platform.nfc.ZapCompatibilityLabels
 import com.justnoise.gate0.platform.restriction.AccessibilityServiceStatus
 import com.justnoise.gate0.platform.restriction.Gate0AccessibilityService
 import com.justnoise.gate0.platform.restriction.ScheduledEnforcement
@@ -37,6 +41,9 @@ data class ZapInteraction(
     val completedSession: SessionHistoryEntry? = null,
     val accountRequired: Boolean = false,
 )
+
+data class SessionShortcutResult(val succeeded: Boolean, val noChange: Boolean = false,
+    val completedSession: SessionHistoryEntry? = null)
 
 class Gate0Controller(
     context: Context,
@@ -88,14 +95,16 @@ class Gate0Controller(
 
     /** The setup UI freezes this intent before explicit replacement confirmation and scanning. */
     fun pairZap(transientCanonicalRecord: ByteArray, expectedToken: ZapPairingToken): Boolean = try {
-        zapStore.pair(transientCanonicalRecord, expectedToken)
+        ZapCompatibilityLabels.isRecognized(transientCanonicalRecord) &&
+            zapStore.pair(transientCanonicalRecord, expectedToken)
     } catch (_: Exception) {
         false
     }
 
     /** Initial foreground pairing only; existing setup keeps its separate replacement action. */
     fun pairInitialZap(transientCanonicalRecord: ByteArray): Boolean = try {
-        zapStore.pairInitial(transientCanonicalRecord)
+        ZapCompatibilityLabels.isRecognized(transientCanonicalRecord) &&
+            zapStore.pairInitial(transientCanonicalRecord)
     } catch (_: Exception) {
         false
     }
@@ -111,7 +120,11 @@ class Gate0Controller(
         val (stored, startToken) = preferences.withScheduleLock {
             preferences.snapshot() to preferences.readSelectionEdit().token
         }
-        val classification = if (zapStore.isAuthorized(transientCanonicalRecord)) {
+        val classification = if (ZapCompatibilityLabels.allowsSessionRead(
+                recognized = ZapCompatibilityLabels.isRecognized(transientCanonicalRecord),
+                paired = zapStore.isAuthorized(transientCanonicalRecord),
+                sessionRequested = stored.desiredActive,
+            )) {
             PayloadClassification.AUTHORIZED
         } else {
             PayloadClassification.UNAUTHORIZED
@@ -199,6 +212,44 @@ class Gate0Controller(
             accessibilityEnabled = enabled,
             nowElapsedMilliseconds = observedAt,
         )
+    }
+
+    /** Start-only UI shortcut. Never treats fabricated tag bytes as an authorized scan. */
+    fun startWithoutScan(): SessionShortcutResult {
+        val events = applicationContext as? FocusSessionEvents
+        val generation = runCatching { events?.focusEventGeneration() }.getOrNull()
+        val (stored, token) = preferences.withScheduleLock {
+            preferences.snapshot() to preferences.readSelectionEdit().token
+        }
+        if (stored.desiredActive) return SessionShortcutResult(false, noChange = true)
+        val ready = hasAcceptedCurrentDisclosure() && Gate0StateReconciler.isServiceReady(stored,
+            AccessibilityServiceStatus.isEnabled(applicationContext), SystemClock.elapsedRealtime())
+        val decision = SessionShortcutRules.longPress(stored.desiredActive, stored.recoveryRequired,
+            preferences.accountAllowsSessionStart(), !stored.zapDigest.isNullOrBlank(),
+            !stored.modeStorageError && stored.selectedPackages.isNotEmpty() && targetsAreEligible(stored.selectedPackages), ready)
+        if (decision != LongPressStartDecision.START)
+            return SessionShortcutResult(false, noChange = decision == LongPressStartDecision.NO_CHANGE)
+        val writer = ValidatedSessionWriter(preferences, stored, token,
+            capabilityReady = { current -> hasAcceptedCurrentDisclosure() && Gate0StateReconciler.isServiceReady(
+                current, AccessibilityServiceStatus.isEnabled(applicationContext), SystemClock.elapsedRealtime()) },
+            completed = {})
+        val start = SessionReducer.reduce(SessionState.IDLE, ZapReadOutcome.ACCEPTED, true,
+            RestrictionCapability.AVAILABLE, 0L)
+        val result = SessionDecisionPersistence.apply(start, System.currentTimeMillis(), writer, stored.activeSessionId)
+        if (result.restrictionAction == RestrictionAction.APPLY || writer.persistenceFailed) publishStateChange()
+        val succeeded = !writer.persistenceFailed && result.restrictionAction == RestrictionAction.APPLY
+        if (succeeded && generation != null) runCatching { events?.recordFocusEvent(generation, true) }
+        return SessionShortcutResult(succeeded)
+    }
+
+    fun emergencyUnzap(expectedSessionId: String): SessionShortcutResult {
+        val events = applicationContext as? FocusSessionEvents
+        val generation = runCatching { events?.focusEventGeneration() }.getOrNull()
+        val result = preferences.emergencyUnzap(System.currentTimeMillis(), expectedSessionId)
+        // A stale/exhausted confirmation must not dismiss a different session's overlay.
+        if (result.succeeded || preferences.snapshot().recoveryRequired) publishStateChange()
+        if (result.succeeded && generation != null) runCatching { events?.recordFocusEvent(generation, false) }
+        return SessionShortcutResult(result.succeeded, completedSession = result.completion)
     }
 
     fun startScheduled(occurrence: ScheduledOccurrence): ScheduleDispatchResult {

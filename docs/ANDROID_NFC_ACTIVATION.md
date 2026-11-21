@@ -93,6 +93,19 @@ The future profile should preserve iOS readability. An Android-only AAR may be a
 
 ## Authorization decision still required
 
+October 10 owner clarification: Android now gates both initial/replacement pairing
+and new NFC session starts against the unchanged shipped iOS compatibility labels.
+The native configuration stores their text SHA-256 fingerprints and validates the
+bounded strict UTF-8 envelope before comparing; fingerprints do not make public
+static labels secret or authentic. Tests compare the iOS source list read-only.
+The existing exact-record local HMAC pairing remains an additional Android gate,
+not a claim that all iOS-authorized tags are interchangeable after pairing. Already
+paired legacy unknown labels retain stop-only escape while a session is requested;
+new pairing and new NFC starts reject them. Existing schedules retain their paired
+activation marker; this change does not silently revoke saved schedules. No NFC
+chip is rewritten, and the previously published 1.0.5 (6) lacks this new guard.
+Physical recognition/rejection and a new signed distribution remain pending.
+
 The shipped iOS application currently recognizes decoded Text values from a compatibility allow-list. The Android Gate 0 spike pairs one syntactically valid Text record locally and stores a Keystore HMAC digest over its canonical bytes. These are materially different provisioning and migration models.
 
 Before production parity is claimed, choose and document one product model covering:

@@ -186,6 +186,39 @@ class AccountRuntimeTest {
         assertFalse(runtime.state.value.analyticsEnabled)
     }
 
+    @Test fun signupMailServerFailureHasActionableCopyAndDoesNotGrantProductAccess() = runBlocking {
+        runtime.restore().join()
+        runtime.navigate(AccountPage.REGISTER)
+        val savedModes = products.loadModes().modes
+        response = "{\"error_code\":\"unexpected_failure\",\"msg\":\"private SMTP key/domain details\"}"
+        status = HttpStatusCode.InternalServerError
+        runtime.passwordSignIn("synthetic@example.invalid", "new-password", true).join()
+        assertEquals(AccountPage.REGISTER, runtime.state.value.page)
+        assertEquals("Account creation is temporarily unavailable. Please try again later.", runtime.state.value.message)
+        assertEquals(AuthPhase.SIGNED_OUT, journal.snapshot().phase)
+        assertFalse(runtime.access.value.productAllowed)
+        assertEquals(LocalWorkspaceId.LOCAL, products.currentWorkspace())
+        assertEquals(savedModes, products.loadModes().modes)
+        assertFalse(runtime.state.value.busy)
+        // The ordinary Create account action remains a valid retry after the fix.
+        response = USER
+        status = HttpStatusCode.OK
+        runtime.passwordSignIn("synthetic@example.invalid", "new-password", true).join()
+        assertTrue(runtime.state.value.message.orEmpty().contains("confirm your account"))
+        assertEquals(AuthPhase.SIGNED_OUT, journal.snapshot().phase)
+    }
+
+    @Test fun signupFailuresNeverAskForANonexistentLinkOrMentionOfflineZap() {
+        for (failure in ProviderFailure.entries) {
+            val message = accountRequestFailureMessage(AccountPage.REGISTER, failure)
+            assertFalse(message.contains("link", ignoreCase = true))
+            assertFalse(message.contains("Zap", ignoreCase = true))
+        }
+        assertTrue(accountRequestFailureMessage(AccountPage.REGISTER, ProviderFailure.RATE_LIMITED).contains("wait"))
+        assertFalse(accountRequestFailureMessage(AccountPage.REGISTER, ProviderFailure.UNAVAILABLE).contains("connection"))
+        assertFalse(accountRequestFailureMessage(AccountPage.REGISTER, ProviderFailure.SERVER_ERROR).contains("connection"))
+    }
+
     @Test fun accountReloadRetriesFailedAnalyticsOptOutWithoutReenablingCapture() = runBlocking {
         runtime.restore().join()
         runtime.setAnalytics(true).join()
@@ -195,7 +228,7 @@ class AccountRuntimeTest {
         assertFalse(runtime.state.value.analyticsEnabled)
         runtime.restore().join()
         assertFalse(runtime.state.value.analyticsEnabled)
-        assertTrue(runtime.state.value.message.orEmpty().contains("Capture stays off"))
+        assertTrue(runtime.state.value.message.orEmpty().contains("Analytics stays off"))
         assertTrue(runtime.access.value.ready) // Offline app remains available.
         consent.fail = false
         runtime.restore().join()

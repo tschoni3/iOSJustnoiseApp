@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/surface"
     android:clickable="true"
+    android:fillViewport="true">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:gravity="center_horizontal"
     android:orientation="vertical"
     android:padding="32dp">
@@ -12,6 +17,15 @@
         android:layout_width="1dp"
         android:layout_height="0dp"
         android:layout_weight="1" />
+
+    <ImageView
+        android:id="@+id/overlayZapArtwork"
+        android:layout_width="112dp"
+        android:layout_height="112dp"
+        android:layout_marginBottom="24dp"
+        android:src="@drawable/zap_button"
+        android:scaleType="fitCenter"
+        android:importantForAccessibility="no" />
 
     <TextView
         android:layout_width="match_parent"
@@ -43,28 +57,8 @@
         android:layout_height="56dp"
         android:backgroundTint="@color/action_background"
         android:text="@string/shield_open_justnoise"
+        android:textAllCaps="false"
         android:textColor="@color/action_label" />
 
-    <Button
-        android:id="@+id/disableServiceButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/shield_disable_service" />
-
-    <Button
-        android:id="@+id/overlayAppInfoButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/shield_app_info" />
-
-    <Button
-        android:id="@+id/homeButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"
-        android:text="@string/shield_home" />
-
 </LinearLayout>
+</ScrollView>

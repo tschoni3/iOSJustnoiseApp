@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -36,7 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -44,16 +41,12 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -143,10 +136,6 @@ fun IntegratedScheduleSurface(
     }
     var deleting by remember { mutableStateOf<StoredSchedule?>(null) }
     val mayDismissEditor by rememberUpdatedState(!state.saving)
-    val editorSheet = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden || mayDismissEditor },
-    )
     MaterialTheme(colorScheme = lightColorScheme(
         primary = Color.Black, onPrimary = Color.White, secondary = Color.Black,
         surface = Color.White, onSurface = Color.Black, background = ScheduleBackground,
@@ -192,7 +181,6 @@ fun IntegratedScheduleSurface(
                         snapshot == null || (state.loading && snapshot.error) -> item { CircularProgressIndicator() }
                         snapshot.error -> item { ScheduleNotice("Schedules couldn’t load. Check free storage, then refresh.", isError = true) }
                         else -> {
-                            item { ScheduleSetupCards(snapshot, onOpenSetup, onAlarmAccess) }
                             if (snapshot.schedules.isEmpty()) item {
                                 ScheduleCard {
                                     Text(JustnoiseContract.text("schedule.list.empty"), color = ScheduleSecondary, fontStyle = FontStyle.Italic)
@@ -207,7 +195,7 @@ fun IntegratedScheduleSurface(
                             if (state.loading || state.saving) item { CircularProgressIndicator() }
                         }
                     }
-                    item {
+                    if (snapshot?.error == true || state.mutationUncertain) item {
                         TextButton(onClick = onRefresh, enabled = !state.loading && !state.saving,
                             modifier = Modifier.heightIn(min = 48.dp).testTag("schedules-refresh")) { Text("Refresh") }
                     }
@@ -215,17 +203,11 @@ fun IntegratedScheduleSurface(
             }
         }
         if (state.editor != null) {
-            ModalBottomSheet(
-                onDismissRequest = { if (mayDismissEditor) onCancelEditor() },
-                sheetState = editorSheet,
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            IntegratedStableSheet(
+                mayDismiss = mayDismissEditor, onDismiss = onCancelEditor, tag = "schedule-editor-sheet",
                 containerColor = ScheduleBackground,
-                contentColor = Color.Black,
-                contentWindowInsets = { WindowInsets.safeDrawing },
-                properties = ModalBottomSheetProperties(shouldDismissOnBackPress = mayDismissEditor),
-                dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFC6C6C8)) },
             ) {
-                Column(Modifier.fillMaxWidth().fillMaxHeight(0.94f).imePadding().testTag("schedule-editor-sheet")) {
+                Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onCancelEditor, enabled = !state.saving,
                             modifier = Modifier.heightIn(min = 48.dp).testTag("schedule-cancel")) {
@@ -387,10 +369,6 @@ private fun ScheduleEditorForm(
                         .semantics { contentDescription = "Schedule enabled" })
             }
         }
-        if (snapshot != null && !snapshot.error) ScheduleSetupCards(
-            snapshot, onOpenSetup, onAlarmAccess,
-            alarmRequested = editor.enabled,
-        )
         if (snapshot?.error == true) ScheduleCard {
             Text("Schedules couldn’t load. Your draft is kept; check free storage, then refresh.")
             TextButton(onClick = onRefresh, enabled = !state.loading && !state.saving,
@@ -482,17 +460,13 @@ private fun ScheduleListCard(
                 if (schedule.timing.repeatWeekdays.isNotEmpty()) ScheduleWeekdayDots(schedule.timing.repeatWeekdays)
                 val status = when {
                     !schedule.enabled -> null
-                    snapshot.hasSetupGap(schedule.modeReference) -> "Setup required"
+                    snapshot.modeForReference(schedule.modeReference)?.selectedPackages.isNullOrEmpty() -> "Choose a mode"
                     execution?.pending == null -> "No upcoming start"
                     else -> null
                 }
                 status?.let { Text(it, color = ScheduleSecondary, fontSize = 12.sp, lineHeight = 17.sp) }
                 if (schedule.enabled) execution?.pending?.let { pending ->
-                    Text("Next: ${formatScheduleInstant(pending.epochMilliseconds, pending.zoneId, locale)} · ${pending.zoneId}",
-                        color = ScheduleSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-                }
-                execution?.lastOutcome?.takeUnless { it.code == ScheduleOutcomeCode.STARTED }?.let { outcome ->
-                    Text("Last attempt: ${outcomeLabel(outcome.code)}\n${formatScheduleInstant(outcome.handledAtEpochMilliseconds, ZoneId.systemDefault().id, locale)}",
+                    Text(scheduleNextStartLabel(pending.epochMilliseconds, pending.zoneId, locale),
                         color = ScheduleSecondary, fontSize = 12.sp, lineHeight = 17.sp)
                 }
             }
@@ -569,38 +543,6 @@ private fun ScheduleWeekdayDots(selected: Set<PortableWeekday>) {
 }
 
 @Composable
-private fun ScheduleSetupCards(
-    snapshot: ScheduleManagementSnapshot,
-    onSetup: () -> Unit,
-    onAlarmAccess: () -> Unit,
-    alarmRequested: Boolean = snapshot.schedules.any { it.enabled },
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (!snapshot.consentAccepted) ScheduleCard {
-            Text("Review setup first", fontWeight = FontWeight.SemiBold)
-            Text("Review and accept the current disclosure before creating or changing schedules.")
-            Button(onClick = onSetup, modifier = Modifier.heightIn(min = 48.dp)) { Text("Open setup") }
-        } else {
-            if (alarmRequested && !snapshot.exactAlarmAccess) ScheduleCard {
-                Text("Alarm access required", fontWeight = FontWeight.SemiBold)
-                Text("Allow alarms and reminders for requested start times. Saving a schedule alone does not grant this access.")
-                Button(onClick = onAlarmAccess, modifier = Modifier.heightIn(min = 48.dp)) { Text("Allow alarms & reminders") }
-            }
-            val gaps = buildList {
-                if (!snapshot.zapPaired) add("Pair your Zap so you can stop sessions.")
-                if (!snapshot.accessibilityEnabled) add("Enable Accessibility in setup.")
-                if (snapshot.recoveryRequired || snapshot.suspended) add("Recovery is required before scheduled starts can resume.")
-            }
-            if (gaps.isNotEmpty()) ScheduleCard {
-                Text("Setup needed", fontWeight = FontWeight.SemiBold)
-                gaps.forEach { Text(it) }
-                Button(onClick = onSetup, modifier = Modifier.heightIn(min = 48.dp)) { Text("Open setup") }
-            }
-        }
-    }
-}
-
-@Composable
 private fun ScheduleModeTargets(mode: StoredMode) {
     val count = mode.selectedPackages.size
     Text(if (count == 0) stringResource(R.string.integrated_schedule_mode_no_apps)
@@ -621,14 +563,17 @@ private fun ScheduleCard(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-private fun formatScheduleInstant(epoch: Long, zone: String, locale: Locale): String = try {
+internal fun formatScheduleInstant(epoch: Long, zone: String, locale: Locale): String = try {
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(locale).withZone(ZoneId.of(zone)).format(Instant.ofEpochMilli(epoch))
 } catch (_: Exception) { "Time unavailable" }
 
-private fun scheduleTimingLabel(schedule: StoredSchedule, locale: Locale): String {
+internal fun scheduleNextStartLabel(epoch: Long, zone: String, locale: Locale): String =
+    "Next: ${formatScheduleInstant(epoch, zone, locale)}"
+
+internal fun scheduleTimingLabel(schedule: StoredSchedule, locale: Locale): String {
     schedule.timing.oneTimeEpochMilliseconds?.let {
-        return "Once · ${formatScheduleInstant(it, schedule.creationZoneId, locale)} · ${schedule.creationZoneId}"
+        return "Once · ${formatScheduleInstant(it, schedule.creationZoneId, locale)}"
     }
     val days = PortableWeekday.entries.filter { it in schedule.timing.repeatWeekdays }
         .joinToString(", ") { DayOfWeek.valueOf(it.name).getDisplayName(TextStyle.SHORT, locale) }
@@ -637,22 +582,7 @@ private fun scheduleTimingLabel(schedule: StoredSchedule, locale: Locale): Strin
             LocalTime.of(requireNotNull(schedule.timing.hour), requireNotNull(schedule.timing.minute)),
         )
     }.getOrDefault("Time unavailable")
-    return "$days · $time · device time zone"
-}
-
-private fun outcomeLabel(code: ScheduleOutcomeCode): String = when (code) {
-    ScheduleOutcomeCode.STARTED -> "Session started"
-    ScheduleOutcomeCode.MISSED -> "Missed the start window"
-    ScheduleOutcomeCode.ACTIVE_SESSION -> "Another session was already active"
-    ScheduleOutcomeCode.MODE_UNAVAILABLE -> "Schedule mode unavailable"
-    ScheduleOutcomeCode.EMPTY_SELECTION -> "No apps selected"
-    ScheduleOutcomeCode.TARGET_UNAVAILABLE -> "Selected apps unavailable"
-    ScheduleOutcomeCode.CONSENT_REQUIRED -> "Disclosure acceptance required"
-    ScheduleOutcomeCode.ZAP_REQUIRED -> "Zap pairing required"
-    ScheduleOutcomeCode.CAPABILITY_UNAVAILABLE -> "App blocking needs setup"
-    ScheduleOutcomeCode.EXACT_ALARM_REQUIRED -> "Alarm access required"
-    ScheduleOutcomeCode.RECOVERY_REQUIRED -> "Skipped for recovery"
-    ScheduleOutcomeCode.ACCOUNT_REQUIRED -> "Skipped; sign-in required"
+    return "$days · $time"
 }
 
 private fun previewScheduleSnapshot(schedules: List<StoredSchedule> = emptyList(), executions: List<ScheduleExecution> = emptyList()) =

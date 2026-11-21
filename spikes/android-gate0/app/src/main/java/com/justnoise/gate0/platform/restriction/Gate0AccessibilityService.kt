@@ -123,6 +123,15 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val foregroundPackage = event?.packageName?.toString()?.takeIf(String::isNotBlank)
         val windowChange = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (windowChange && AccessibilitySetupReturn.isPending()) {
+            val stored = preferences.snapshot()
+            AccessibilitySetupReturn.onWindow(this, foregroundPackage,
+                stored.acceptedDisclosureVersion == Gate0Preferences.CURRENT_DISCLOSURE_VERSION &&
+                    stored.acceptedDisclosureEpochMilliseconds > 0L &&
+                    !stored.desiredActive && !stored.recoveryRequired &&
+                    getSystemService(PowerManager::class.java).isInteractive &&
+                    !getSystemService(KeyguardManager::class.java).isKeyguardLocked)
+        }
         val eventClass = if (windowChange) event?.className?.toString() else null
         val ownActivityWindow = windowChange && foregroundPackage == packageName &&
             isVisibleOwnActivity(eventClass)
@@ -281,6 +290,7 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
     }
 
     override fun onInterrupt() {
+        AccessibilitySetupReturn.cancel()
         // Feedback interruption does not unbind the service. Keep stop/withdrawal delivery
         // and heartbeat reconciliation alive, but suspend enforcement until recovery.
         if (::overlayController.isInitialized) overlayController.hide()
@@ -296,11 +306,13 @@ class Gate0AccessibilityService : AccessibilityService(), ScheduledEnforcementEn
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        AccessibilitySetupReturn.cancel()
         shutdownServiceState()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
+        AccessibilitySetupReturn.cancel()
         shutdownServiceState()
         super.onDestroy()
     }

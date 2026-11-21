@@ -4,6 +4,7 @@
     <string name="history_settings">History settings</string>
     <string name="history_ninety_days">90 Days</string>
     <string name="history_year">Year</string>
+    <string name="history_choose_day">Choose day</string>
     <string name="history_zaps">Zaps</string>
     <string name="history_session_time">Session time</string>
     <string name="history_refresh">Refresh</string>

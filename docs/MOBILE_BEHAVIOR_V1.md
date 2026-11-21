@@ -1,5 +1,80 @@
 # Mobile behavior contract v1
 
+iOS registered Zap update (November 21): fresh activation and session controls accept both the original sold Zap labels and the new issuer-signed, encrypted record bound to the UID read from the chip. A registered Zap must contain a single valid credential. The iOS reader verifies signed credentials in UTF-8 or UTF-16 Text records. New station writes use UTF-8 and legacy label matching keeps its original encoding rules. Reading a legacy label alongside a registered credential rejects the scan. The same Zap may activate multiple installations. See [iOS Zap registration](IOS_ZAP_REGISTRATION.md) for issuance, migration, and device acceptance. Android keeps its existing pairing policy.
+
+November 6 language decision (supersedes earlier partial-localization notes):
+iOS and Android ship English app-authored copy only until another language is
+complete across the app. Remove partial German resources and their temporary lint
+exception. Keep localization keys for future complete translations. Do not override
+the device locale or translate user-entered mode names. OS-owned permission dialogs
+and settings continue to follow the device language.
+
+
+Android presentation update (November 5): welcome uses the same personal-benefit
+copy as iOS. The first-session guide uses a black surface, full-frame looping video,
+plain numbered steps (no enclosing card), close action and fixed bottom action.
+English/German resources cover the welcome and guide. Android keeps its native
+setup order, permission consent and unlocked-phone NFC tap-to-start/stop behavior.
+No empty mode presets are seeded; the name field offers example names.
+The Zap purchase link is https://justnoise.shop/pages/the-zap.
+
+
+iOS onboarding update (owner, November 5): new installations follow Welcome →
+Create your first mode → Connect Zap → Sign in/sign up → Home. Mode setup requests
+Screen Time authorization only when the user chooses apps. Save requires a trimmed
+nonempty name, at least one blocking target, approved authorization, and no active
+session. Do not seed preset modes; persist and select the user-created
+mode before marking intro setup complete. Remove legacy presets only when their
+original stable ID/name is unchanged, they have no blocking targets, and no
+schedule or active-session reference exists. Preserve configured/custom modes. Existing completed onboarding
+is not reset. Android onboarding and shared session rules remain unchanged.
+
+Welcome uses “Make space for you.” with a nontechnical personal-benefit subline.
+The guide uses a scrollable video and numbered Tap/Hold/Done steps, with a fixed
+bottom action and a 44-point close button; text supports Dynamic Type.
+The bundled instructional video appears at first Zap activation, not at Welcome.
+Its three short instructions describe tapping the in-app button, holding the top
+of the iPhone against Zap, and waiting for the tone; start/stop use the same gesture.
+The primary action dismisses the video before opening the activation scanner.
+Closing without the primary action does not scan. Scan cancellation/failure leaves
+activation retryable. Settings and the activation screen can replay the guide.
+The mode name starts empty with localized examples (Focus, Sleep, Study, Work);
+existing configured mode names stay unchanged. Welcome, mode setup, activation,
+and the video guide follow the system/app language (English/German, English fallback).
+The video loops until dismissed. Playback controls stay hidden; playback pauses when hidden/backgrounded and resumes
+on foreground return. The basic three-tip Home tour remains removed; the optional
+first-session walkthrough remains available. Notification/tracking timing is unchanged.
+
+Android session shortcuts (owner, October 11): holding the Home Zap artwork starts
+the selected mode without a scan, matching the unchanged iOS gesture. It is start-only,
+requires account access, pairing, valid eligible targets, current disclosure and a
+ready restriction service, and revalidates the same selection before committing.
+Normal taps and NFC entry points retain their existing validation and stop rules.
+Settings provides Emergency Unzap with five installation-owned unlocks, confirmation
+bound to the current session ID, and atomic token consumption with the normal
+stop/completion transaction. Cancel, idle, stale confirmation, exhaustion and failed
+writes consume nothing. Recovery sessions can be released without re-enabling a
+service. Account changes/deletion and disclosure withdrawal do not replenish unlocks;
+uninstall/data-clear starts a new installation. No replenishment is defined.
+Identifier-free cases are in `product/behavior/android-session-shortcuts.v1.json`.
+The shield reuses the Zap artwork as a decorative image, not an unlock action.
+These additions are source behavior, not device acceptance or Play distribution.
+
+Android Zap-label clarification (owner, October 10): initial and replacement
+pairing must recognize the unchanged iOS compatibility label list. Arbitrary
+valid Text records are no longer enough. Matching is exact decoded UTF-8 text,
+without trimming or broad case folding. Android keeps its existing local HMAC
+pairing requirement and strict single-Text envelope. An already paired legacy
+non-recognized tag retains stop-only escape for an existing requested session;
+it cannot start a new one. Identifier-free migration fixtures are in
+`product/behavior/android-zap-labels.v1.json`. This is not anti-cloning protection,
+full iOS provisioning parity or physical-device acceptance. iOS is unchanged.
+
+Android-only onboarding clarification (owner, October 10): mode creation is not a
+first-run prerequisite. After account and blocking setup, Home is accessible with
+an empty mode catalog. A new session still requires an explicitly selected valid
+mode; no automatic default is created. iOS and shared session rules are unchanged.
+
 Android production account-entry clarification (owner, September 9): sign-in or
 registration is required before product access and new manual/NFC/scheduled starts.
 A durably restored signed-in workspace remains usable offline, including expired
@@ -48,7 +123,7 @@ The `targetSelectionValidity` cases in `product/behavior/portable-fixtures.v1.js
 The owner now includes real named modes in the Android internal-test MVP. This
 supersedes the earlier single-selection scope, not the shipped iOS implementation.
 [`android-modes.v1.json`](../product/behavior/android-modes.v1.json), extension
-version 1.0.0, contains framework-neutral examples exercised by Android's real mode
+version 1.0.1, contains framework-neutral examples exercised by Android's real mode
 rules and codec. It adds no iOS edits or claim that the existing iOS MODE-01 gap is
 closed. The original shared fixtures remain unchanged.
 
@@ -57,8 +132,10 @@ closed. The original shared fixtures remain unchanged.
   30 modes. New/edited modes require a nonempty selection. Installed-app eligibility
   remains an Android adapter check, not a string-format rule.
 - Manual/direct Zap starts resolve the last explicitly selected mode. A missing or
-  empty mode fails truthfully; no first-mode fallback. Saving a mode does not select
-  it. A scheduled start resolves its own saved mode ID and never changes the user's
+  empty mode fails truthfully; no first-mode fallback. Owner extension 2026-10-11:
+  creating a mode in the Android UI selects it in the same successful storage
+  transaction. Editing an existing mode leaves selection unchanged. Non-UI saves
+  require an explicit selection request. A scheduled start resolves its own saved mode ID and never changes the user's
   recent selection. Stops do not depend on a current mode lookup.
 - All mode mutations and explicit selection reject an active/requested session or
   recovery state. Committed sessions retain their fixed target snapshot.

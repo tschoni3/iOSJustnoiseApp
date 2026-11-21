@@ -1,5 +1,260 @@
 # Justnoise — local signed release candidate
 
+October 11 Settings cleanup: next local candidate **1.0.13 (15)** groups the main
+screen into Account, Your Zap and Help, with More settings for device/data options.
+Emergency and Now Bar stay directly reachable. Tutorial/contact become compact
+rows; support email fallback appears only after a failed handoff; version is a
+quiet footer. No session/account/permission/storage behavior or iOS changes.
+Physical visual acceptance and distribution of 15 remain pending.
+Local verification: 551 JVM tests / 70 suites, no failures/errors/skips; Release
+build succeeds and lint has zero errors (106 warnings, three hints). The changed
+emulator UI tests compile; no phone instrumentation or tests were performed.
+
+Owner has accepted all three 1.0.12 (14) additions. Its internal Play publication
+and in-place A16 update are recorded in the frozen candidate HANDOFF. Those passed
+checks must not be repeated for this presentation-only Settings cleanup.
+
+October 11 next candidate: **1.0.12 (14)** adds the source-matched Zap image to
+the blocked screen, start-only long press on Home's Zap artwork and Emergency
+Unzap in Settings. Five installation-owned unlocks use confirmation and the
+existing atomic stop/completion path; no token reset on account changes, deletion
+or consent withdrawal. History stays reachable while active so Emergency is not
+hidden. Native settings/recovery remain available; no permissions, iOS edits,
+owner-data clearing or repeated passed phone tests. New-path physical acceptance
+and upload/install remain pending. Published/installed 1.0.11 (13) is unchanged.
+
+Local verification for 1.0.12 (14): 547 JVM tests across 69 suites, no failures,
+errors or skips; release lint has zero errors, 96 warnings and three hints.
+Signed APK/AAB checks, shared contracts, layout and the full pre-device verifier
+pass. New emulator UI checks compile but were not executed on the owner's A16.
+
+October 11 bundled follow-up: **1.0.11 (13)** adds best-effort return after an
+explicit Accessibility setup action, automatic selection of a newly saved UI mode,
+and a clearer typography hierarchy for permission/video guidance. Creation and
+selection share one guarded storage commit; editing preserves selection and never
+starts a session. Return is process-only, once, within two minutes, from recognized
+Settings on an unlocked idle phone with current consent. If Samsung denies launch
+or emits no qualifying event, manual return still advances setup automatically.
+No automatic permission grant, iOS change, data reset or repeated physical tests.
+Published to the existing internal Play track October 11 at 13:45 Europe/Berlin:
+Active, available to internal testers, one version code. At 13:53 the A16 updated
+in place through Play: version 1.0.11 (13), installer com.android.vending. No data
+reset, permission change or passed core-test repeat; new physical acceptance is
+still pending.
+See `evidence/setup-return-mode-selection-2026-10-11.md` and its frozen HANDOFF.
+
+October 11 guided-first-session candidate: **1.0.10 (12)** builds with 532 JVM
+tests / 64 suites, no failures/errors/skips, zero release-lint errors (94 warnings,
+two hints), and verified signed APK/AAB packages. Permission setup has a static
+two-step visual guide and safe shortest-supported Settings routing. Existing
+automatic continuation uses real permission state. Ready, idle Home shows the
+owner's unchanged local video once, with brief mode/Zap instructions and one
+button: Choose a mode, or Got it when a mode is selected. No automatic permission,
+mode/session creation, data clearing or iOS changes. It was published to internal
+testing and installed through Play on the A16 at 13:19/13:21 Europe/Berlin; the
+visual first-run/video acceptance remains pending. See
+`evidence/first-session-guide-2026-10-11.md` and the candidate HANDOFF.
+
+October 11 account UI release: **1.0.9 (11)** builds successfully with 524 JVM
+tests / 62 suites, no release-lint errors (92 warnings, two hints), and verified
+signed APK/AAB packages. Google is the primary account entry; email forms appear
+after choosing email. Accessibility setup copy is shorter, without removing the
+disclosure or manual consent. Distribution/install evidence belongs to the new
+candidate HANDOFF, separately from these local checks. iOS remains unchanged.
+
+The earlier SMTP blocker below is resolved: auth.justnoise.shop is verified,
+Resend delivered the owner's fresh confirmation email, and Supabase recorded
+confirmation. The link was opened on a different device; that does not prove an
+Android PKCE callback or email/password-to-Home acceptance. Owner reports Google
+signup/sign-in works. No owner account, pairing or app data was erased.
+
+October 11 RC1 technical handoff: **1.0.8 (10)** is frozen for final owner testing.
+The new Be Right Back -> Android Home behavior is now owner-reported PASS.
+Curated source snapshot/checksums accompany the signed binaries. No new runtime
+change, upload or repeated core test was needed. Remaining first-run/account and
+historical interruption limits, plus out-of-scope public-distribution blockers,
+are consolidated in `evidence/release-candidate-closure-2026-10-11.md`.
+
+October 11 signed Year overview candidate: **`build/candidates/1.0.8-10-f2f046d2/`**.
+All 365/366 days fit without scrolling; real day details remain available by dot
+or Choose day. Production build, 512 JVM tests / 61 suites, zero-error release
+lint, signed APK/AAB verification, production layout and product contracts pass.
+Owner authorized internal Play publication and A16 Play Store update. See the
+candidate HANDOFF for subsequent distribution/install and visual evidence;
+local checks alone do not prove device acceptance. iOS remains unchanged.
+Published October 11 at 00:30 Europe/Berlin: Play shows Active, available to
+internal testers, one version code. At 00:35, A16 updated through Play to 1.0.8
+(10), installer `com.android.vending`. Existing selected mode/app remain visible.
+At 00:36, the full 2026 grid fits on the A16 without scrolling; tapping October 10
+opens the existing day details. Phone left on Year for owner testing. No data
+clearing, uninstall, permission change or passed core-test repeat. Evidence and
+remaining untested size/date-picker boundaries are recorded in HANDOFF.
+
+October 11 source-only follow-up: Year History is now a non-scrolling 365/366-dot
+overview fitted to the remaining viewport, with a full-size Choose day alternative.
+Ninety-day scrolling, calendar aggregation and stored records are unchanged. This
+is not in the published/installed 1.0.7 (9) snapshot below; a new version code and
+signed bundle are required before the next internal Play update. iOS unchanged.
+Verification: 512 production unit tests / 61 suites pass; production release lint
+has zero errors (93 warnings, two hints). Product contracts and full Android
+pre-device verifier pass. The isolated 365/366-dot rendered check compiles but was
+not run: no emulator is connected. No owner-phone instrumentation or installation.
+
+Latest bundled candidate, October 10: **`build/candidates/1.0.7-9-f95857f5/`**.
+**Be Right Back** targets Android Home without stopping a session. Schedule times
+omit raw zone identifiers; scan/account messages no longer use technical reload,
+NDEF or UTF-8 wording. Account retry is conditional rather than a permanent
+diagnostic control. Real errors and required consent remain. 509 production tests
+/ 60 suites, signed artifact checks, contracts and full Android pre-device checks
+pass; release lint has zero errors, 93 warnings and two hints. iOS unchanged.
+Owner authorized internal Play upload and A16 update. The version-code-8
+intermediate artifact was removed from the release draft before publication;
+never install/publish it. Final distribution/install evidence follows in HANDOFF.
+Published October 10 at 23:48 Europe/Berlin: Play shows Active, **1.0.7 (9) -
+Internal**, Available to internal testers, one included version code. Updated A16
+through Play at 23:49: versionName 1.0.7, versionCode 9, installer
+`com.android.vending`. Existing selected mode/app and schedule are visible; raw
+zone suffix is absent on the real schedule screen. No data deletion or permission
+change. The new Home action still needs one affected physical check; installation
+alone does not establish that behavior. Evidence is in the candidate HANDOFF.
+
+Latest final blocker candidate, October 10: **`build/candidates/1.0.6-7-d2f08d5b/`**.
+Only **Be Right Back** is shown; Help and technical overlay controls are removed.
+Primary navigation, native Home/Back and Settings recovery remain available.
+504 production tests / 58 suites and signed release artifact verification pass;
+product contracts and full Android pre-device checks also pass. Owner authorized
+internal Play upload/update. Published October 10 at 23:22 Europe/Berlin: Play shows
+**Active — 1.0.6 (7) - Internal — Available to internal testers**. Only version 7
+is included; supported device counts are unchanged. Two non-blocking warnings
+concern deobfuscation mapping/native symbols. Proof: candidate
+`play-internal-active.jpg`. After the owner stopped the session, A16 `RFGYC3DYKBR`
+was updated through Play at 23:27 Europe/Berlin: passive package inspection shows
+version 1.0.6 (7), installer `com.android.vending`. Normal idle Home opens with
+the existing selected mode and one app retained. No data reset, permission change,
+new session, intrusive instrumentation or public rollout. The new blocker still
+requires one affected physical visual check; installation is not that evidence.
+The previous `888be688` candidate remains immutable and must not be uploaded.
+
+October 10 source follow-up: the blocker now has only **Be Right Back**, without
+the Help link or technical panel. It still opens Justnoise without ending a
+session; native navigation and recovery in Settings remain available. This change
+is not included in the immutable `1.0.6-7-888be688` snapshot below; a replacement
+signed candidate must be built before uploading it. Product contracts, the full
+Android pre-device tests/lint/build verifier and scoped diff checks pass. iOS is
+unchanged. No phone install or Play upload was performed for this follow-up.
+
+Latest signed local candidate, October 10: **`build/candidates/1.0.6-7-888be688/`**.
+Normal blocker: Keep going and small Need help? action; technical escape controls
+are collapsed behind Help, with native Home/Back unchanged. Includes the iOS-label
+NFC gate described below. 504 production tests / 58 suites pass; lint has zero
+errors, 94 warnings and two hints. Signed APK/AAB artifact verification, contracts
+and full pre-device checks pass. NOT uploaded or installed; Play/A16 remain 1.0.5
+(6). The new blocker/Help and NFC gate require affected physical acceptance.
+
+Bundled NFC follow-up, October 10: initial/replacement NFC pairing now
+requires the unchanged iOS compatibility labels, in addition to Android's exact
+local pairing. Unknown labels cannot start new NFC sessions; an already paired
+legacy label retains stop-only escape. 503 production JVM tests / 58 suites pass
+(including six new NFC regressions); release lint remains zero errors, 94 warnings
+and two hints at that source-only checkpoint. Now included in the signed local
+1.0.6 (7), but NOT in the immutable 1.0.5 (6) candidate or installed Play app.
+See `evidence/nfc-label-parity-2026-10-10.md`; iOS is unchanged.
+
+Latest local delivery, October 10: **`build/candidates/1.0.5-6-c3355e1b/`**.
+Removes mandatory first-mode creation and prevents missing-mode presentation from
+masking revoked Accessibility access. 497 production JVM tests / 57 suites pass;
+release lint has zero errors, 94 warnings and two hints. Signed APK/AAB artifact
+checks, contracts, full pre-device verification and one new isolated rendered UI
+regression pass. Fresh Samsung first-run acceptance and the historical interruption
+trigger remain open. See the new HANDOFF.
+
+**Play internal distribution, October 10 at 20:13 Europe/Berlin:** the exact
+`1.0.5-6-c3355e1b/app-release.aab` was accepted and published through the Codex
+in-app browser. Play shows **Active — Latest release: 1.0.5 (6) - Internal —
+Available to internal testers**. Screenshot: candidate `play-internal-active.jpg`.
+Two non-blocking warnings concern missing deobfuscation/native symbol files;
+supported device counts are unchanged. No public release or tester membership
+change. At 20:18 Europe/Berlin, the connected A16 `RFGYC3DYKBR` was updated
+through its Play Store: passive package inspection confirms versionName 1.0.5,
+versionCode 6, installer `com.android.vending`; screenshot
+`a16-play-update-complete.png` shows Open rather than Update. No uninstall,
+data clearing, permission change or acceptance-test repeat was performed.
+Retention of visible modes/History and fresh onboarding remain to be accepted.
+
+**Play internal distribution, October 10 at 18:07 Europe/Berlin:** the exact
+`1.0.4-5-a0da8b20/app-release.aab` below was accepted and published to the existing
+internal track through the Codex in-app browser. Play shows **Active — Latest
+release: 1.0.4 (5) - Internal — Available to internal testers**. No public release
+or tester membership change. Affected A16 sheet/setup acceptance remains open;
+see the candidate HANDOFF and `play-internal-active.jpg`. The local-build account
+below records the earlier boundary and is superseded only for distribution.
+
+Latest bundled candidate, October 10: **`build/candidates/1.0.4-5-a0da8b20/`**.
+Includes portrait-only phone UI, one stable presentation for all four bottom sheets,
+and guided app-blocking/scheduled-start setup outside the normal product screens.
+Parent-sheet drag is disabled so child scrolling cannot move/rebound the editor;
+Cancel, Back and scrim dismissal remain available, with saving guards preserved.
+Home has no setup/recovery headlines or permanent helper paragraphs. Schedules have
+no setup cards, permanent Refresh button or historical execution diagnostics.
+Missing capability and genuine interruption use a separate guided entry/recovery
+surface; an unconfirmed session is never presented as protected and can still be
+ended with the paired Zap. Permission grants stay manual, prior grants are skipped,
+and optional schedule refusal returns to manual Zap use. History and execution
+records, safety flags and the native session/alarm engines are unchanged.
+489 production JVM tests/56 suites pass with no failures/errors/skips. Release lint
+has 0 errors, 94 warnings and 2 hints; signed APK/AAB, alignment/package checks,
+contracts and the full pre-device verification pass. Updated emulator-only UI
+fixtures compile but were not run. No A16 was connected: new scrolling, onboarding
+and recovery presentation are **not physically verified**. The underlying cause of
+the owner's photographed interruption is also not diagnosed from screenshots.
+No phone data/settings were changed, and nothing was installed or uploaded.
+iOS was untouched, including preservation of the pre-existing Shield source diff.
+This snapshot supersedes the earlier unuploaded 1.0.4 snapshot below; see HANDOFF.
+
+Latest local candidate, October 10: **`build/candidates/1.0.4-5-b0ae7dc6/`**.
+The Accessibility button first attempts direct navigation to Justnoise's service
+switch, with standard Settings fallback if the action is unavailable or denied.
+The disclosure is 47 words with two numbered activation steps. Permission grants
+remain manual; refusal, account/session recovery and automatic continuation on
+return are preserved. 475 production JVM tests, release lint/build, contracts,
+layout and signed artifact checks pass. No connected A16 was available to verify
+Samsung's direct route or rendered layout. This candidate is **not installed or
+uploaded**; the prior 1.0.3 (4) release remains the available internal test version.
+See its HANDOFF for the exact checksums and the single affected phone check.
+
+Previous UX update, October 10: **`build/candidates/1.0.3-4-f2dd0069/`**.
+First-time Android setup now asks for a real saved/selected mode before a concise
+standalone Accessibility disclosure. One affirmative “Agree & open Android Settings”
+action replaces the duplicate checkbox and button; returning with the service
+enabled advances automatically. Declining exits, and active-session/recovery routes
+remain reachable. The AAB is signed with the existing upload key and has SHA-256
+`f2dd00699be94dc55d977795a236a41774e0c07961ebf37b086adede3a53aacd`.
+Production unit tests, release lint and artifact checks passed. This candidate is
+available to internal testers: Play Console confirmed active 1.0.3 (4) on October 10.
+New-screen A16 visual acceptance remains outstanding. The iOS source was not changed by
+this Android work.
+
+Previous local update candidate, October 10: **`build/candidates/1.0.2-3-e2e07c45/`**.
+It removes the duplicate welcome/recovery dialog, presents a focused Android NFC
+scan dialog, reduces repeated activation copy, and requires the separate
+Accessibility disclosure/manual enablement step before an inactive user reaches
+the product screen. Declining setup exits without granting consent; an active
+session or recovery remains accessible. The normal Home no longer carries the
+Accessibility disclosure helper and redundant setup action. Required account
+sign-in remains in place. The existing external upload key signed the APK/AAB;
+no key was regenerated. Production unit tests, release lint, product contracts,
+full Android pre-device verification, and signed artifact checks pass. The AAB
+SHA-256 is `e2e07c4561a84183a0e7c6e9b631e300ea84bef3459d066bcb2a9f4b849dc3f3`.
+Google Play accepted this exact bundle as **1.0.2 (3) – Internal** on October 10;
+the internal track shows it active and available to testers. It has not been
+installed or visually accepted on the A16 yet. The candidate's verifier JSON
+records the earlier build-time boundary, before the Play upload.
+
+Previous internal-track update, October 10: **`build/candidates/1.0.1-2-d561187a/`**.
+This was uploaded to the Play internal track and is the version shown in the
+owner's three October 10 onboarding screenshots. Its local HANDOFF predates that
+upload and therefore describes its status at creation time.
+
 Latest Play-registration candidate, September 20:
 **`build/candidates/1.0.0-1-94741f2a/`**. Google Play reported the earlier planned
 `com.justnoise.app` identity as already in use and confirmed the domain-derived

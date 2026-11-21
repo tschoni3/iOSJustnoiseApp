@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "extensionVersion": "1.0.0",
+  "initialEmergencyUnlocks": 5,
+  "description": "Android equivalents of the unchanged iOS long-press start and installation-owned Emergency Unzap. No NFC authorization bypass for scan entry points.",
+  "longPress": [
+    {"id":"ready-idle", "requested":false, "recovery":false, "account":true, "paired":true, "selection":true, "capability":true, "expected":"start"},
+    {"id":"active-never-toggles", "requested":true, "recovery":false, "account":true, "paired":true, "selection":true, "capability":true, "expected":"noChange"},
+    {"id":"recovery", "requested":false, "recovery":true, "account":true, "paired":true, "selection":true, "capability":true, "expected":"unavailable"},
+    {"id":"signed-out", "requested":false, "recovery":false, "account":false, "paired":true, "selection":true, "capability":true, "expected":"unavailable"},
+    {"id":"unpaired", "requested":false, "recovery":false, "account":true, "paired":false, "selection":true, "capability":true, "expected":"unavailable"},
+    {"id":"no-mode", "requested":false, "recovery":false, "account":true, "paired":true, "selection":false, "capability":true, "expected":"unavailable"},
+    {"id":"service-off", "requested":false, "recovery":false, "account":true, "paired":true, "selection":true, "capability":false, "expected":"unavailable"}
+  ],
+  "emergency": [
+    {"id":"active", "requested":true, "sameSession":true, "remaining":5, "expected":true},
+    {"id":"last-unlock", "requested":true, "sameSession":true, "remaining":1, "expected":true},
+    {"id":"empty", "requested":true, "sameSession":true, "remaining":0, "expected":false},
+    {"id":"idle", "requested":false, "sameSession":true, "remaining":5, "expected":false},
+    {"id":"stale-confirmation", "requested":true, "sameSession":false, "remaining":5, "expected":false}
+  ]
+}

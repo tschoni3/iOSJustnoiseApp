@@ -283,12 +283,45 @@ class StaticPolicyContractTest {
         assertTrue(layout.contains("android:clickable=\"true\""))
         assertTrue(layout.contains("android:backgroundTint=\"@color/action_background\""))
         assertTrue(colors.contains("<color name=\"action_background\">#FFFFFF</color>"))
-        assertTrue(strings.contains("<string name=\"shield_open_justnoise\">Keep going</string>"))
+        assertTrue(strings.contains("<string name=\"shield_open_justnoise\">Be Right Back</string>"))
         assertTrue(extractionRules.contains("<cloud-backup>"))
         assertTrue(extractionRules.contains("<device-transfer>"))
         assertTrue(extractionRules.contains("domain=\"sharedpref\" path=\".\""))
         assertTrue(resolver.contains("\"com.android.vending\""))
         assertTrue(resolver.contains("\"com.sec.android.app.samsungapps\""))
+    }
+
+    @Test
+    fun `blocker has one primary action and recovery remains outside the overlay`() {
+        val android = "http://schemas.android.com/apk/res/android"
+        val document = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+            .newDocumentBuilder().parse(file("app/src/main/res/layout/overlay_blocked.xml"))
+        val nodes = document.getElementsByTagName("*")
+        val elements = (0 until nodes.length).map { nodes.item(it) as Element }
+        val buttons = elements.filter { it.tagName == "Button" }
+        assertEquals(1, buttons.size)
+        val primary = buttons.single()
+        assertEquals("@+id/openJustnoiseButton", primary.getAttributeNS(android, "id"))
+        assertEquals("56dp", primary.getAttributeNS(android, "layout_height"))
+        assertEquals("false", primary.getAttributeNS(android, "textAllCaps"))
+        assertEquals("LinearLayout", (primary.parentNode as Element).tagName)
+        assertEquals("ScrollView", document.documentElement.tagName)
+        assertEquals("true", document.documentElement.getAttributeNS(android, "fillViewport"))
+        val artwork = elements.single { it.tagName == "ImageView" }
+        assertEquals("@drawable/zap_button", artwork.getAttributeNS(android, "src"))
+        assertEquals("no", artwork.getAttributeNS(android, "importantForAccessibility"))
+        val source = file("app/src/main/java/com/justnoise/gate0/platform/restriction/OverlayController.kt").readText()
+        assertTrue(source.contains("openAfterHiding(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))"))
+        assertFalse(source.contains("MainActivity::class.java"))
+        assertFalse(source.contains("StopRequested"))
+        assertFalse(source.contains("SessionEngine"))
+        assertFalse(source.contains("overlayHelpButton"))
+        val setup = file("app/src/main/java/com/justnoise/gate0/app/MainActivity.kt").readText()
+        assertTrue(setup.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS"))
+        val settingsHost = File(repositoryRoot,
+            "spikes/android-integrated/app/src/main/java/com/justnoise/integrated/MainActivity.kt").readText()
+        assertTrue(settingsHost.contains("onOpenAppInfo = ::openAppInfo"))
+        assertTrue(settingsHost.contains("Settings.ACTION_APPLICATION_DETAILS_SETTINGS"))
     }
 
     @Test
@@ -361,10 +394,10 @@ class StaticPolicyContractTest {
         )
         assertTrue(
             source.contains(
-                "override fun onUnbind(intent: Intent?): Boolean {\n        shutdownServiceState()",
+                "override fun onUnbind(intent: Intent?): Boolean {\n        AccessibilitySetupReturn.cancel()\n        shutdownServiceState()",
             ),
         )
-        assertTrue(source.contains("override fun onDestroy() {\n        shutdownServiceState()"))
+        assertTrue(source.contains("override fun onDestroy() {\n        AccessibilitySetupReturn.cancel()\n        shutdownServiceState()"))
     }
 
     @Test

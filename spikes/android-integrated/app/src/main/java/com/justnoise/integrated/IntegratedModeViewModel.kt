@@ -151,7 +151,7 @@ class IntegratedModeViewModel internal constructor(
         mutate { token -> management.save(token, editor.id, editor.name, packages) }
     }
 
-    /** Only an explicit row action changes the remembered mode; Save never selects implicitly. */
+    /** Rows select existing modes. Creating a mode selects it in the same durable save. */
     @MainThread
     fun select(id: String) {
         if (closed || !state.canMutate || state.editor != null) return

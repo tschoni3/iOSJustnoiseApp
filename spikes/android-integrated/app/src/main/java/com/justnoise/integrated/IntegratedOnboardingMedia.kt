@@ -49,6 +49,7 @@ internal fun IntegratedOnboardingMedia(
     isActive: Boolean,
     description: String,
     modifier: Modifier = Modifier,
+    unavailableCopyResource: Int = R.string.first_run_video_unavailable,
 ) {
     val context = LocalContext.current
     val lifecycle = (LocalActivity.current as? LifecycleOwner)?.lifecycle
@@ -98,7 +99,7 @@ internal fun IntegratedOnboardingMedia(
     ) {
         if (unavailable) {
             Text(
-                stringResource(R.string.first_run_video_unavailable),
+                stringResource(unavailableCopyResource),
                 color = Color(0xFF98989D), fontSize = 15.sp, textAlign = TextAlign.Center,
                 modifier = Modifier.padding(24.dp),
             )

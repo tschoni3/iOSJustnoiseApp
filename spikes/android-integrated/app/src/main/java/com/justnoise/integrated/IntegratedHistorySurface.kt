@@ -1,5 +1,6 @@
 package com.justnoise.integrated
 
+import android.app.DatePickerDialog
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -41,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +57,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -68,6 +74,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
@@ -82,6 +90,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 
 private val HistoryDark = Color(0xFF0E0E0D)
@@ -111,16 +120,96 @@ fun IntegratedHistorySurface(
     Surface(Modifier.fillMaxSize().testTag("history-main"), color = Color.White, contentColor = Color.Black) {
         Box(Modifier.background(HistoryDark).windowInsetsPadding(WindowInsets.safeDrawing)) {
             BoxWithConstraints(Modifier.fillMaxSize().background(Color.White)) {
-                val scrollingHeader = maxHeight < 680.dp || LocalDensity.current.fontScale >= 1.5f
+                val scrollingHeader = state.window == HistoryWindow.NINETY_DAYS &&
+                    (maxHeight < 680.dp || LocalDensity.current.fontScale >= 1.5f)
                 Column(Modifier.fillMaxSize()) {
                     HistoryToolbar(state.window, onBack, onSelectWindow, onOpenSettings)
                     if (!scrollingHeader) HistorySummary(state)
-                    HistoryCalendar(state, scrollingHeader, onRetry, onSelectDay,
-                        Modifier.fillMaxWidth().weight(1f))
+                    if (state.window == HistoryWindow.YEAR) {
+                        HistoryYearCalendar(state, onRetry, onSelectDay, Modifier.fillMaxWidth().weight(1f))
+                    } else {
+                        HistoryCalendar(state, scrollingHeader, onRetry, onSelectDay,
+                            Modifier.fillMaxWidth().weight(1f))
+                    }
                 }
             }
         }
         state.selectedDay?.let { HistoryDayDialog(it, state.today, onDismissDay) }
+    }
+}
+
+/** A year is an overview, never a scrollable list. A full-size date picker is the
+ * accessible alternative to tapping the deliberately small overview dots. */
+@Composable
+private fun HistoryYearCalendar(state: IntegratedHistoryState, onRetry: () -> Unit,
+                                onSelectDay: (LocalDate) -> Unit, modifier: Modifier) {
+    val context = LocalContext.current
+    val snapshot = state.snapshot
+    Column(modifier.padding(horizontal = 16.dp).testTag("history-calendar")) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(state.today.year.toString(), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = {
+                val initial = state.selectedDate ?: state.today
+                DatePickerDialog(context, { _, year, month, day ->
+                    onSelectDay(LocalDate.of(year, month + 1, day))
+                }, initial.year, initial.monthValue - 1, initial.dayOfMonth).apply {
+                    datePicker.minDate = state.range.startInclusive.atStartOfDay(state.zoneId).toInstant().toEpochMilli()
+                    datePicker.maxDate = state.range.endExclusive.minusDays(1).atStartOfDay(state.zoneId).toInstant().toEpochMilli()
+                }.show()
+            }, enabled = !state.loading && snapshot?.error == false,
+                modifier = Modifier.heightIn(min = 48.dp).testTag("history-year-choose-day"),
+                colors = ButtonDefaults.textButtonColors(contentColor = HistoryDark)) {
+                Text(stringResource(R.string.history_choose_day))
+            }
+        }
+        when {
+            state.loading || snapshot == null -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                val description = stringResource(R.string.history_loading)
+                CircularProgressIndicator(Modifier.size(32.dp).semantics { contentDescription = description }, color = HistoryDark)
+            }
+            snapshot.error -> Box(Modifier.fillMaxWidth().weight(1f)) {
+                HistoryNotice(stringResource(R.string.history_error_title), stringResource(R.string.history_error_body), onRetry)
+            }
+            else -> {
+                HistoryYearDots(snapshot.days, state.today, state.selectedDate, onSelectDay,
+                    Modifier.fillMaxWidth().weight(1f))
+                val (left, percent) = IntegratedHistoryGridRules.yearProgress(state.today)
+                Text(stringResource(R.string.history_year_progress, left, percent), color = HistoryBody,
+                    fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryYearDots(days: List<HistoryDaySummary>, today: LocalDate, selected: LocalDate?,
+                            onSelectDay: (LocalDate) -> Unit, modifier: Modifier) {
+    BoxWithConstraints(modifier.testTag("history-year-dots"), contentAlignment = Alignment.Center) {
+        val layout = remember(days.size, maxWidth, maxHeight) {
+            IntegratedHistoryGridRules.yearLayout(days.size, maxWidth.value, maxHeight.value)
+        }
+        val cell = with(LocalDensity.current) { floor(layout.cellSizeDp.dp.toPx()).toInt().toDp() }
+        val configuration = LocalViewConfiguration.current
+        val preciseDotTargets = remember(configuration) {
+            object : ViewConfiguration by configuration {
+                override val minimumTouchTargetSize = DpSize.Zero
+            }
+        }
+        // Avoid overlapping expanded touch areas. Choose day above stays >=48dp.
+        CompositionLocalProvider(LocalViewConfiguration provides preciseDotTargets) {
+            Column(Modifier.width(cell * layout.columns).height(cell * layout.rows)) {
+                repeat(layout.rows) { row ->
+                    Row {
+                        val start = row * layout.columns
+                        days.subList(start, minOf(start + layout.columns, days.size)).forEach { day ->
+                            HistoryDay(day, today, selected == day.date, onSelectDay,
+                                compactSize = cell, dotPadding = cell * .1f)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -257,14 +346,6 @@ private fun HistoryCalendar(state: IntegratedHistoryState, scrollingHeader: Bool
                     if (snapshot.totalCount == 0) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                         HistoryNotice(stringResource(R.string.history_empty_title), stringResource(R.string.history_empty_body))
                     }
-                    if (state.window == HistoryWindow.YEAR) item(span = { GridItemSpan(maxLineSpan) }, key = "year-progress") {
-                        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (state.window == HistoryWindow.YEAR) {
-                                val (left, percent) = IntegratedHistoryGridRules.yearProgress(state.today)
-                                Text(stringResource(R.string.history_year_progress, left, percent), color = HistoryBody, fontSize = 13.sp)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -273,7 +354,9 @@ private fun HistoryCalendar(state: IntegratedHistoryState, scrollingHeader: Bool
 
 @Composable
 private fun HistoryDay(day: HistoryDaySummary, today: LocalDate, isSelected: Boolean,
-                       onSelect: (LocalDate) -> Unit) {
+                       onSelect: (LocalDate) -> Unit,
+                       modifier: Modifier = Modifier, compactSize: Dp? = null,
+                       dotPadding: Dp = 0.dp) {
     val locale = LocalLocale.current.platformLocale
     val formatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale) }
     val label = listOfNotNull(formatter.format(day.date),
@@ -283,12 +366,14 @@ private fun HistoryDay(day: HistoryDaySummary, today: LocalDate, isSelected: Boo
         pluralStringResource(R.plurals.history_day_sessions, day.sessionCount, day.sessionCount)).joinToString(". ")
     val density = PortableHistoryRules.density(day.durationMilliseconds / 1_000.0)
     val fill = if (day.date == today) HistoryOrange else JustnoiseContract.color("history.dot.${density.contractValue}")
-    Box(Modifier.heightIn(min = 48.dp).aspectRatio(1f).testTag("history-day-${day.date}")
+    val target = if (compactSize == null) modifier.heightIn(min = 48.dp).aspectRatio(1f)
+        else modifier.size(compactSize)
+    Box(target.testTag("history-day-${day.date}")
         .clickable(role = Role.Button) { onSelect(day.date) }
         .semantics { contentDescription = label; selected = isSelected; role = Role.Button },
         contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxSize().clip(CircleShape).background(fill)
-            .then(if (isSelected) Modifier.border(3.dp, HistoryOrange, CircleShape) else Modifier))
+        Box(Modifier.fillMaxSize().padding(dotPadding).clip(CircleShape).background(fill)
+            .then(if (isSelected) Modifier.border(minOf(3.dp, dotPadding.takeIf { it > 0.dp } ?: 3.dp), HistoryOrange, CircleShape) else Modifier))
     }
 }
 
@@ -354,4 +439,14 @@ private fun HistoryErrorPreview() {
 @Composable
 private fun HistoryLoadingPreview() {
     JustnoiseIntegratedTheme { IntegratedHistorySurface(IntegratedHistoryState(loading = true), {}, {}, {}, {}, {}) }
+}
+
+@Preview(name = "Whole year — 366 dots", widthDp = 384, heightDp = 832)
+@Preview(name = "Whole year — compact large text", widthDp = 360, heightDp = 640, fontScale = 2f)
+@Composable
+private fun HistoryYearPreview() {
+    val state = IntegratedHistoryState(window = HistoryWindow.YEAR, today = LocalDate.of(2028, 10, 11))
+    val snapshot = SessionHistoryTimelineSnapshot(state.range,
+        List(state.range.dayCount) { HistoryDaySummary(state.range.startInclusive.plusDays(it.toLong())) })
+    JustnoiseIntegratedTheme { IntegratedHistorySurface(state.copy(snapshot = snapshot), {}, {}, {}, {}, {}) }
 }

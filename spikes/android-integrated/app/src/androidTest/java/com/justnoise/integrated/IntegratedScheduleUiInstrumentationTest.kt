@@ -164,8 +164,8 @@ class IntegratedScheduleUiInstrumentationTest {
         }
         render(IntegratedScheduleState(snapshot = readySnapshot().copy(consentAccepted = false)))
         compose.onNodeWithTag("schedules-add").assertIsNotEnabled()
-        compose.onNodeWithText("Open setup").performScrollTo().performClick()
-        assertEvents("setup")
+        compose.onNodeWithText("Open setup").assertDoesNotExist()
+        assertEvents()
         render(IntegratedScheduleState(snapshot = readySnapshot().copy(error = true)))
         compose.onNodeWithTag("schedules-add").assertIsNotEnabled()
         // At compact/large text this lazy item may not be composed yet.

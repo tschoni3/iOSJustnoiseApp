@@ -31,6 +31,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
@@ -62,6 +64,7 @@ class IntegratedZapUiInstrumentationTest {
     private var scenario: ActivityScenario<MainActivity>? = null
     private var renderedState by mutableStateOf(IntegratedZapState(truth = Gate0Truth.IDLE))
     private var compactEnlarged by mutableStateOf(false)
+    private var blockingEnabled by mutableStateOf(true)
     private val events = mutableListOf<String>()
 
     @Before
@@ -82,7 +85,22 @@ class IntegratedZapUiInstrumentationTest {
                             Box(if (compactEnlarged) {
                                 Modifier.widthIn(max = 360.dp).heightIn(max = 640.dp)
                             } else Modifier.fillMaxSize()) {
-                                IntegratedZapSurface(
+                                if (IntegratedProductEntryRules.needsRecovery(renderedState.truth,
+                                        renderedState.desiredActive, false, false, false)) {
+                                    IntegratedRecoverySurface(renderedState.desiredActive, false, false,
+                                        renderedState.truth == Gate0Truth.CONSENT_REQUIRED,
+                                        renderedState.transientStatus, renderedState.isScanning,
+                                        onRestore = { events += "setup" }, onStop = { events += "zap" },
+                                        onCancelScan = { events += "cancel-scan" }, onHelp = { events += "help" })
+                                } else if (IntegratedProductEntryRules.needsBlocking(renderedState.truth,
+                                        renderedState.truth != Gate0Truth.CONSENT_REQUIRED, blockingEnabled)) {
+                                    IntegratedAccessibilitySetupSurface(
+                                        renderedState.truth != Gate0Truth.CONSENT_REQUIRED, null,
+                                        { events += "setup" }, { events += "exit" }, true)
+                                } else if (renderedState.truth == Gate0Truth.ZAP_REQUIRED) {
+                                    IntegratedActivationSurface(false, false, null, { events += "zap" }, {}, {},
+                                        onPurchaseZap = {})
+                                } else IntegratedZapSurface(
                                     state = renderedState,
                                     onZap = { events += "zap" },
                                     onOpenSetup = { events += "setup" },
@@ -90,6 +108,7 @@ class IntegratedZapUiInstrumentationTest {
                                     onOpenSchedules = { events += "schedules" },
                                     onOpenSelection = { events += "selection" },
                                     onCancelScan = { events += "cancel-scan" },
+                                    onLongPressZap = { events += "long-start" },
                                 )
                             }
                         }
@@ -100,10 +119,35 @@ class IntegratedZapUiInstrumentationTest {
         compose.waitForIdle()
     }
 
+    @Test fun longPressIsOneStartActionWithoutOpeningScannerAndNeverStopsActiveSession() {
+        compose.onNodeWithTag("zap-artwork").performTouchInput { longClick() }
+        compose.runOnIdle { assertEquals(listOf("long-start"), events); events.clear()
+            renderedState = IntegratedZapState(truth = Gate0Truth.ACTIVE, desiredActive = true) }
+        compose.onNodeWithTag("zap-artwork").performTouchInput { longClick() }
+        compose.runOnIdle { assertEquals(emptyList<String>(), events) }
+        compose.onNodeWithTag("zap-artwork").performClick()
+        compose.runOnIdle { assertEquals(listOf("zap"), events) }
+    }
+
     @After
     fun closeOnlyTheHostLaunchedAfterTheGuard() {
         scenario?.close()
         scenario = null
+    }
+
+    @Test
+    fun revokedBlockingWithNoModeReplacesHomeAndRestoringAccessReturnsToHome() {
+        render(IntegratedZapState(truth = Gate0Truth.TARGET_REQUIRED))
+        compose.onNodeWithTag("zap-main").assertIsDisplayed()
+        compose.runOnIdle { blockingEnabled = false }
+        compose.onNodeWithTag("zap-main").assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.first_run_blocking_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.first_run_open_android_settings))
+            .performClick()
+        assertEquals(listOf("setup"), events)
+        compose.runOnIdle { blockingEnabled = true }
+        compose.onNodeWithTag("zap-main").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.first_run_blocking_title)).assertDoesNotExist()
     }
 
     @Test
@@ -127,48 +171,48 @@ class IntegratedZapUiInstrumentationTest {
     }
 
     @Test
-    fun activeShowsElapsedTimeAndStopWithHelpButNoEditableSelectionOrIdleNavigation() {
+    fun activeShowsElapsedTimeStopAndHistoryForEmergencyWithoutSetupHelp() {
         render(activeState())
         compose.onNodeWithText(JustnoiseContract.text("zap.active.title")).assertIsDisplayed()
         compose.onNodeWithText(ELAPSED).assertIsDisplayed()
         compose.onNodeWithTag("zap-selection").assertDoesNotExist()
         compose.onNodeWithContentDescription(text(R.string.zap_schedules_accessibility)).assertDoesNotExist()
-        compose.onNodeWithContentDescription(text(R.string.zap_history_accessibility)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(text(R.string.zap_history_accessibility))
+            .assertIsDisplayed().assertHasClickAction().performClick()
         compose.onNodeWithText(JustnoiseContract.text("zap.active.action.stop"))
             .inView().assertIsEnabled().performClick()
-        compose.onNodeWithText(text(R.string.zap_session_help))
-            .inView().assertHasClickAction().performClick()
-        assertEvents("zap", "setup")
+        compose.onNodeWithText(text(R.string.zap_session_help)).assertDoesNotExist()
+        assertEvents("history", "zap")
         captureZapEvidence("fixture-zap-active")
     }
 
     @Test
-    fun recoveryWithRequestedSessionOffersOnlyStopAndHelpWithoutActivePresentation() {
+    fun recoveryWithRequestedSessionIsOutsideZapAndRetainsStopAndReconnect() {
         render(activeState().copy(truth = Gate0Truth.RECOVERY_REQUIRED))
         assertNoActivePresentation()
-        compose.onNodeWithText(text(R.string.zap_recovery_title)).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.zap_recovery_subtitle)).assertIsDisplayed()
+        compose.onNodeWithTag("zap-main").assertDoesNotExist()
+        compose.onNodeWithTag("guided-recovery").assertIsDisplayed()
         compose.onNodeWithTag("zap-selection").assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.zap_recovery_needed)).inView()
-        compose.onNodeWithText("Scan Zap to stop").inView().performClick()
-        compose.onNodeWithText(text(R.string.zap_session_help)).inView().performClick()
+        compose.onNodeWithText(text(R.string.first_run_recovery_stop_body)).inView()
+        compose.onNodeWithText(text(R.string.first_run_end_session)).inView().performClick()
+        compose.onNodeWithText(text(R.string.first_run_restore_blocking)).inView().performClick()
         assertEvents("zap", "setup")
         captureZapEvidence("fixture-zap-recovery-requested-lower-actions")
     }
 
     @Test
-    fun idleRecoveryExplainsUncertaintyAndOffersSetupInsteadOfAStart() {
+    fun idleRecoveryGuidesReconnectOutsideTheProductInsteadOfOfferingAStart() {
         render(IntegratedZapState(truth = Gate0Truth.RECOVERY_REQUIRED, elapsedText = ELAPSED))
         assertNoActivePresentation()
-        compose.onNodeWithTag("zap-artwork").assertContentDescriptionEquals("Open setup")
+        compose.onNodeWithTag("zap-main").assertDoesNotExist()
         compose.onNodeWithText("Scan Zap to start").assertDoesNotExist()
-        compose.onNodeWithText(text(R.string.zap_recovery_needed)).inView()
-        compose.onAllNodesWithText(text(R.string.zap_open_setup))[0].inView().performClick()
+        compose.onNodeWithText(text(R.string.first_run_reconnect_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.first_run_restore_blocking)).inView().performClick()
         assertEvents("setup")
     }
 
     @Test
-    fun everySetupGapRetainsItsExplanationAndCannotPresentProtectionWithAnOldDesiredFlag() {
+    fun setupAndUnconfirmedSessionsNeverShowTechnicalHelpersInTheProduct() {
         val notices = mapOf(
             Gate0Truth.CONSENT_REQUIRED to R.string.zap_consent_needed,
             Gate0Truth.TARGET_REQUIRED to R.string.zap_selection_needed,
@@ -179,11 +223,18 @@ class IntegratedZapUiInstrumentationTest {
             listOf(false, true).forEach { desired ->
                 render(IntegratedZapState(truth = truth, desiredActive = desired, elapsedText = ELAPSED))
                 assertNoActivePresentation()
-                compose.onNodeWithTag("zap-artwork").assertContentDescriptionEquals("Open setup")
-                compose.onNodeWithText(text(notice)).inView()
-                val help = if (desired) R.string.zap_session_help else R.string.zap_open_setup
-                compose.onAllNodesWithText(text(help))[0].inView().performClick()
-                assertEvents("setup")
+                compose.onNodeWithText(text(notice)).assertDoesNotExist()
+                if (desired) {
+                    compose.onNodeWithTag("zap-main").assertDoesNotExist()
+                    compose.onNodeWithText(text(R.string.first_run_end_session)).inView().performClick()
+                    assertEvents("zap")
+                } else if (truth == Gate0Truth.TARGET_REQUIRED) {
+                    compose.onNodeWithTag("zap-selection").inView().performClick()
+                    assertEvents("selection")
+                } else {
+                    compose.onNodeWithTag("zap-main").assertDoesNotExist()
+                    assertEvents()
+                }
             }
         }
     }
@@ -196,13 +247,15 @@ class IntegratedZapUiInstrumentationTest {
             activeState().copy(truth = Gate0Truth.RECOVERY_REQUIRED),
         ).forEach { state ->
             render(state.copy(isScanning = true, transientStatus = SCAN_NOTICE))
-            compose.onNodeWithTag("zap-artwork").inView()
+            if (state.truth != Gate0Truth.RECOVERY_REQUIRED) compose.onNodeWithTag("zap-artwork").inView()
                 .assertContentDescriptionEquals("Hold Zap near phone").assertIsNotEnabled()
-            compose.onNodeWithText(SCAN_NOTICE).inView()
+            compose.onNodeWithText(SCAN_NOTICE).assertDoesNotExist()
             compose.onNodeWithText(text(R.string.zap_cancel_scan)).inView()
                 .assertHasClickAction().assertIsEnabled().performClick()
             compose.onNodeWithText(JustnoiseContract.text("zap.active.action.stop")).assertDoesNotExist()
             assertEvents("cancel-scan")
+            render(state.copy(transientStatus = SCAN_NOTICE))
+            compose.onNodeWithText(SCAN_NOTICE).inView()
         }
     }
 
@@ -211,8 +264,8 @@ class IntegratedZapUiInstrumentationTest {
         compose.runOnIdle { compactEnlarged = true }
         render(activeState().copy(truth = Gate0Truth.RECOVERY_REQUIRED))
         assertNoActivePresentation()
-        compose.onNodeWithText("Scan Zap to stop").inView().performClick()
-        compose.onNodeWithText(text(R.string.zap_session_help)).inView().performClick()
+        compose.onNodeWithText(text(R.string.first_run_end_session)).inView().performClick()
+        compose.onNodeWithText(text(R.string.first_run_restore_blocking)).inView().performClick()
         assertEvents("zap", "setup")
         captureZapEvidence("fixture-zap-compact-360x640-font200-recovery-lower-actions")
 

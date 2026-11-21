@@ -117,7 +117,7 @@ internal class AccountRuntime(
         val token = expected.token ?: return@operation
         val saved = coordinator.deferLocalImport(token)
         publish(coordinator.restore())
-        if (!saved) mutableState.value = mutableState.value.copy(message = "This data choice could not be saved. Reload account state and try again.")
+        if (!saved) mutableState.value = mutableState.value.copy(message = "Your choice could not be saved. Tap Try again.")
     }
 
     fun importLocalData(expected: LocalDataImportOffer) = operation {
@@ -130,10 +130,10 @@ internal class AccountRuntime(
             LocalDataImportResult.ACTIVE_SESSION -> "Stop your session with the Zap before importing local data."
             LocalDataImportResult.RECOVERY_REQUIRED -> "Finish app recovery before importing local data."
             LocalDataImportResult.CAPACITY -> "There is not enough mode or schedule capacity to merge everything. Nothing was imported. Free space in your account's lists, then retry."
-            LocalDataImportResult.CONFLICT -> "Your account or data changed. Reload account state and confirm the import again."
+            LocalDataImportResult.CONFLICT -> "Your account or data changed. Tap Try again, then confirm the transfer."
             LocalDataImportResult.HISTORY_CONFLICT -> "A local session conflicts with an existing account record. Nothing was imported or overwritten; both records are kept. Contact support before retrying."
             LocalDataImportResult.UNAVAILABLE -> "These local data are no longer available to import."
-            LocalDataImportResult.STORAGE_FAILED -> "The transfer could not finish. Do not clear app data. Reload account state to retry safely; nothing was reported as completed."
+            LocalDataImportResult.STORAGE_FAILED -> "Your data transfer could not finish. Tap Try again. Your existing data is kept."
         })
     }
     fun recordSession(generation: Long, started: Boolean) = analytics.capture(
@@ -148,7 +148,9 @@ internal class AccountRuntime(
             message = if (saved) null else ANALYTICS_SAVE_FAILURE)
     }
 
-    fun passwordSignIn(email: String, password: String, register: Boolean) = operation {
+    fun passwordSignIn(email: String, password: String, register: Boolean) = operation(
+        failurePage = if (register) AccountPage.REGISTER else AccountPage.SIGN_IN,
+    ) {
         abandonRecoveryNow()
         val snapshot = journal.snapshot()
         require(snapshot.phase == AuthPhase.SIGNED_OUT)
@@ -331,16 +333,18 @@ internal class AccountRuntime(
         }
     }
 
-    private fun operation(enqueue: Boolean = false, action: suspend () -> Unit): Job {
+    private fun operation(enqueue: Boolean = false, failurePage: AccountPage? = null, action: suspend () -> Unit): Job {
         return scope.launch {
             if (enqueue) mutex.lock() else if (!mutex.tryLock()) return@launch
             try {
                 mutableState.value = mutableState.value.copy(busy = true, message = null)
                 action()
-            } catch (_: Exception) {
+            } catch (failure: Exception) {
                 if (!mutableAccess.value.ready) coordinator.denyProductAccess()
-                mutableState.value = mutableState.value.copy(message =
-                    "The request could not be completed. Check your connection or request a new link, then retry. Your offline Zap is unchanged.")
+                mutableState.value = mutableState.value.copy(message = accountRequestFailureMessage(
+                    failurePage ?: mutableState.value.page,
+                    (failure as? AccountProviderException)?.failure,
+                ))
             } finally {
                 mutableState.value = mutableState.value.copy(busy = false, analyticsEnabled = analytics.isEnabled(),
                     canRetryLink = recovery == null && flows.hasPendingClaim())
@@ -350,6 +354,22 @@ internal class AccountRuntime(
     }
 
     companion object {
-        private const val ANALYTICS_SAVE_FAILURE = "Analytics preference could not be saved. Capture stays off for this process. Use Reload account state to retry saving it."
+        private const val ANALYTICS_SAVE_FAILURE = "Your analytics choice could not be saved. Analytics stays off for now. Tap Try again."
     }
+}
+
+/** Customer-facing, operation-specific copy; never render a provider exception. */
+internal fun accountRequestFailureMessage(page: AccountPage, failure: ProviderFailure?): String = when {
+    failure == ProviderFailure.RATE_LIMITED -> "Too many attempts. Please wait a few minutes before trying again."
+    // UNAVAILABLE also includes local secure-storage/SDK failures, not just network.
+    failure == ProviderFailure.UNAVAILABLE -> "Couldn't complete this request. Please try again."
+    page == AccountPage.REGISTER && failure in setOf(ProviderFailure.INVALID_INPUT, ProviderFailure.REJECTED) ->
+        "Couldn't create your account. Check your email and password. If you already have an account, sign in instead."
+    page == AccountPage.REGISTER -> "Account creation is temporarily unavailable. Please try again later."
+    page == AccountPage.SIGN_IN && failure in setOf(ProviderFailure.INVALID_INPUT, ProviderFailure.REJECTED) ->
+        "Couldn't sign in. Check your email and password, or continue with Google."
+    page == AccountPage.SIGN_IN -> "Sign-in is temporarily unavailable. Please try again later."
+    page == AccountPage.RECOVERY -> "Couldn't send the reset email. Please try again later."
+    page == AccountPage.UPDATE_PASSWORD -> "Couldn't update your password. Please try again."
+    else -> "Couldn't complete this action. Please try again."
 }

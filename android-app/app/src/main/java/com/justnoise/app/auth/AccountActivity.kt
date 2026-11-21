@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,10 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -42,7 +45,8 @@ class AccountActivity : ComponentActivity() {
     private var requiredEntry = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        // Fail closed until Compose has identified the visible account surface.
+        setScreenshotProtection(true)
         enableEdgeToEdge()
         requiredEntry = savedInstanceState?.getBoolean("account_required_entry")
             ?: !runtime.access.value.productAllowed
@@ -71,7 +75,7 @@ class AccountActivity : ComponentActivity() {
             AccountSurface(state, runtime::navigate, runtime::passwordSignIn, runtime::requestRecovery,
                 runtime::google, runtime::updatePassword, runtime::signOut, runtime::deleteAccount,
                 runtime::restore, runtime::setAnalytics, runtime::reauthenticate, runtime::retryPendingLink, ::finish,
-                runtime::importLocalData, runtime::deferLocalImport)
+                runtime::importLocalData, runtime::deferLocalImport, ::setScreenshotProtection)
         }
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); receive(intent) }
@@ -91,6 +95,10 @@ class AccountActivity : ComponentActivity() {
             ownedFlow?.let(runtime::abandonRecovery)
         }
         super.onDestroy()
+    }
+    private fun setScreenshotProtection(protected: Boolean) {
+        if (protected) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
     private fun receive(intent: Intent) {
         if (intent.action == Intent.ACTION_VIEW) intent.dataString?.let {
@@ -117,6 +125,7 @@ internal fun AccountSurface(
     onDone: () -> Unit,
     onImportLocal: (LocalDataImportOffer) -> Unit,
     onDeferLocal: (LocalDataImportOffer) -> Unit,
+    onScreenshotProtection: (Boolean) -> Unit,
 ) {
     // Deliberately not rememberSaveable: passwords/drafts never enter Android backups/Bundles.
     var email by remember(state.page) { mutableStateOf("") }
@@ -125,8 +134,14 @@ internal fun AccountSurface(
     var confirmImport by remember { mutableStateOf<LocalDataImportOffer?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmAnalytics by remember { mutableStateOf(false) }
+    var emailFormRequested by remember { mutableStateOf(false) }
     val authForm = state.page != AccountPage.ACCOUNT
-    MaterialTheme(colorScheme = if (authForm) darkColorScheme(primary = Color(0xFF8BC1FF), onPrimary = Color.Black,
+    val showEmailForm = AccountEntryPresentation.showEmailForm(state.page, emailFormRequested)
+    val showPasswordFields = AccountEntryPresentation.showPasswordFields(state.page, emailFormRequested)
+    // Apply before drawing the committed composition; never depend on field focus
+    // or whether a masked password happens to be empty.
+    SideEffect { onScreenshotProtection(showPasswordFields) }
+    MaterialTheme(colorScheme = if (authForm) darkColorScheme(primary = Color.White, onPrimary = Color.Black,
         background = Color(0xFF151515), surface = Color(0xFF252525), onSurface = Color.White)
         else lightColorScheme(primary = Color.Black, onPrimary = Color.White,
             background = Color(0xFFF2F2F7), surface = Color.White)) {
@@ -139,14 +154,8 @@ internal fun AccountSurface(
                 if (authForm) Image(painterResource(R.drawable.justnoise_icon), contentDescription = null,
                     modifier = Modifier.padding(top = 24.dp).size(84.dp).clip(RoundedCornerShape(16.dp))
                         .align(Alignment.CenterHorizontally))
-                Text(when (state.page) {
-                    AccountPage.SIGN_IN -> "Log in to Justnoise"
-                    AccountPage.REGISTER -> "Create your account"
-                    AccountPage.RECOVERY -> "Reset password"
-                    AccountPage.UPDATE_PASSWORD -> "New password"
-                    AccountPage.ACCOUNT -> "Your account"
-                    AccountPage.REAUTHENTICATE -> "Confirm your account"
-                }, modifier = Modifier.fillMaxWidth(), textAlign = if (authForm) TextAlign.Center else TextAlign.Start,
+                Text(AccountEntryPresentation.title(state.page, emailFormRequested),
+                    modifier = Modifier.fillMaxWidth(), textAlign = if (authForm) TextAlign.Center else TextAlign.Start,
                     style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 if (!authForm) Text("Justnoise", style = MaterialTheme.typography.titleMedium)
                 state.message?.let { Text(it, modifier = Modifier.testTag("account-message")
@@ -166,7 +175,7 @@ internal fun AccountSurface(
                         }
                     }
                     if (state.localImport.status == LocalDataImportStatus.ERROR || state.localImport.status == LocalDataImportStatus.PENDING)
-                        Text("Local data transfer needs attention. Reload account state to retry safely. Do not clear app data.")
+                        Text("Your data transfer is not finished. Tap Try again. Your existing data is kept.")
                     Surface(shape = RoundedCornerShape(16.dp)) {
                         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(state.email)
@@ -178,58 +187,77 @@ internal fun AccountSurface(
                         }
                     }
                 } else {
-                    if (state.page != AccountPage.UPDATE_PASSWORD) OutlinedTextField(
-                        value = if (state.reauthenticating) state.email else email,
-                        onValueChange = { email = it }, label = { Text("Email") },
-                        singleLine = true, enabled = !state.busy, readOnly = state.reauthenticating, modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
-                    if (state.page != AccountPage.RECOVERY) {
-                        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") },
-                            visualTransformation = PasswordVisualTransformation(), singleLine = true, enabled = !state.busy,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
-                        if (state.page in setOf(AccountPage.REGISTER, AccountPage.UPDATE_PASSWORD)) {
-                            OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it },
-                                label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(),
-                                singleLine = true, enabled = !state.busy, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                    val passwordValid = password.isNotEmpty() &&
-                        (state.page in setOf(AccountPage.SIGN_IN, AccountPage.REAUTHENTICATE) ||
-                            (password.length >= 8 && password == confirmPassword))
-                    val effectiveEmail = if (state.reauthenticating) state.email else email
-                    Button(colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0066D6), contentColor = Color.White), onClick = {
-                        val submitted = password
-                        password = ""; confirmPassword = ""
-                        when (state.page) {
-                            AccountPage.RECOVERY -> onRecovery(effectiveEmail)
-                            AccountPage.UPDATE_PASSWORD -> onUpdatePassword(submitted)
-                            AccountPage.REAUTHENTICATE -> onReauthenticate(submitted)
-                            else -> onSignIn(email, submitted, state.page == AccountPage.REGISTER)
-                        }
-                    }, enabled = !state.busy && (state.page == AccountPage.RECOVERY && effectiveEmail.isNotBlank() ||
-                        state.page != AccountPage.RECOVERY && passwordValid &&
-                        (state.page == AccountPage.UPDATE_PASSWORD || effectiveEmail.isNotBlank())), modifier = Modifier.fillMaxWidth()) {
-                        Text(when (state.page) {
-                            AccountPage.REGISTER -> "Create account"
-                            AccountPage.RECOVERY -> "Send recovery link"
-                            AccountPage.UPDATE_PASSWORD -> "Save new password"
-                            AccountPage.REAUTHENTICATE -> "Confirm sign-in"
-                            else -> "Sign in"
+                    if (AccountEntryPresentation.showGoogle(state.page)) {
+                        GoogleAccountButton(enabled = !state.busy, onClick = {
+                            password = ""; confirmPassword = ""
+                            onGoogle()
                         })
-                    }
-                    if (state.page in setOf(AccountPage.SIGN_IN, AccountPage.REAUTHENTICATE)) {
-                        OutlinedButton(onClick = onGoogle, enabled = !state.busy,
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White, contentColor = Color.Black),
-                            shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            Text("Continue with Google")
+                        if (showEmailForm) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            HorizontalDivider(Modifier.weight(1f))
+                            Text("or use email", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall)
+                            HorizontalDivider(Modifier.weight(1f))
                         }
-                        if (!state.reauthenticating) TextButton(onClick = { onNavigate(AccountPage.REGISTER) }, enabled = !state.busy) { Text("Create an account") }
-                        TextButton(onClick = { onNavigate(AccountPage.RECOVERY) }, enabled = !state.busy) { Text("Forgot password?") }
                     }
-                    if (state.page != AccountPage.SIGN_IN) TextButton(onClick = {
-                        onNavigate(if (state.reauthenticating) AccountPage.ACCOUNT else AccountPage.SIGN_IN)
-                    }, enabled = !state.busy) { Text(if (state.reauthenticating) "Back to account" else "Back to sign in") }
+                    if (!showEmailForm) {
+                        OutlinedButton(onClick = { emailFormRequested = true }, enabled = !state.busy,
+                            shape = RoundedCornerShape(28.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("account-use-email")) {
+                            Text("Continue with email")
+                        }
+                    } else {
+                        if (state.page != AccountPage.UPDATE_PASSWORD) OutlinedTextField(
+                            value = if (state.reauthenticating) state.email else email,
+                            onValueChange = { email = it }, label = { Text("Email") },
+                            singleLine = true, enabled = !state.busy, readOnly = state.reauthenticating, modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
+                        if (showPasswordFields) {
+                            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") },
+                                visualTransformation = PasswordVisualTransformation(), singleLine = true, enabled = !state.busy,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+                            if (state.page in setOf(AccountPage.REGISTER, AccountPage.UPDATE_PASSWORD)) {
+                                OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it },
+                                    label = { Text("Confirm password") }, visualTransformation = PasswordVisualTransformation(),
+                                    singleLine = true, enabled = !state.busy, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    modifier = Modifier.fillMaxWidth())
+                            }
+                        }
+                        val passwordValid = password.isNotEmpty() &&
+                            (state.page in setOf(AccountPage.SIGN_IN, AccountPage.REAUTHENTICATE) ||
+                                (password.length >= 8 && password == confirmPassword))
+                        val effectiveEmail = if (state.reauthenticating) state.email else email
+                        Button(colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+                            shape = RoundedCornerShape(28.dp), onClick = {
+                            val submitted = password
+                            password = ""; confirmPassword = ""
+                            when (state.page) {
+                                AccountPage.RECOVERY -> onRecovery(effectiveEmail)
+                                AccountPage.UPDATE_PASSWORD -> onUpdatePassword(submitted)
+                                AccountPage.REAUTHENTICATE -> onReauthenticate(submitted)
+                                else -> onSignIn(email, submitted, state.page == AccountPage.REGISTER)
+                            }
+                        }, enabled = !state.busy && (state.page == AccountPage.RECOVERY && effectiveEmail.isNotBlank() ||
+                            state.page != AccountPage.RECOVERY && passwordValid &&
+                            (state.page == AccountPage.UPDATE_PASSWORD || effectiveEmail.isNotBlank())),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("account-email-submit")) {
+                            Text(when (state.page) {
+                                AccountPage.REGISTER -> "Create account"
+                                AccountPage.RECOVERY -> "Send recovery link"
+                                AccountPage.UPDATE_PASSWORD -> "Save new password"
+                                AccountPage.REAUTHENTICATE -> "Confirm sign-in"
+                                else -> "Sign in"
+                            })
+                        }
+                        if (state.page in setOf(AccountPage.SIGN_IN, AccountPage.REAUTHENTICATE)) {
+                            if (!state.reauthenticating) TextButton(onClick = { onNavigate(AccountPage.REGISTER) }, enabled = !state.busy,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("New here? Create an account") }
+                            TextButton(onClick = { onNavigate(AccountPage.RECOVERY) }, enabled = !state.busy) { Text("Forgot password?") }
+                        }
+                        if (state.page != AccountPage.SIGN_IN) TextButton(onClick = {
+                            onNavigate(if (state.reauthenticating) AccountPage.ACCOUNT else AccountPage.SIGN_IN)
+                        }, enabled = !state.busy) { Text(if (state.reauthenticating) "Back to account" else "Back to sign in") }
+                    }
                 }
                 if (state.page == AccountPage.ACCOUNT) Surface(shape = RoundedCornerShape(16.dp)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -242,8 +270,12 @@ internal fun AccountSurface(
                     }
                 }
                 if (state.canRetryLink) TextButton(onClick = onRetryLink, enabled = !state.busy) { Text("Retry received sign-in link") }
-                if (state.page != AccountPage.UPDATE_PASSWORD) TextButton(onClick = onRetry, enabled = !state.busy) { Text("Reload account state") }
-                TextButton(onClick = onDone) { Text(if (state.page == AccountPage.ACCOUNT) "Back to Justnoise" else "Close") }
+                if (!authForm &&
+                    (!state.message.isNullOrBlank() || state.localImport.status in
+                        setOf(LocalDataImportStatus.ERROR, LocalDataImportStatus.PENDING))) {
+                    TextButton(onClick = onRetry, enabled = !state.busy) { Text("Try again") }
+                }
+                if (!authForm) TextButton(onClick = onDone) { Text("Back to Justnoise") }
             }
         }
         confirmImport?.let { offer -> AlertDialog(onDismissRequest = { confirmImport = null },
@@ -262,5 +294,17 @@ internal fun AccountSurface(
             text = { Text("Justnoise sends focus_session_started and focus_session_ended to our existing PostHog service in the US, using a random ID and no account profile. The service receives your network IP address. Turn this off here at any time; account changes and app-process restarts also turn it off. You can choose to enable it again here. Already delivered events cannot be recalled by this switch.") },
             confirmButton = { TextButton(onClick = { confirmAnalytics = false; onAnalytics(true) }) { Text("Allow analytics") } },
             dismissButton = { TextButton(onClick = { confirmAnalytics = false }) { Text("Not now") } })
+    }
+}
+
+/** Official Google light/pill asset, scaled without changing its logo, font or aspect ratio. */
+@Composable
+private fun GoogleAccountButton(enabled: Boolean, onClick: () -> Unit) {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Image(painterResource(R.drawable.google_signin_light), contentDescription = "Sign in with Google",
+            modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth().aspectRatio(4.5f)
+                .heightIn(min = 48.dp).alpha(if (enabled) 1f else 0.45f)
+                .clip(RoundedCornerShape(50)).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                .testTag("account-google"))
     }
 }

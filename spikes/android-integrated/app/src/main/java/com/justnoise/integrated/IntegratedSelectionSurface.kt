@@ -7,20 +7,16 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -28,12 +24,8 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,26 +64,9 @@ fun IntegratedSelectionSheet(
 ) {
     if (!state.visible) return
     val mayDismiss by rememberUpdatedState(!state.saving)
-    val sheet = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden || mayDismiss },
-    )
     var confirmingReload by remember { mutableStateOf(false) }
-    ModalBottomSheet(
-        onDismissRequest = { if (mayDismiss) onDismiss() },
-        sheetState = sheet,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = Color.White,
-        contentColor = Color.Black,
-        contentWindowInsets = { WindowInsets.safeDrawing },
-        // Selection is idle-only and closes if a session starts. Its modal window
-        // needs light icons above the dark Zap scrim, but dark icons below the white sheet.
-        properties = ModalBottomSheetProperties(
-            isAppearanceLightStatusBars = false,
-            isAppearanceLightNavigationBars = true,
-            shouldDismissOnBackPress = mayDismiss,
-        ),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFC6C6C8)) },
+    IntegratedStableSheet(
+        mayDismiss = mayDismiss, onDismiss = onDismiss, tag = "selection-sheet",
     ) {
         SelectionSheetContent(
             state = state,
@@ -99,7 +74,7 @@ fun IntegratedSelectionSheet(
             onSave = onSave,
             onReload = { if (state.hasChanges) confirmingReload = true else onReload() },
             onDismiss = onDismiss,
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.90f).testTag("selection-sheet"),
+            modifier = Modifier.fillMaxSize(),
         )
     }
     if (confirmingReload) {

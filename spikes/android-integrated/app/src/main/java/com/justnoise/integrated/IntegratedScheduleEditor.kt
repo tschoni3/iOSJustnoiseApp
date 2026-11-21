@@ -65,7 +65,7 @@ data class IntegratedScheduleEditor(
             } else {
                 PortableScheduleTimingRules.resolveOneTimeEpochMilliseconds(
                     localDate, hour, minute, zoneId, nowEpochMilliseconds,
-                ) ?: return invalid("Choose a valid future date and time in $zoneId. A daylight-saving gap cannot be used.")
+                ) ?: return invalid("Choose a future date and time that exists on this day.")
             }
             ScheduleTiming(oneTimeEpochMilliseconds = epoch)
         }

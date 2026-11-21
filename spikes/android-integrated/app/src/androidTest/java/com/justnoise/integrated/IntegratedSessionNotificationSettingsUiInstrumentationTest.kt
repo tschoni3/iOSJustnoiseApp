@@ -47,6 +47,7 @@ class IntegratedSessionNotificationSettingsUiInstrumentationTest {
     private var notificationsEnabled by mutableStateOf(false)
     private var enlarged by mutableStateOf(false)
     private var liveUpdateStatus by mutableStateOf(SessionLiveUpdateStatus.UNSUPPORTED)
+    private var page by mutableStateOf(IntegratedSettingsPage.MAIN)
     private val events = mutableListOf<String>()
 
     @Before
@@ -64,7 +65,7 @@ class IntegratedSessionNotificationSettingsUiInstrumentationTest {
                         Box(Modifier.fillMaxSize()) {
                             Box(if (enlarged) Modifier.widthIn(max = 360.dp).heightIn(max = 640.dp) else Modifier.fillMaxSize()) {
                                 IntegratedSettingsSurface(
-                                    page = IntegratedSettingsPage.MAIN,
+                                    page = page,
                                     appVersion = "notification-ui-fixture",
                                     setupSummary = "Setup status fixture",
                                     onDone = { events += "done" },
@@ -147,6 +148,7 @@ class IntegratedSessionNotificationSettingsUiInstrumentationTest {
     }
 
     private fun scrollToNotification() {
+        compose.runOnIdle { page = IntegratedSettingsPage.ADVANCED }
         compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-session-notification"))
     }
 

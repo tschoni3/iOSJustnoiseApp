@@ -1,5 +1,17 @@
 # Android connected-release extension — 2026-09-09
 
+October 11 fresh Play signup diagnosis: both owner signup requests reached the
+shared Auth backend and returned HTTP 500 because Resend rejected the confirmation
+email: the SMTP key's associated domain was not verified. Custom SMTP is enabled
+with smtp.resend.com and sender hello@justnoise.app. This is a shared mail-delivery
+configuration defect, not a proven Android connectivity/password/callback defect.
+Do not disable email confirmation or grant a local session as a workaround.
+Android now maps HTTP 5xx and 429 to sanitized server/rate-limit failures and
+shows operation-specific account errors without requesting a nonexistent link or
+mentioning offline Zap state. Provider response bodies remain private. The shared
+Resend configuration and a real confirmation/sign-in still require completion;
+neither source changes nor mock tests establish working customer registration.
+
 Owner approved Sign-in, PostHog and Samsung Now Bar, then requested implementation.
 This extends the local MVP; it does not make older signed bundles complete, waive
 the Chrome keyboard-window acceptance failure, or authorize upload/distribution.

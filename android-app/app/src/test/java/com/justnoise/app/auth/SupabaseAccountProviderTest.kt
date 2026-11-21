@@ -87,6 +87,28 @@ class SupabaseAccountProviderTest {
         assertFalse(constructed)
     }
 
+    @Test fun signupServerFailureIsSanitizedAndDistinguishedFromRejection() = runBlocking {
+        val result = failure {
+            provider { "{\"error_code\":\"unexpected_failure\",\"msg\":\"private mail-provider credential synthetic@example.invalid\"}" to HttpStatusCode.InternalServerError }
+                .register("synthetic@example.invalid", "synthetic-password", MemoryCodeVerifierCache(),
+                    AuthFlowHandle(A, AuthFlowPurpose.REGISTRATION))
+        }
+        assertEquals(ProviderFailure.SERVER_ERROR, result.failure)
+        assertNull(result.cause)
+        assertFalse(result.toString().contains("credential"))
+        assertFalse(result.toString().contains("example.invalid"))
+    }
+
+    @Test fun signupRateLimitHasItsOwnSafeFailure() = runBlocking {
+        val result = failure {
+            provider { "{\"error_code\":\"over_email_send_rate_limit\",\"msg\":\"private details\"}" to HttpStatusCode.TooManyRequests }
+                .register("synthetic@example.invalid", "synthetic-password", MemoryCodeVerifierCache(),
+                    AuthFlowHandle(A, AuthFlowPurpose.REGISTRATION))
+        }
+        assertEquals(ProviderFailure.RATE_LIMITED, result.failure)
+        assertFalse(result.toString().contains("private details"))
+    }
+
     @Test fun nativeClientCannotAutomaticallyPersistOrRefreshSessions() = runBlocking {
         val engine = MockEngine { error("Construction must not perform network requests") }
         val client = accountSupabaseClient(engine)

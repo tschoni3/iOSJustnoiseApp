@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -78,6 +79,7 @@ data class IntegratedZapState(
     val isScanning: Boolean = false,
     val transientStatus: String? = null,
     val modeName: String? = null,
+    val shortcutBusy: Boolean = false,
 ) {
     val isActive: Boolean get() = truth == Gate0Truth.ACTIVE
     val primaryAction: IntegratedZapAction
@@ -130,6 +132,7 @@ fun IntegratedZapSurface(
     onOpenSchedules: () -> Unit,
     onOpenSelection: () -> Unit,
     onCancelScan: () -> Unit,
+    onLongPressZap: () -> Unit = {},
 ) {
     // Compose respects the system animator duration scale; no independent animation loop.
     val background by animateColorAsState(JustnoiseContract.color(
@@ -150,29 +153,30 @@ fun IntegratedZapSurface(
         ZapToolbar(foreground, showActions = !state.isActive, onOpenSchedules, onOpenHistory)
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
             val flowLayout = maxHeight < 660.dp || LocalDensity.current.fontScale > 1.15f ||
-                state.needsAttention || state.isScanning || state.transientStatus != null
+                state.needsAttention || (state.transientStatus != null && !state.isScanning)
             if (flowLayout) {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     HeroHeader(state, scalable = true)
                     Spacer(Modifier.height(48.dp))
-                    ZapArtwork(state, onZap)
+                    ZapArtwork(state, onZap, onLongPressZap = onLongPressZap)
                     Spacer(Modifier.height(26.dp))
                     SelectionSlot(state, onOpenSelection)
                     Spacer(Modifier.height(32.dp))
-                    ZapActions(state, foreground, onZap, onOpenSetup, onOpenSelection, onCancelScan)
+                    ZapActions(state, foreground, onZap, onOpenSetup)
                 }
             } else {
                 val geometry = integratedZapGeometry(maxHeight.value)
                 HeroHeader(state, scalable = false)
-                ZapArtwork(state, onZap, Modifier.align(Alignment.TopCenter).offset(y = geometry.artworkTop.dp))
+                ZapArtwork(state, onZap, Modifier.align(Alignment.TopCenter).offset(y = geometry.artworkTop.dp), onLongPressZap)
                 SelectionSlot(state, onOpenSelection,
                     Modifier.align(Alignment.TopCenter).offset(y = geometry.selectionTop.dp))
-                ZapActions(state, foreground, onZap, onOpenSetup, onOpenSelection, onCancelScan,
+                ZapActions(state, foreground, onZap, onOpenSetup,
                     Modifier.align(Alignment.BottomCenter))
             }
         }
     }
+    if (state.isScanning) IntegratedNfcScanDialog(onCancelScan)
 }
 
 @Composable
@@ -184,9 +188,10 @@ private fun ZapToolbar(foreground: Color, showActions: Boolean, onSchedules: () 
         if (showActions) {
             ToolbarAction(stringResource(R.string.zap_schedules_accessibility), foreground, false, onSchedules,
                 Modifier.align(Alignment.CenterStart))
-            ToolbarAction(stringResource(R.string.zap_history_accessibility), foreground, true, onHistory,
-                Modifier.align(Alignment.CenterEnd))
         }
+        // History -> Settings -> Emergency Unzap remains reachable during a session.
+        ToolbarAction(stringResource(R.string.zap_history_accessibility), foreground, true, onHistory,
+            Modifier.align(Alignment.CenterEnd))
     }
 }
 
@@ -218,11 +223,9 @@ private fun ToolbarAction(label: String, color: Color, history: Boolean, onClick
 
 @Composable
 private fun HeroHeader(state: IntegratedZapState, scalable: Boolean) {
-    val recovery = state.truth == Gate0Truth.RECOVERY_REQUIRED && state.desiredActive
-    val title = if (recovery) stringResource(R.string.zap_recovery_title) else JustnoiseContract.text(
+    val title = JustnoiseContract.text(
         if (state.isActive) "zap.active.title" else "zap.idle.title")
-    val subtitle = if (recovery) stringResource(R.string.zap_recovery_subtitle)
-        else if (state.isActive) state.elapsedText else JustnoiseContract.text("zap.idle.subtitle")
+    val subtitle = if (state.isActive) state.elapsedText else JustnoiseContract.text("zap.idle.subtitle")
     val foreground = JustnoiseContract.color(if (state.isActive) "text.zap.active.primary" else "text.zap.idle.primary")
     val secondary = integratedZapSubtitleColor(state)
     BoxWithConstraints(Modifier.fillMaxWidth().then(if (scalable) Modifier else Modifier.height(126.dp))
@@ -245,9 +248,13 @@ private fun HeroHeader(state: IntegratedZapState, scalable: Boolean) {
 }
 
 @Composable
-private fun ZapArtwork(state: IntegratedZapState, onZap: () -> Unit, modifier: Modifier = Modifier) {
+private fun ZapArtwork(state: IntegratedZapState, onZap: () -> Unit, modifier: Modifier = Modifier,
+    onLongPressZap: () -> Unit = {}) {
     Box(modifier.size(240.dp).testTag("zap-artwork")
-        .clickable(enabled = !state.isScanning, role = Role.Button, onClickLabel = state.actionLabel, onClick = onZap)
+        .combinedClickable(enabled = !state.isScanning && !state.shortcutBusy, role = Role.Button,
+            onClickLabel = state.actionLabel, onClick = onZap,
+            onLongClickLabel = if (state.truth == Gate0Truth.IDLE) "Start session" else null,
+            onLongClick = { if (!state.desiredActive && !state.isActive) onLongPressZap() })
         .semantics { contentDescription = state.actionLabel }, contentAlignment = Alignment.Center) {
         Image(painterResource(R.drawable.zap_button), null, Modifier.size(220.dp), contentScale = ContentScale.Fit)
     }
@@ -281,42 +288,20 @@ private fun SelectionSlot(state: IntegratedZapState, onOpen: () -> Unit, modifie
 
 @Composable
 private fun ZapActions(state: IntegratedZapState, foreground: Color, onZap: () -> Unit, onSetup: () -> Unit,
-    onSelection: () -> Unit, onCancelScan: () -> Unit, modifier: Modifier = Modifier) {
+    modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(horizontal = 28.dp).padding(bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val notice = state.transientStatus ?: when (state.truth) {
-            Gate0Truth.CONSENT_REQUIRED -> stringResource(R.string.zap_consent_needed)
-            Gate0Truth.TARGET_REQUIRED -> stringResource(R.string.zap_selection_needed)
-            Gate0Truth.ZAP_REQUIRED -> stringResource(R.string.zap_pair_needed)
-            Gate0Truth.PERMISSION_REQUIRED -> stringResource(R.string.zap_permission_needed)
-            Gate0Truth.RECOVERY_REQUIRED -> stringResource(R.string.zap_recovery_needed)
-            else -> null
-        }
+        val notice = if (state.isScanning) null else state.transientStatus
         notice?.let {
             Text(it, color = foreground.copy(alpha = 0.74f), fontSize = 14.sp, lineHeight = 20.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         when {
-            state.isScanning -> TextButton(onClick = onCancelScan) {
-                Text(stringResource(R.string.zap_cancel_scan), color = foreground, fontSize = 16.sp)
-            }
+            state.isScanning -> Unit // The modal owns the only cancel action.
             state.isActive -> Button(onClick = onZap, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                 shape = RoundedCornerShape(30.dp), colors = ButtonDefaults.buttonColors(
                     containerColor = JustnoiseContract.color("action.zap.stop.background"), contentColor = Color.Black)) {
                 Text(JustnoiseContract.text("zap.active.action.stop"), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            }
-            state.needsAttention -> Button(onClick = if (state.canScan) onZap
-                else if (state.truth == Gate0Truth.TARGET_REQUIRED && !state.desiredActive) onSelection else onSetup,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(30.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)) {
-                Text(if (state.truth == Gate0Truth.TARGET_REQUIRED && !state.desiredActive) JustnoiseContract.text("mode.selector.label")
-                    else state.actionLabel, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-        if (state.desiredActive || state.truth == Gate0Truth.TARGET_REQUIRED) {
-            TextButton(onClick = onSetup) {
-                Text(stringResource(if (state.desiredActive) R.string.zap_session_help else R.string.zap_open_setup),
-                    color = foreground.copy(alpha = 0.8f), fontSize = 14.sp)
             }
         }
     }
@@ -332,8 +317,9 @@ private fun IntegratedZapActivePreview() = IntegratedZapPreview(IntegratedZapSta
     selectedAppName = "2 apps", elapsedText = "00:25:00", desiredActive = true, modeName = "Sleep"))
 @Preview(name = "Recovery, enlarged text", widthDp = 360, heightDp = 640, fontScale = 2f)
 @Composable
-private fun IntegratedZapRecoveryPreview() = IntegratedZapPreview(IntegratedZapState(truth = Gate0Truth.RECOVERY_REQUIRED,
-    selectedAppName = "2 apps", desiredActive = true))
+private fun IntegratedZapRecoveryPreview() = JustnoiseIntegratedTheme {
+    IntegratedRecoverySurface(true, false, false, false, null, false, {}, {}, {}, {})
+}
 @Composable
 private fun IntegratedZapPreview(state: IntegratedZapState) = JustnoiseIntegratedTheme {
     IntegratedZapSurface(state, {}, {}, {}, {}, {}, {})

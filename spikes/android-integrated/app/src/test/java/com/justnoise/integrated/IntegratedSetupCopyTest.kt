@@ -33,7 +33,7 @@ class IntegratedSetupCopyTest {
             assertTrue("Disclosure must retain: $it", disclosure.contains(it))
         }
         assertTrue(copy.getValue("consent_checkbox").contains("I understand this disclosure"))
-        assertTrue(copy.getValue("status_consent_required").contains("Nothing is blocked until setup is complete and a session starts"))
+        assertTrue(copy.getValue("status_consent_required").contains("App blocking is off"))
     }
 
     @Test fun normalSetupActionsDoNotUsePrototypeTerminology() {
@@ -45,5 +45,16 @@ class IntegratedSetupCopyTest {
                 assertFalse("$key must not expose $it", value.contains(it))
             }
         }
+    }
+
+    @Test fun scanResultCopyDoesNotExposeProtocolOrImplementationDiagnostics() {
+        val copy = strings()
+        copy.filterKeys { it.startsWith("status_scan_") || it in setOf(
+            "status_pair_success", "status_pair_storage_failed", "status_stopped", "zap_explanation") }
+            .forEach { (key, value) ->
+                listOf("NDEF", "UTF-8", "payload", "overlay", "State did not change").forEach {
+                    assertFalse("$key must not expose $it", value.contains(it))
+                }
+            }
     }
 }

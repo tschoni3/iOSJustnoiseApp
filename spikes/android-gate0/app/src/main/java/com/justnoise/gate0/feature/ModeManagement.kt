@@ -28,7 +28,9 @@ class ModeManagement internal constructor(
     constructor(context: Context, preferences: Gate0Preferences = Gate0Preferences(context)) : this(
         read = preferences::loadModes,
         discover = LauncherAppRepository(context.applicationContext)::load,
-        saveMode = preferences::saveMode,
+        saveMode = { token, id, name, packages ->
+            preferences.saveMode(token, id, name, packages, selectNewMode = id == null)
+        },
         selectMode = preferences::selectMode,
         deleteMode = preferences::deleteMode,
         changed = {

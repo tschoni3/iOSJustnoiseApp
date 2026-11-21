@@ -5,8 +5,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Insets
 import android.graphics.PixelFormat
-import android.net.Uri
-import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -15,7 +13,6 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import com.justnoise.gate0.R
-import com.justnoise.gate0.app.MainActivity
 import com.justnoise.gate0.domain.ShieldMessageRenderer
 
 class OverlayController(
@@ -37,7 +34,7 @@ class OverlayController(
         }
         val view = LayoutInflater.from(service).inflate(R.layout.overlay_blocked, null)
         updateMessage(view, selectedAppDisplayName)
-        wireEscapeRoutes(view)
+        wirePrimaryAction(view)
         view.setOnApplyWindowInsetsListener { _, insets ->
             refreshBounds()
             insets
@@ -106,7 +103,7 @@ class OverlayController(
             setFitInsetsTypes(0)
             layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-            title = "Justnoise Gate 0 blocked surface"
+            title = "Justnoise blocked screen"
         }
     }
 
@@ -120,22 +117,8 @@ class OverlayController(
         }
     }
 
-    private fun wireEscapeRoutes(view: View) {
+    private fun wirePrimaryAction(view: View) {
         view.findViewById<Button>(R.id.openJustnoiseButton).setOnClickListener {
-            openAfterHiding(Intent(service, MainActivity::class.java))
-        }
-        view.findViewById<Button>(R.id.disableServiceButton).setOnClickListener {
-            openAfterHiding(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-        view.findViewById<Button>(R.id.overlayAppInfoButton).setOnClickListener {
-            openAfterHiding(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:${service.packageName}"),
-                ),
-            )
-        }
-        view.findViewById<Button>(R.id.homeButton).setOnClickListener {
             openAfterHiding(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
         }
     }

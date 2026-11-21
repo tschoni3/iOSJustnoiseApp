@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixtureSetVersion": "1.0.0",
+  "fixtureSetVersion": "1.0.1",
   "scope": "android-native-extension",
   "approvedOn": "2026-09-07",
   "description": "Framework-neutral Android named-mode examples. These extend the existing last-explicit-mode and schedule safety intent without changing the shipped iOS app or its existing conformance gaps. Fixture packages and identifiers are synthetic; no NFC payloads appear here.",
@@ -86,11 +86,16 @@
   "adapterObligations": [
     "All mode changes and explicit selection reject requested-active or recovery state.",
     "Create/edit validate currently eligible Android launchable apps; pure target syntax is not installed-app safety evidence.",
-    "Saving a mode does not change the most recent explicit selection. A schedule resolves its own mode and never changes that selection.",
+    "Owner extension 2026-10-11: UI creation selects the new mode atomically after a successful save. Editing an existing mode preserves selection. A schedule resolves its own mode and never changes that selection.",
     "Deleting the recent mode clears the remembered ID and never selects another. Zero modes remain zero; deleted defaults are not recreated.",
     "Migrate legacy data only when no mode catalog exists; empty or dangling saved catalogs never invoke legacy migration.",
     "An active session keeps its fixed target snapshot; stopping remains independent of mode lookup.",
     "Revalidate mode identity/revision, consent and schedule references under the existing shared state lock before commit.",
     "History schema and generic notification content remain unchanged; mode names and target sets are not added to them."
+  ],
+  "creationSelectionCases": [
+    { "id": "ui-create-selects-saved-mode", "creating": true, "selectNewMode": true, "expectedRecent": "saved" },
+    { "id": "non-ui-save-preserves-choice", "creating": true, "selectNewMode": false, "expectedRecent": "existing" },
+    { "id": "editing-other-mode-preserves-choice", "creating": false, "selectNewMode": true, "expectedRecent": "existing" }
   ]
 }

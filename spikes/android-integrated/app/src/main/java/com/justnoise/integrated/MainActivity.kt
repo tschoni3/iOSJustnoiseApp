@@ -42,6 +42,7 @@ import com.justnoise.gate0.platform.nfc.NdefTagReader
 import com.justnoise.gate0.platform.nfc.OneShotScanCoordinator
 import com.justnoise.gate0.platform.nfc.ProcessDirectNfcMutationGate
 import com.justnoise.gate0.platform.notification.SessionNotifications
+import com.justnoise.gate0.platform.restriction.AccessibilityServiceStatus
 import com.justnoise.gate0.platform.schedule.ScheduleAlarmScheduler
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -70,18 +71,32 @@ class MainActivity : ComponentActivity() {
     private var notificationsEnabled by mutableStateOf(false)
     private var liveUpdateStatus by mutableStateOf(SessionLiveUpdateStatus.UNSUPPORTED)
     private var installedVersion = ""
+    private var emergencyUnlocks by mutableStateOf(5)
+    private var emergencySessionId by mutableStateOf<String?>(null)
     private var completionState by mutableStateOf(IntegratedCompletionState())
     private var firstRunRoute by mutableStateOf(IntegratedFirstRunRoute.MAIN)
     private var onboardingPage by mutableStateOf(0)
     private var onboardingSaveBusy by mutableStateOf(false)
     private var onboardingSaveError by mutableStateOf<String?>(null)
     private var initialZapPaired by mutableStateOf(false)
+    private var firstSessionGuideDismissed by mutableStateOf(false)
+    private var showingAccessibilitySetup by mutableStateOf(false)
+    private var showingScheduleSetup by mutableStateOf(false)
+    private var scheduleSetupPending = false
+    private var blockingSetupIsRequired by mutableStateOf(false)
+    private var accessibilityEnabled by mutableStateOf(false)
+    private var disclosureAccepted by mutableStateOf(false)
+    private var accessibilitySetupError by mutableStateOf<String?>(null)
+    private var storageRecoveryRequired by mutableStateOf(false)
+    private var alarmAccessEnabled by mutableStateOf(false)
     private lateinit var schedules: IntegratedScheduleViewModel
     private lateinit var modes: IntegratedModeViewModel
     private lateinit var history: IntegratedHistoryViewModel
     private var scheduleRefreshAt = 0L
     private var accountViewGeneration by mutableStateOf(-1L)
     private var promptedAccountGeneration = -1L
+    private var requiredAccountOpened = false
+    private var requiredAccountHostPaused = false
     private val storageExecutor = Executors.newSingleThreadExecutor()
 
     private val clearTransientStatus = Runnable {
@@ -106,8 +121,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         controller = Gate0Controller(this)
         preferences = Gate0Preferences(this)
-        val initialFacts = firstRunFacts(preferences.snapshot())
+        firstSessionGuideDismissed = getSharedPreferences("justnoise_installation_guidance", MODE_PRIVATE)
+            .getBoolean("first_session_guide_dismissed_v1", false)
+        alarmAccessEnabled = ScheduleAlarmScheduler(this).hasExactAlarmAccess()
+        val initialStored = preferences.snapshot()
+        val initialFacts = firstRunFacts(initialStored)
+        promptedAccountGeneration = savedInstanceState?.getLong(PROMPTED_ACCOUNT_GENERATION_KEY) ?: -1L
+        requiredAccountOpened = savedInstanceState?.getBoolean(REQUIRED_ACCOUNT_OPENED_KEY) ?: false
+        requiredAccountHostPaused = savedInstanceState?.getBoolean(REQUIRED_ACCOUNT_PAUSED_KEY) ?: false
         initialZapPaired = initialFacts.zapPaired
+        val needsBlockingSetup = IntegratedFirstRunRules.needsBlockingSetup(initialFacts,
+            controller.hasAcceptedCurrentDisclosure(), AccessibilityServiceStatus.isEnabled(this))
+        // An old saved first-mode route must not bypass the remaining permission gate.
+        showingAccessibilitySetup = needsBlockingSetup ||
+            savedInstanceState?.getBoolean(ACCESSIBILITY_SETUP_ROUTE_KEY) == true
+        blockingSetupIsRequired = savedInstanceState?.getBoolean(REQUIRED_BLOCKING_SETUP_KEY)
+            ?: needsBlockingSetup
+        showingScheduleSetup = savedInstanceState?.getBoolean(SCHEDULE_SETUP_ROUTE_KEY) ?: false
+        scheduleSetupPending = savedInstanceState?.getBoolean(SCHEDULE_SETUP_PENDING_KEY)
+            ?: blockingSetupIsRequired
         firstRunRoute = IntegratedFirstRunRules.route(
             initialFacts,
             IntegratedFirstRunRoute.entries.firstOrNull {
@@ -178,27 +210,27 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(access.ready, access.signedIn) {
                         maybeOpenRequiredAccount()
                     }
-                    AlertDialog(onDismissRequest = {}, title = { Text(if (access.ready) "Welcome to Justnoise" else "Account recovery") },
-                        text = { Text(if (access.ready) "Sign in or create an account to use Justnoise. An existing session can still be stopped with your Zap."
-                            else "Checking your local account workspace. Your physical Zap can still stop a session.") },
-                        confirmButton = { TextButton(onClick = { accountHost.openAccount(this@MainActivity) }) { Text(if (access.ready) "Sign in / Create account" else "Open account") } },
-                        dismissButton = { TextButton(onClick = {
-                            startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }) { Text("Android recovery settings") } })
+                    IntegratedAccountTransitionSurface()
                     return@JustnoiseIntegratedTheme
                 }
                 LaunchedEffect(modes.state.savedVersion) {
-                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) refreshTruth()
+                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        refreshTruth()
+                    }
                 }
-                BackHandler(enabled = showingHistory || showingSchedules || showingSettings ||
+                BackHandler(enabled = showingAccessibilitySetup || showingScheduleSetup || showingHistory || showingSchedules || showingSettings ||
                     completionState.visibleEntry != null || modes.state.visible || screenState.isScanning ||
                     firstRunRoute == IntegratedFirstRunRoute.ACTIVATION ||
                     (firstRunRoute == IntegratedFirstRunRoute.ONBOARDING && onboardingPage > 0)
                 ) {
                     when {
                         completionState.visibleEntry != null -> completionState = completionState.dismiss()
+                        showingAccessibilitySetup -> deferBlockingSetup()
+                        showingScheduleSetup -> skipScheduleSetup()
                         firstRunRoute == IntegratedFirstRunRoute.ACTIVATION -> {
-                            if (screenState.isScanning) cancelInitialScan() else leaveFirstRun()
+                            if (screenState.isScanning) cancelInitialScan()
+                            else if (initialZapPaired) continueAfterPairing()
+                            else finish()
                         }
                         firstRunRoute == IntegratedFirstRunRoute.ONBOARDING -> {
                             if (!onboardingSaveBusy) onboardingPage = 0
@@ -226,12 +258,56 @@ class MainActivity : ComponentActivity() {
                         status = screenState.transientStatus,
                         onScan = ::beginInitialPairing,
                         onCancelScan = ::cancelInitialScan,
-                        onContinueToSetup = { leaveFirstRun(); openSetup() },
+                        onContinueToSetup = ::continueAfterPairing,
                         continueLabel = if (accountHost != null && access?.productAllowed != true)
                             "Continue to sign in" else null,
-                        onSkip = ::leaveFirstRun,
                         onPurchaseZap = ::openZapStore,
                     )
+                } else if (showingAccessibilitySetup) {
+                    IntegratedAccessibilitySetupSurface(
+                        consentAccepted = disclosureAccepted,
+                        errorMessage = accessibilitySetupError,
+                        onEnable = ::enableAccessibilityFromSetup,
+                        onLater = ::deferBlockingSetup,
+                        exitOnLater = blockingSetupIsRequired,
+                    )
+                } else if (showingScheduleSetup) {
+                    IntegratedScheduleSetupSurface(
+                        errorMessage = accessibilitySetupError,
+                        onEnable = ::enableScheduleAccessFromSetup,
+                        onLater = ::skipScheduleSetup,
+                    )
+                } else if (IntegratedProductEntryRules.needsRecovery(screenState.truth, screenState.desiredActive,
+                        storageRecoveryRequired, showingSchedules, schedules.state.snapshot?.suspended == true) && !showingSettings) {
+                    IntegratedRecoverySurface(
+                        sessionRequested = screenState.desiredActive,
+                        storageRecovery = storageRecoveryRequired,
+                        schedulesOnly = screenState.truth in setOf(Gate0Truth.IDLE, Gate0Truth.TARGET_REQUIRED) &&
+                            !storageRecoveryRequired && !screenState.desiredActive,
+                        consentNeeded = !disclosureAccepted,
+                        errorMessage = accessibilitySetupError ?: screenState.transientStatus,
+                        isScanning = screenState.isScanning,
+                        onRestore = ::restoreFromGuidedRecovery,
+                        onStop = { if (screenState.desiredActive) beginOneShotScan() },
+                        onCancelScan = ::cancelSessionScan,
+                        onHelp = {
+                            if (!launchSupportEmail(getString(R.string.integrated_settings_support_email), ::startActivity))
+                                accessibilitySetupError = getString(R.string.integrated_settings_email_unavailable)
+                        },
+                        blockingEnabled = accessibilityEnabled,
+                        onEmergencySettings = ::openSettings,
+                    )
+                } else if (IntegratedProductEntryRules.needsBlocking(screenState.truth,
+                        disclosureAccepted, accessibilityEnabled) && !showingSettings) {
+                    IntegratedAccessibilitySetupSurface(disclosureAccepted, accessibilitySetupError,
+                        ::enableAccessibilityFromSetup, ::finish, exitOnLater = true)
+                } else if (showingSchedules && !alarmAccessEnabled) {
+                    IntegratedScheduleSetupSurface(accessibilitySetupError,
+                        ::enableScheduleAccessFromSetup, ::skipScheduleSetup)
+                } else if (screenState.truth == Gate0Truth.ZAP_REQUIRED) {
+                    IntegratedActivationSurface(screenState.isScanning, initialZapPaired,
+                        screenState.transientStatus, ::beginInitialPairing, ::cancelInitialScan,
+                        ::continueAfterPairing, onPurchaseZap = ::openZapStore)
                 } else if (showingSettings && tutorialReplayPage != null) {
                     IntegratedOnboardingSurface(
                         page = tutorialReplayPage ?: 0,
@@ -259,10 +335,11 @@ class MainActivity : ComponentActivity() {
                         }),
                         message = settingsMessage,
                         onDone = ::closeSettings,
-                        onBackFromPrivacy = { settingsPage = IntegratedSettingsPage.MAIN },
+                        onBackFromPrivacy = ::backFromSettings,
                         onOpenSetup = ::openSetup,
                         onShowTutorial = { tutorialReplayPage = 0 },
                         onShowPrivacy = { settingsPage = IntegratedSettingsPage.PRIVACY },
+                        onShowMore = { settingsPage = IntegratedSettingsPage.ADVANCED },
                         onReviewLocalData = ::openSetup,
                         onOpenAppInfo = ::openAppInfo,
                         notificationsEnabled = notificationsEnabled,
@@ -270,6 +347,10 @@ class MainActivity : ComponentActivity() {
                         liveUpdateStatus = liveUpdateStatus,
                         onManageLiveUpdates = ::manageLiveUpdates,
                         onOpenAccount = accountHost?.let { { it.openAccount(this@MainActivity) } },
+                        emergencyUnlocks = emergencyUnlocks,
+                        emergencySessionId = emergencySessionId,
+                        emergencyBusy = screenState.shortcutBusy,
+                        onEmergencyUnzap = ::handleEmergencyUnzap,
                         onComposeSupportEmail = {
                             launchSupportEmail(getString(R.string.integrated_settings_support_email), ::startActivity)
                         },
@@ -309,7 +390,17 @@ class MainActivity : ComponentActivity() {
                         onOpenSchedules = ::openSchedules,
                         onOpenSelection = ::openModes,
                         onCancelScan = ::cancelSessionScan,
+                        onLongPressZap = ::handleLongPressZap,
                     )
+                    if (IntegratedFirstSessionGuideRules.shouldShow(firstSessionGuideDismissed,
+                            screenState.truth, screenState.desiredActive, screenState.isScanning,
+                            modes.state.visible || completionState.visibleEntry != null)) {
+                        IntegratedFirstSessionGuide(
+                            needsMode = screenState.truth == Gate0Truth.TARGET_REQUIRED,
+                            onChooseMode = { dismissFirstSessionGuide(); openModes() },
+                            onDismiss = ::dismissFirstSessionGuide,
+                        )
+                    }
                 }
                 if (modes.state.visible && firstRunRoute == IntegratedFirstRunRoute.MAIN) {
                     IntegratedModeSheet(
@@ -357,18 +448,24 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        maybeOpenRequiredAccount()
+        com.justnoise.gate0.platform.restriction.AccessibilitySetupReturn.cancel()
+        maybeOpenRequiredAccount(returnedToHost = true)
         ScheduleRuntime(this).onExplicitForeground()
         handler.removeCallbacks(refresh)
         refresh.run()
         notificationsEnabled = SessionNotifications.areEnabled(this)
         SessionNotifications.refresh(this)
         liveUpdateStatus = SessionNotifications.liveUpdateStatus(this)
+        accessibilityEnabled = AccessibilityServiceStatus.isEnabled(this)
+        alarmAccessEnabled = ScheduleAlarmScheduler(this).hasExactAlarmAccess()
+        disclosureAccepted = controller.hasAcceptedCurrentDisclosure()
+        if (showingAccessibilitySetup || showingScheduleSetup) advancePermissionSetup()
         if (showingHistory && !showingSettings) history.onForeground()
         if (showingSchedules) schedules.load()
     }
 
     override fun onPause() {
+        if (requiredAccountOpened) requiredAccountHostPaused = true
         cancelReaderMode()
         modes.onHostPaused()
         completionState = completionState.onBackground()
@@ -379,19 +476,36 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
-    private fun maybeOpenRequiredAccount() {
+    private fun maybeOpenRequiredAccount(returnedToHost: Boolean = false) {
         val host = application as? IntegratedAccountHost ?: return
         val access = host.accountAccess.value
         if (firstRunRoute == IntegratedFirstRunRoute.MAIN &&
             lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && access.ready && !access.signedIn &&
             promptedAccountGeneration != access.generation) {
             promptedAccountGeneration = access.generation
+            requiredAccountOpened = true
+            requiredAccountHostPaused = false
             host.openAccount(this)
+        } else if (firstRunRoute == IntegratedFirstRunRoute.MAIN &&
+            returnedToHost && access.ready && !access.signedIn &&
+            promptedAccountGeneration == access.generation &&
+            requiredAccountOpened && requiredAccountHostPaused
+        ) {
+            // Backing out of required sign-in exits instead of revealing a second
+            // account or recovery dialog underneath it.
+            finish()
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString(FIRST_RUN_ROUTE_KEY, firstRunRoute.name)
+        outState.putBoolean(ACCESSIBILITY_SETUP_ROUTE_KEY, showingAccessibilitySetup)
+        outState.putBoolean(SCHEDULE_SETUP_ROUTE_KEY, showingScheduleSetup)
+        outState.putBoolean(SCHEDULE_SETUP_PENDING_KEY, scheduleSetupPending)
+        outState.putBoolean(REQUIRED_BLOCKING_SETUP_KEY, blockingSetupIsRequired)
+        outState.putLong(PROMPTED_ACCOUNT_GENERATION_KEY, promptedAccountGeneration)
+        outState.putBoolean(REQUIRED_ACCOUNT_OPENED_KEY, requiredAccountOpened)
+        outState.putBoolean(REQUIRED_ACCOUNT_PAUSED_KEY, requiredAccountHostPaused)
         outState.putInt(ONBOARDING_PAGE_KEY, onboardingPage)
         outState.putBoolean(ONBOARDING_SAVE_FAILED_KEY, onboardingSaveError != null)
         outState.putBoolean(HISTORY_ROUTE_KEY, showingHistory)
@@ -433,6 +547,7 @@ class MainActivity : ComponentActivity() {
         showingHistory = false
         showingSchedules = true
         schedules.load()
+        if (!ScheduleAlarmScheduler(this).hasExactAlarmAccess()) openScheduleAlarmAccess()
     }
 
     private fun backFromSchedules() {
@@ -449,18 +564,84 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Only this explicit user action opens alarm Settings; onResume merely refreshes access. */
+    /** A single guided route, not another technical warning panel inside the editor. */
     private fun openScheduleAlarmAccess() {
         cancelReaderMode()
+        val stored = preferences.snapshot()
+        if (stored.desiredActive || stored.recoveryRequired) {
+            openSetup()
+            return
+        }
+        scheduleSetupPending = true
+        blockingSetupIsRequired = false
+        accessibilitySetupError = null
+        showingScheduleSetup = true
+        advancePermissionSetup()
+    }
+
+    /** Only an affirmative action opens the app-specific system switch. */
+    private fun enableScheduleAccessFromSetup() {
+        if (ScheduleAlarmScheduler(this).hasExactAlarmAccess()) {
+            advancePermissionSetup()
+            return
+        }
         try {
             startActivity(ScheduleAlarmScheduler(this).permissionIntent())
         } catch (_: RuntimeException) {
-            schedules.showMessage("Android couldn’t open alarm access. Open Settings → Apps → Special access → Alarms & reminders.")
+            accessibilitySetupError = getString(R.string.first_run_schedules_unavailable)
         }
     }
 
     private fun handleZapPress() {
-        if (screenState.canScan) beginOneShotScan() else openSetup()
+        if (screenState.shortcutBusy) return
+        when {
+            screenState.canScan -> beginOneShotScan()
+            screenState.truth == Gate0Truth.TARGET_REQUIRED -> openModes()
+            else -> openSetup()
+        }
+    }
+
+    private fun handleLongPressZap() {
+        if (screenState.shortcutBusy || screenState.isScanning || screenState.desiredActive) return
+        if (screenState.truth != Gate0Truth.IDLE) {
+            if (screenState.truth == Gate0Truth.TARGET_REQUIRED) openModes() else openSetup()
+            return
+        }
+        screenState = screenState.copy(shortcutBusy = true)
+        storageExecutor.execute {
+            val result = runCatching { controller.startWithoutScan() }.getOrNull()
+            handler.post {
+                screenState = screenState.copy(shortcutBusy = false)
+                if (!isDestroyed) {
+                    if (result?.noChange != true) showTransientStatus(if (result?.succeeded == true)
+                        R.string.status_started else R.string.status_start_failed)
+                    refreshTruth()
+                }
+            }
+        }
+    }
+
+    private fun handleEmergencyUnzap(sessionId: String) {
+        if (screenState.shortcutBusy) return
+        cancelReaderMode()
+        screenState = screenState.copy(shortcutBusy = true)
+        settingsMessage = null
+        storageExecutor.execute {
+            val result = runCatching { controller.emergencyUnzap(sessionId) }.getOrNull()
+            handler.post {
+                screenState = screenState.copy(shortcutBusy = false)
+                if (!isDestroyed) {
+                    refreshTruth()
+                    if (result?.succeeded == true) {
+                        showingSettings = false
+                        showingHistory = false
+                        history.onBackground()
+                        if (!screenState.desiredActive)
+                            result.completedSession?.let { completionState = completionState.receive(it) }
+                    } else settingsMessage = getString(R.string.integrated_emergency_failed)
+                }
+            }
+        }
     }
 
     private fun openModes() {
@@ -486,7 +667,125 @@ class MainActivity : ComponentActivity() {
             host.openAccount(this)
             return
         }
+        val stored = preferences.snapshot()
+        if (stored.desiredActive || stored.recoveryRequired || !firstRunFacts(stored).zapPaired) {
+            startActivity(Intent(this, Gate0SetupActivity::class.java))
+            return
+        }
+        if (!controller.hasAcceptedCurrentDisclosure() || !AccessibilityServiceStatus.isEnabled(this)) {
+            openAccessibilitySetup(required = false)
+            return
+        }
         startActivity(Intent(this, Gate0SetupActivity::class.java))
+    }
+
+    private fun openAccessibilitySetup(required: Boolean) {
+        cancelReaderMode()
+        accessibilitySetupError = null
+        accessibilityEnabled = AccessibilityServiceStatus.isEnabled(this)
+        disclosureAccepted = controller.hasAcceptedCurrentDisclosure()
+        blockingSetupIsRequired = required
+        scheduleSetupPending = required
+        showingScheduleSetup = false
+        showingAccessibilitySetup = true
+        advancePermissionSetup()
+    }
+
+    private fun closeAccessibilitySetup() {
+        advancePermissionSetup()
+    }
+
+    private fun advancePermissionSetup() {
+        val stored = preferences.snapshot()
+        // Permission education must never obscure a real stop or recovery route.
+        if (stored.desiredActive || stored.recoveryRequired) {
+            finishPermissionSetup()
+            return
+        }
+        when (IntegratedPermissionFlow.next(controller.hasAcceptedCurrentDisclosure(),
+            AccessibilityServiceStatus.isEnabled(this), scheduleSetupPending,
+            ScheduleAlarmScheduler(this).hasExactAlarmAccess())) {
+            IntegratedPermissionStep.BLOCKING -> {
+                showingAccessibilitySetup = true
+                showingScheduleSetup = false
+            }
+            IntegratedPermissionStep.SCHEDULES -> {
+                showingAccessibilitySetup = false
+                showingScheduleSetup = true
+                accessibilitySetupError = null
+            }
+            IntegratedPermissionStep.COMPLETE -> finishPermissionSetup()
+        }
+    }
+
+    private fun finishPermissionSetup() {
+        showingAccessibilitySetup = false
+        showingScheduleSetup = false
+        scheduleSetupPending = false
+        blockingSetupIsRequired = false
+        accessibilitySetupError = null
+        refreshTruth()
+        schedules.load()
+    }
+
+    private fun dismissFirstSessionGuide() {
+        // Installation-owned education only. Never alter pairing/account/session data.
+        firstSessionGuideDismissed = true
+        getSharedPreferences("justnoise_installation_guidance", MODE_PRIVATE).edit()
+            .putBoolean("first_session_guide_dismissed_v1", true).apply()
+    }
+
+    private fun skipScheduleSetup() {
+        // Declining optional schedules returns to manual Zap use, not a broken editor.
+        showingSchedules = false
+        finishPermissionSetup()
+    }
+
+    private fun restoreFromGuidedRecovery() {
+        accessibilitySetupError = null
+        when {
+            storageRecoveryRequired -> refreshTruth() // Retry reads; never clear data or quarantine flags.
+            !controller.hasAcceptedCurrentDisclosure() -> enableAccessibilityFromSetup()
+            screenState.truth in setOf(Gate0Truth.IDLE, Gate0Truth.TARGET_REQUIRED) && !screenState.desiredActive -> {
+                ScheduleRuntime(this).onExplicitForeground()
+                schedules.refresh()
+            }
+            else -> try {
+                if (!AccessibilitySetupNavigation.open(this))
+                    accessibilitySetupError = getString(R.string.first_run_blocking_settings_unavailable)
+            } catch (_: RuntimeException) {
+                accessibilitySetupError = getString(R.string.first_run_blocking_settings_unavailable)
+            }
+        }
+    }
+
+    private fun deferBlockingSetup() {
+        if (blockingSetupIsRequired) finish() else finishPermissionSetup()
+    }
+
+    private fun continueAfterPairing() {
+        leaveFirstRun()
+        openAccessibilitySetup(required = true)
+    }
+
+    private fun enableAccessibilityFromSetup() {
+        if (!controller.hasAcceptedCurrentDisclosure() && !controller.acceptDisclosure()) {
+            accessibilitySetupError = getString(R.string.first_run_blocking_save_failed)
+            return
+        }
+        accessibilitySetupError = null
+        disclosureAccepted = true
+        if (AccessibilityServiceStatus.isEnabled(this)) {
+            closeAccessibilitySetup()
+            return
+        }
+        try {
+            if (!AccessibilitySetupNavigation.open(this)) {
+                accessibilitySetupError = getString(R.string.first_run_blocking_settings_unavailable)
+            }
+        } catch (_: RuntimeException) {
+            accessibilitySetupError = getString(R.string.first_run_blocking_settings_unavailable)
+        }
     }
 
     private fun openSettings() {
@@ -512,7 +811,8 @@ class MainActivity : ComponentActivity() {
     private fun backFromSettings() {
         when {
             tutorialReplayPage != null -> tutorialReplayPage = null
-            settingsPage == IntegratedSettingsPage.PRIVACY -> settingsPage = IntegratedSettingsPage.MAIN
+            settingsPage == IntegratedSettingsPage.PRIVACY -> settingsPage = IntegratedSettingsPage.ADVANCED
+            settingsPage == IntegratedSettingsPage.ADVANCED -> settingsPage = IntegratedSettingsPage.MAIN
             else -> closeSettings()
         }
     }
@@ -600,7 +900,7 @@ class MainActivity : ComponentActivity() {
 
     private fun beginInitialPairing() {
         val facts = firstRunFacts(preferences.snapshot())
-        if (firstRunRoute != IntegratedFirstRunRoute.ACTIVATION || facts.zapPaired ||
+        if ((firstRunRoute != IntegratedFirstRunRoute.ACTIVATION && screenState.truth != Gate0Truth.ZAP_REQUIRED) || facts.zapPaired ||
             facts.sessionRequested || facts.recoveryRequired
         ) {
             refreshTruth()
@@ -611,13 +911,12 @@ class MainActivity : ComponentActivity() {
 
     private fun cancelInitialScan() {
         cancelReaderMode()
-        showTransientStatus(R.string.first_run_scan_canceled)
     }
 
     private fun openZapStore() {
         cancelReaderMode()
         try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://store.justnoise.shop/products/thezap")))
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://justnoise.shop/pages/the-zap")))
         } catch (_: RuntimeException) {
             showTransientStatus(R.string.first_run_store_unavailable)
         }
@@ -625,7 +924,13 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshTruth() {
         val truth = controller.truth()
+        disclosureAccepted = controller.hasAcceptedCurrentDisclosure()
+        // TARGET_REQUIRED precedes permission truth; use the actual grant for presentation.
+        accessibilityEnabled = AccessibilityServiceStatus.isEnabled(this)
         val stored = preferences.snapshot()
+        storageRecoveryRequired = stored.recoveryRequired
+        emergencyUnlocks = preferences.emergencyUnlocksRemaining()
+        emergencySessionId = stored.activeSessionId.takeIf { stored.desiredActive }
         screenState = screenState.copy(
             truth = truth,
             selectedAppName = selectedAppsLabel(controller.sessionPackages()),
@@ -643,14 +948,33 @@ class MainActivity : ComponentActivity() {
         val firstRun = firstRunFacts(stored)
         if (stored.desiredActive) completionState = completionState.onNewSession()
         if (!controller.hasAcceptedCurrentDisclosure()) completionState = completionState.onWithdrawal()
-        if (stored.desiredActive || stored.recoveryRequired) modes.onHostPaused()
+        if (stored.desiredActive || stored.recoveryRequired) {
+            // A scheduled start or recovery may occur while onboarding is backgrounded.
+            // Never let a restored setup page cover the real stop/recovery route.
+            modes.onHostPaused()
+            showingAccessibilitySetup = false
+            showingScheduleSetup = false
+            scheduleSetupPending = false
+            blockingSetupIsRequired = false
+        }
         initialZapPaired = firstRun.zapPaired
         val resolvedRoute = IntegratedFirstRunRules.route(firstRun, firstRunRoute)
         if (resolvedRoute != firstRunRoute) {
+            val leavingActivation = firstRunRoute == IntegratedFirstRunRoute.ACTIVATION &&
+                resolvedRoute == IntegratedFirstRunRoute.MAIN
             cancelReaderMode()
             modes.onHostPaused()
             firstRunRoute = resolvedRoute
+            if (leavingActivation && IntegratedFirstRunRules.needsBlockingSetup(firstRun,
+                    disclosureAccepted, AccessibilityServiceStatus.isEnabled(this))) {
+                blockingSetupIsRequired = true
+                scheduleSetupPending = true
+                showingAccessibilitySetup = true
+            }
             if (resolvedRoute != IntegratedFirstRunRoute.MAIN) {
+                showingAccessibilitySetup = false
+                showingScheduleSetup = false
+                scheduleSetupPending = false
                 showingSettings = false
                 tutorialReplayPage = null
                 showingHistory = false
@@ -843,6 +1167,13 @@ class MainActivity : ComponentActivity() {
         const val SETTINGS_PAGE_KEY = "settings_page"
         const val TUTORIAL_REPLAY_PAGE_KEY = "tutorial_replay_page"
         const val FIRST_RUN_ROUTE_KEY = "first_run_route"
+        const val ACCESSIBILITY_SETUP_ROUTE_KEY = "showing_accessibility_setup"
+        const val SCHEDULE_SETUP_ROUTE_KEY = "showing_schedule_setup"
+        const val SCHEDULE_SETUP_PENDING_KEY = "schedule_setup_pending"
+        const val REQUIRED_BLOCKING_SETUP_KEY = "required_blocking_setup"
+        const val PROMPTED_ACCOUNT_GENERATION_KEY = "prompted_account_generation"
+        const val REQUIRED_ACCOUNT_OPENED_KEY = "required_account_opened"
+        const val REQUIRED_ACCOUNT_PAUSED_KEY = "required_account_paused"
         const val ONBOARDING_PAGE_KEY = "onboarding_page"
         const val ONBOARDING_SAVE_FAILED_KEY = "onboarding_save_failed"
     }

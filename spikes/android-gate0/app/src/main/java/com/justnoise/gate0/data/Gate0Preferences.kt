@@ -8,6 +8,7 @@ import com.justnoise.gate0.domain.ScheduleDeliveryDecision
 import com.justnoise.gate0.domain.ScheduleDeliveryRules
 import com.justnoise.gate0.domain.SessionHistoryTiming
 import com.justnoise.gate0.domain.SessionStateWriter
+import com.justnoise.gate0.domain.SessionShortcutRules
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
@@ -350,7 +351,8 @@ class Gate0Preferences internal constructor(
         runCatching { readModes().modes.find { it.id == id } }.getOrNull()
     }
 
-    fun saveMode(token: SelectionEditToken, id: String?, name: String, packages: Set<String>): ModeMutationResult =
+    fun saveMode(token: SelectionEditToken, id: String?, name: String, packages: Set<String>,
+        selectNewMode: Boolean = false): ModeMutationResult =
         mutateModes(token) { catalog ->
             if (!ModeRules.validName(name)) return@mutateModes ModeMutationResult.INVALID_NAME to null
             if (!ModeRules.validTargets(packages)) return@mutateModes ModeMutationResult.INVALID_SELECTION to null
@@ -364,8 +366,11 @@ class Gate0Preferences internal constructor(
             }
             val mode = StoredMode(previous?.id ?: UUID.randomUUID().toString(),
                 Math.addExact(previous?.revision ?: 0L, 1L), name.trim(), packages.toSet())
+            // Creation and its UI-requested selection share one guarded durable commit.
+            // Editing an existing mode never changes the remembered selection.
             ModeMutationResult.SAVED to catalog.copy(modes = if (previous == null) catalog.modes + mode else
-                catalog.modes.map { if (it.id == id) mode else it })
+                catalog.modes.map { if (it.id == id) mode else it },
+                recentModeId = if (previous == null && selectNewMode) mode.id else catalog.recentModeId)
         }
 
     fun selectMode(token: SelectionEditToken, id: String): ModeMutationResult = mutateModes(token) { catalog ->
@@ -650,13 +655,26 @@ class Gate0Preferences internal constructor(
     override fun stopSession(epochMilliseconds: Long, expectedSessionId: String?): Boolean =
         stopSessionWithCompletion(epochMilliseconds, expectedSessionId).succeeded
 
+    fun emergencyUnlocksRemaining(): Int = synchronized(STATE_LOCK) {
+        runCatching { preferences.getInt(KEY_EMERGENCY_UNLOCKS,
+            SessionShortcutRules.INITIAL_EMERGENCY_UNLOCKS).coerceIn(0, SessionShortcutRules.INITIAL_EMERGENCY_UNLOCKS) }
+            .getOrDefault(0)
+    }
+
+    fun emergencyUnzap(epochMilliseconds: Long, expectedSessionId: String): SessionStopResult =
+        stopSessionWithCompletion(epochMilliseconds, expectedSessionId, consumeEmergencyUnlock = true)
+
     /** Return the exact outbox value only when this call newly commits the stop. */
     fun stopSessionWithCompletion(
         epochMilliseconds: Long,
         expectedSessionId: String? = null,
+        consumeEmergencyUnlock: Boolean = false,
     ): SessionStopResult = synchronized(STATE_LOCK) {
         if (!confirmFailedWrite(allowWorkspacePending = true)) return SessionStopResult(false)
         val stored = snapshot()
+        if (consumeEmergencyUnlock && !SessionShortcutRules.emergencyAllowed(stored.desiredActive,
+                expectedSessionId != null && stored.activeSessionId == expectedSessionId,
+                emergencyUnlocksRemaining())) return SessionStopResult(false)
         if (!stored.desiredActive) {
             return SessionStopResult(expectedSessionId == null ||
                 preferences.getString(KEY_LAST_FINISHED_ID, null) == expectedSessionId)
@@ -702,6 +720,7 @@ class Gate0Preferences internal constructor(
             .putLong(KEY_SESSION_REVISION, nextSessionRevision())
             .remove(KEY_RECOVERY_REQUIRED)
         if (entry != null) editor.putString(KEY_PENDING_HISTORY, entry.encode())
+        if (consumeEmergencyUnlock) editor.putInt(KEY_EMERGENCY_UNLOCKS, emergencyUnlocksRemaining() - 1)
         // This is the commit point: cleared active state and completion travel together.
         // Database delivery is deferred; a DB problem must never undo a successful stop.
         if (commitState(editor)) SessionStopResult(true, entry) else SessionStopResult(false)
@@ -1036,6 +1055,7 @@ class Gate0Preferences internal constructor(
         selectionEditGeneration += 1L
         dismissedNotificationSessionId = null
         val outgoingWorkspace = readWorkspace()
+        val emergencyUnlocks = emergencyUnlocksRemaining()
         // A local-only withdrawal/re-consent is not an account change. Keep that UI bridge
         // usable; its existing frozen consent-epoch guard still rejects old queued writes.
         val localEpoch = if (outgoingWorkspace == LocalWorkspaceId.LOCAL) {
@@ -1048,6 +1068,7 @@ class Gate0Preferences internal constructor(
                 .map { LocalWorkspaceId.parse(it.removePrefix(WORKSPACE_PROFILE_PREFIX)).value }
         // Revoke and discard outbox first. A crash cannot replay a record being deleted.
         val revoked = preferences.edit().clear().putBoolean(KEY_HISTORY_DELETION_PENDING, true)
+            .putInt(KEY_EMERGENCY_UNLOCKS, emergencyUnlocks)
             .putString(KEY_WORKSPACE_EPOCH, localEpoch)
             .putStringSet(KEY_HISTORY_DELETE_WORKSPACES, owners).commit()
         unconfirmedWrite = !revoked
@@ -1162,6 +1183,7 @@ class Gate0Preferences internal constructor(
         }
 
     companion object {
+        private const val KEY_EMERGENCY_UNLOCKS = "emergency_unlocks_remaining_v1"
         const val CURRENT_DISCLOSURE_VERSION = "gate0-accessibility-v4"
         const val HEARTBEAT_STALE_AFTER_MILLISECONDS = 8_000L
 

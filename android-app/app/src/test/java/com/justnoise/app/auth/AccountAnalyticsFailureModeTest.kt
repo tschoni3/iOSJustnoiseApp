@@ -38,21 +38,34 @@ class AccountAnalyticsFailureModeTest {
         } finally { transport.close() }
     }
 
-    @Test fun optOutCancelsAnActualKtorMockRequestBeforeReturning() = runBlocking {
+    @Test fun optOutJoinsTheActualRequestAndPreventsFurtherCaptures() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val cancelled = CompletableDeferred<Unit>()
+        val requestFinished = CompletableDeferred<Unit>()
+        val calls = AtomicInteger()
         val transport = PostHogCaptureTransport(MockEngine {
+            calls.incrementAndGet()
             started.complete(Unit)
             try { awaitCancellation() } finally { cancelled.complete(Unit) }
         })
-        val analytics = AccountAnalytics(TestAnalyticsConsent(), transport)
+        val analytics = AccountAnalytics(TestAnalyticsConsent()) { event, id ->
+            try { transport.send(event, id) } finally { requestFinished.complete(Unit) }
+        }
         try {
             assertTrue(analytics.optIn())
-            analytics.capture(ProductAnalyticsEvent.SESSION_STARTED, analytics.generation())
+            val generation = analytics.generation()
+            analytics.capture(ProductAnalyticsEvent.SESSION_STARTED, generation)
             withTimeout(5_000) { started.await() }
             assertTrue(analytics.closeAndPurge())
-            assertTrue(cancelled.isCompleted)
+            // AccountAnalytics must join its real request before acknowledging revocation.
+            assertTrue(requestFinished.isCompleted)
             assertFalse(analytics.isEnabled())
+            // Ktor's mock handler is an engine-owned coroutine: its cancellation cleanup
+            // can run just after the request completes, so observe it without a scheduling race.
+            withTimeout(5_000) { cancelled.await() }
+            analytics.capture(ProductAnalyticsEvent.SESSION_STOPPED, generation)
+            analytics.capture(ProductAnalyticsEvent.SESSION_STOPPED, analytics.generation())
+            assertEquals(1, calls.get())
         } finally { analytics.closeAndPurge(); transport.close() }
     }
 

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "description": "Recognized compatibility labels are required for Android pairing and new manual starts. Exact local pairing remains required; a previously paired legacy tag retains stop-only escape during an existing session. No raw labels in fixtures.",
+  "cases": [
+    {"id":"recognized-paired-idle","recognized":true,"paired":true,"active":false,"expected":true},
+    {"id":"recognized-unpaired-idle","recognized":true,"paired":false,"active":false,"expected":false},
+    {"id":"unknown-paired-idle","recognized":false,"paired":true,"active":false,"expected":false},
+    {"id":"unknown-unpaired-idle","recognized":false,"paired":false,"active":false,"expected":false},
+    {"id":"recognized-paired-stop","recognized":true,"paired":true,"active":true,"expected":true},
+    {"id":"legacy-paired-stop-only","recognized":false,"paired":true,"active":true,"expected":true},
+    {"id":"unknown-unpaired-active","recognized":false,"paired":false,"active":true,"expected":false},
+    {"id":"recognized-unpaired-active","recognized":true,"paired":false,"active":true,"expected":false}
+  ]
+}

@@ -43,7 +43,7 @@ class IntegratedScheduleModeResourcesTest {
         val surface = File(appRoot, "src/main/java/com/justnoise/integrated/IntegratedScheduleSurface.kt").readText()
         assertTrue(surface.contains("schedule-mode-choice:"))
         assertTrue(surface.contains("onChange(editor.copy(modeReference = mode.id))"))
-        assertTrue(surface.contains("snapshot.hasSetupGap(schedule.modeReference)"))
+        assertTrue(surface.contains("snapshot.modeForReference(schedule.modeReference)?.selectedPackages.isNullOrEmpty()"))
         assertFalse(surface.contains("snapshot.selectedAppCount"))
         assertFalse(surface.contains("DEFAULT_SCHEDULE_MODE_REFERENCE"))
     }

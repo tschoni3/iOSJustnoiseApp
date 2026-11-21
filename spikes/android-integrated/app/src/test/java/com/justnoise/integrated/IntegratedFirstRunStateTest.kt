@@ -22,13 +22,38 @@ class IntegratedFirstRunStateTest {
             val node = nodes.item(index) as Element
             node.getAttribute("name") to node.textContent
         }
-        assertEquals("Create a Mode", strings["first_run_select_apps"])
-        assertTrue(strings.getValue("first_run_select_apps_body").contains("choose the apps it blocks"))
+        assertEquals("Make space for you.", strings["first_run_select_apps"])
+        assertEquals("Less noise. More time for what matters to you.", strings["first_run_select_apps_body"])
         val sessions = strings.getValue("first_run_stay_focused_body")
         assertTrue(sessions.contains("last selected mode"))
         assertTrue(sessions.contains("tap again to stop"))
         assertTrue(sessions.contains("Schedules start automatically with their saved mode"))
-        assertTrue(strings.getValue("first_run_connected_body").contains("Pairing alone does not enable blocking"))
+        assertEquals("Next, allow Justnoise to block distractions.", strings["first_run_connected_body"])
+        assertEquals(null, strings["first_run_mode_title"])
+        assertEquals("One last step", strings["first_run_blocking_title"])
+        assertEquals("Allow Justnoise to block distractions.", strings["first_run_blocking_intro"])
+        assertEquals(null, strings["first_run_blocking_body"])
+        assertTrue(strings.getValue("first_run_accessibility_disclosure").contains("detect opened apps and window changes"))
+        assertTrue(strings.getValue("first_run_accessibility_disclosure").contains("stays on your phone"))
+        assertTrue(strings.getValue("first_run_accessibility_disclosure").contains("We don’t read your screen"))
+        assertEquals("Agree & open settings", strings["first_run_agree_open_settings"])
+        assertEquals("Open settings", strings["first_run_open_android_settings"])
+        assertTrue(strings.getValue("first_run_accessibility_disclosure").split(Regex("\\s+")).size <= 45)
+        listOf("Android Accessibility", "Zap sessions", "passwords", "typing", "notifications", "Turn access off").forEach {
+            assertTrue(strings.getValue("first_run_accessibility_disclosure").contains(it))
+        }
+        assertEquals("Switch on Justnoise", strings["first_run_accessibility_turn_on"])
+        assertEquals("Turn on · Tap Allow", strings["first_run_accessibility_allow"])
+        assertTrue(strings.getValue("first_run_accessibility_path").startsWith("Return to Justnoise"))
+        val branding = DocumentBuilderFactory.newInstance().apply {
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }.newDocumentBuilder().parse(File(appRoot, "../../../android-app/app/src/release/res/values/branding.xml").canonicalFile)
+        val labels = branding.getElementsByTagName("string")
+        val serviceLabel = (0 until labels.length).map { labels.item(it) as Element }
+            .single { it.getAttribute("name") == "integrated_accessibility_service_label" }.textContent
+        assertEquals("Justnoise", serviceLabel)
+        assertEquals("Scanning for your Zap", strings["first_run_scan_overlay_title"])
+        assertEquals("Not now", strings["first_run_blocking_not_now"])
     }
 
     @Test fun `fresh installation starts with two page tutorial`() {
@@ -42,9 +67,21 @@ class IntegratedFirstRunStateTest {
             IntegratedFirstRunRules.route(fresh.copy(tutorialCompleted = true)))
     }
 
-    @Test fun `paired confirmation survives cold launch before explicit setup`() {
+    @Test fun `paired confirmation stays during pairing but does not replay on cold launch`() {
+        val paired = fresh.copy(tutorialCompleted = true, zapPaired = true)
         assertEquals(IntegratedFirstRunRoute.ACTIVATION,
-            IntegratedFirstRunRules.route(fresh.copy(tutorialCompleted = true, zapPaired = true)))
+            IntegratedFirstRunRules.route(paired, IntegratedFirstRunRoute.ACTIVATION))
+        assertEquals(IntegratedFirstRunRoute.MAIN, IntegratedFirstRunRules.route(paired))
+    }
+
+    @Test fun `blocking setup is required before the first inactive product route`() {
+        val paired = fresh.copy(tutorialCompleted = true, zapPaired = true)
+        assertTrue(IntegratedFirstRunRules.needsBlockingSetup(paired, false, false))
+        assertTrue(IntegratedFirstRunRules.needsBlockingSetup(paired, true, false))
+        assertEquals(false, IntegratedFirstRunRules.needsBlockingSetup(paired, true, true))
+        assertEquals(false, IntegratedFirstRunRules.needsBlockingSetup(paired.copy(sessionRequested = true), false, false))
+        assertEquals(false, IntegratedFirstRunRules.needsBlockingSetup(paired.copy(recoveryRequired = true), false, false))
+        assertTrue(IntegratedFirstRunRules.needsBlockingSetup(paired.copy(tutorialCompleted = false), false, false))
     }
 
     @Test fun `legacy pairing bypasses new tutorial without pretending permissions are ready`() {

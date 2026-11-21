@@ -23,12 +23,30 @@ object IntegratedFirstRunRules {
         // A pre-existing paired installation predates the tutorial. Skip education only:
         // the existing controller still decides whether consent and capability are ready.
         if (facts.zapPaired && !facts.tutorialCompleted) return IntegratedFirstRunRoute.MAIN
+        // Keep the just-paired confirmation on screen, but do not replay it on
+        // every later cold launch before Accessibility setup is finished.
+        if (facts.zapPaired && facts.tutorialCompleted) {
+            return if (restored == IntegratedFirstRunRoute.ACTIVATION) {
+                IntegratedFirstRunRoute.ACTIVATION
+            } else {
+                IntegratedFirstRunRoute.MAIN
+            }
+        }
         if (restored == IntegratedFirstRunRoute.MAIN) return IntegratedFirstRunRoute.MAIN
         if (facts.tutorialCompleted) return IntegratedFirstRunRoute.ACTIVATION
         return IntegratedFirstRunRoute.ONBOARDING
     }
 
     fun page(restoredPage: Int): Int = restoredPage.coerceIn(0, 1)
+
+    fun needsBlockingSetup(
+        facts: IntegratedFirstRunFacts,
+        disclosureAccepted: Boolean,
+        accessibilityEnabled: Boolean,
+    ): Boolean = facts.zapPaired &&
+        !facts.sessionRequested && !facts.recoveryRequired &&
+        (!disclosureAccepted || !accessibilityEnabled)
+
 }
 
 /** Capture intent when arming the reader; never infer it from the current route on callback. */

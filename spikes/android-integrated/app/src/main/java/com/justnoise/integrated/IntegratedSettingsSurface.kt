@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,7 +56,7 @@ import androidx.core.view.WindowCompat
 import com.justnoise.gate0.R
 import com.justnoise.gate0.feature.SessionLiveUpdateStatus
 
-enum class IntegratedSettingsPage { MAIN, PRIVACY }
+enum class IntegratedSettingsPage { MAIN, ADVANCED, PRIVACY }
 
 private val SettingsBackground = Color(0xFFF2F2F7)
 private val SettingsSecondary = Color(0xFF636366)
@@ -79,6 +81,11 @@ fun IntegratedSettingsSurface(
     liveUpdateStatus: SessionLiveUpdateStatus = SessionLiveUpdateStatus.UNSUPPORTED,
     onManageLiveUpdates: () -> Unit = {},
     onOpenAccount: (() -> Unit)? = null,
+    emergencyUnlocks: Int = 5,
+    emergencySessionId: String? = null,
+    emergencyBusy: Boolean = false,
+    onEmergencyUnzap: (String) -> Unit = {},
+    onShowMore: () -> Unit = {},
 ) {
     val activity = LocalActivity.current
     LaunchedEffect(activity) {
@@ -94,16 +101,20 @@ fun IntegratedSettingsSurface(
         onSurface = Color.Black, background = SettingsBackground,
     )) {
         Surface(color = SettingsBackground, modifier = Modifier.fillMaxSize()
-            .testTag(if (page == IntegratedSettingsPage.PRIVACY) "settings-privacy-main" else "settings-main")) {
+            .testTag(when (page) {
+                IntegratedSettingsPage.MAIN -> "settings-main"
+                IntegratedSettingsPage.ADVANCED -> "settings-advanced-main"
+                IntegratedSettingsPage.PRIVACY -> "settings-privacy-main"
+            })) {
             Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (page == IntegratedSettingsPage.PRIVACY) {
+                    if (page != IntegratedSettingsPage.MAIN) {
                         TextButton(onClick = onBackFromPrivacy,
                             modifier = Modifier.heightIn(min = 48.dp).testTag("settings-privacy-back")) {
                             Text(stringResource(R.string.integrated_settings_back))
                         }
                     } else Spacer(Modifier.weight(1f))
-                    if (page == IntegratedSettingsPage.MAIN) {
+                    if (page != IntegratedSettingsPage.PRIVACY) {
                         TextButton(onClick = onDone,
                             modifier = Modifier.heightIn(min = 48.dp).testTag("settings-done")) {
                             Text(stringResource(R.string.integrated_settings_done), fontWeight = FontWeight.SemiBold)
@@ -115,7 +126,9 @@ fun IntegratedSettingsSurface(
                 } else {
                     SettingsGroups(appVersion, setupSummary, message, onOpenSetup, onShowTutorial,
                         onShowPrivacy, onReviewLocalData, onOpenAppInfo, notificationsEnabled,
-                        onManageNotifications, onComposeSupportEmail, liveUpdateStatus, onManageLiveUpdates, onOpenAccount)
+                        onManageNotifications, onComposeSupportEmail, liveUpdateStatus, onManageLiveUpdates, onOpenAccount,
+                        emergencyUnlocks, emergencySessionId, emergencyBusy, onEmergencyUnzap,
+                        page == IntegratedSettingsPage.ADVANCED, onShowMore)
                 }
             }
         }
@@ -138,17 +151,43 @@ private fun SettingsGroups(
     liveUpdateStatus: SessionLiveUpdateStatus,
     onManageLiveUpdates: () -> Unit,
     onOpenAccount: (() -> Unit)?,
+    emergencyUnlocks: Int,
+    emergencySessionId: String?,
+    emergencyBusy: Boolean,
+    onEmergencyUnzap: (String) -> Unit,
+    advanced: Boolean,
+    onShowMore: () -> Unit,
 ) {
     var emailUnavailable by rememberSaveable { mutableStateOf(false) }
+    var emergencyConfirmation by rememberSaveable { mutableStateOf<String?>(null) }
+    val mainListState = rememberLazyListState()
+    val moreListState = rememberLazyListState()
+    if (emergencyConfirmation != null) {
+        val confirmedSession = requireNotNull(emergencyConfirmation)
+        AlertDialog(onDismissRequest = { emergencyConfirmation = null },
+            title = { Text(stringResource(R.string.integrated_emergency_confirm_title)) },
+            text = { Text(stringResource(R.string.integrated_emergency_confirm_body, emergencyUnlocks)) },
+            confirmButton = { TextButton(enabled = !emergencyBusy && emergencyUnlocks > 0 &&
+                confirmedSession == emergencySessionId, onClick = {
+                    emergencyConfirmation = null
+                    onEmergencyUnzap(confirmedSession)
+                }, modifier = Modifier.testTag("emergency-confirm")) {
+                    Text(stringResource(R.string.integrated_emergency_confirm))
+                } },
+            dismissButton = { TextButton(onClick = { emergencyConfirmation = null }) {
+                Text(stringResource(R.string.integrated_emergency_cancel))
+            } })
+    }
     LazyColumn(
+        state = if (advanced) moreListState else mainListState,
         modifier = Modifier.fillMaxSize().testTag("settings-list"),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        item { SettingsTitle(stringResource(R.string.integrated_settings_title)) }
-        if (onOpenAccount != null) item {
-            SettingsGroup("Account") {
-                SettingsActionRow(title = "Your account",
+        item { SettingsTitle(stringResource(if (advanced) R.string.integrated_settings_more else R.string.integrated_settings_title)) }
+        if (!advanced && onOpenAccount != null) item {
+            SettingsGroup(stringResource(R.string.integrated_settings_account_group)) {
+                SettingsActionRow(title = stringResource(R.string.integrated_settings_account),
                     tag = "settings-account", onClick = onOpenAccount)
             }
         }
@@ -156,22 +195,14 @@ private fun SettingsGroups(
             Text(message, color = Color(0xFF8A241B), fontSize = 15.sp, lineHeight = 21.sp,
                 modifier = Modifier.testTag("settings-message").semantics { liveRegion = LiveRegionMode.Polite })
         }
-        item {
-            SettingsGroup(stringResource(R.string.integrated_settings_setup_group)) {
+        if (!advanced) item {
+            SettingsGroup(stringResource(R.string.integrated_settings_zap_group)) {
+                val enabled = emergencySessionId != null && emergencyUnlocks > 0 && !emergencyBusy
                 SettingsActionRow(
-                    title = stringResource(R.string.integrated_settings_setup),
-                    tag = "settings-setup", onClick = onOpenSetup,
-                )
-            }
-        }
-        item {
-            SettingsGroup(stringResource(R.string.integrated_settings_notifications_group)) {
-                val status = stringResource(if (notificationsEnabled) R.string.integrated_settings_notifications_on
-                    else R.string.integrated_settings_notifications_off)
-                SettingsActionRow(
-                    title = stringResource(R.string.integrated_settings_session_notification),
-                    detail = status,
-                    tag = "settings-session-notification", onClick = onManageNotifications,
+                    title = stringResource(R.string.integrated_emergency_title),
+                    detail = stringResource(R.string.integrated_emergency_remaining, emergencyUnlocks),
+                    tag = "settings-emergency", enabled = enabled,
+                    onClick = { emergencyConfirmation = emergencySessionId },
                 )
                 SettingsRowDivider()
                 SettingsActionRow(
@@ -188,15 +219,50 @@ private fun SettingsGroups(
                 )
             }
         }
-        item {
-            SettingsGroup(stringResource(R.string.integrated_settings_onboarding_group)) {
+        if (!advanced) item {
+            SettingsGroup(stringResource(R.string.integrated_settings_help_group)) {
                 SettingsActionRow(
                     title = stringResource(R.string.integrated_settings_tutorial),
                     tag = "settings-tutorial", onClick = onShowTutorial,
                 )
+                SettingsRowDivider()
+                SettingsActionRow(title = stringResource(R.string.integrated_settings_support),
+                    tag = "support-email", onClick = { emailUnavailable = !onComposeSupportEmail() })
+                if (emailUnavailable) Column(Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.integrated_settings_email_unavailable),
+                        color = Color(0xFF8A241B), fontSize = 15.sp, lineHeight = 21.sp,
+                        modifier = Modifier.testTag("support-email-unavailable")
+                            .semantics { liveRegion = LiveRegionMode.Polite })
+                    SelectionContainer {
+                        Text(stringResource(R.string.integrated_settings_support_email),
+                            color = Color.Black, fontSize = 17.sp, modifier = Modifier.testTag("support-address"))
+                    }
+                }
             }
         }
-        item {
+        if (!advanced) item {
+            SettingsGroup(stringResource(R.string.integrated_settings_more_group)) {
+                SettingsActionRow(title = stringResource(R.string.integrated_settings_more),
+                    tag = "settings-more", onClick = onShowMore)
+            }
+        }
+        if (advanced) item {
+            SettingsGroup(stringResource(R.string.integrated_settings_device_group)) {
+                SettingsActionRow(title = stringResource(R.string.integrated_settings_setup),
+                    tag = "settings-setup", onClick = onOpenSetup)
+                SettingsRowDivider()
+                SettingsActionRow(
+                    title = stringResource(R.string.integrated_settings_session_notification),
+                    detail = stringResource(if (notificationsEnabled) R.string.integrated_settings_notifications_on
+                        else R.string.integrated_settings_notifications_off),
+                    tag = "settings-session-notification", onClick = onManageNotifications)
+                SettingsRowDivider()
+                SettingsActionRow(title = stringResource(R.string.integrated_settings_app_info),
+                    tag = "settings-app-info", onClick = onOpenAppInfo)
+            }
+        }
+        if (advanced) item {
             SettingsGroup(stringResource(R.string.integrated_settings_privacy_group)) {
                 SettingsActionRow(
                     title = stringResource(R.string.integrated_settings_privacy),
@@ -210,44 +276,9 @@ private fun SettingsGroups(
             }
         }
         item {
-            SettingsGroup(stringResource(R.string.integrated_settings_recovery_group)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp).testTag("settings-support"),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.integrated_settings_support), fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold, modifier = Modifier.semantics { heading() })
-                    SelectionContainer {
-                        Text(stringResource(R.string.integrated_settings_support_email),
-                            color = Color.Black, fontSize = 17.sp, modifier = Modifier.testTag("support-address"))
-                    }
-                    if (emailUnavailable) Text(stringResource(R.string.integrated_settings_email_unavailable),
-                        color = Color(0xFF8A241B), fontSize = 15.sp, lineHeight = 21.sp,
-                        modifier = Modifier.testTag("support-email-unavailable")
-                            .semantics { liveRegion = LiveRegionMode.Polite })
-                    TextButton(onClick = { emailUnavailable = !onComposeSupportEmail() },
-                        modifier = Modifier.heightIn(min = 48.dp).testTag("support-email")) {
-                        Text(stringResource(R.string.integrated_settings_email_support))
-                    }
-                }
-                SettingsRowDivider()
-                SettingsActionRow(
-                    title = stringResource(R.string.integrated_settings_app_info),
-                    tag = "settings-app-info", onClick = onOpenAppInfo,
-                )
-            }
-        }
-        item {
-            SettingsGroup(stringResource(R.string.integrated_settings_about_group)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Justnoise", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                }
-                SettingsRowDivider()
-                Column(Modifier.fillMaxWidth().padding(16.dp).testTag("settings-version"),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.integrated_settings_version), fontSize = 17.sp)
-                    Text(appVersion.ifBlank { stringResource(R.string.integrated_settings_version_unavailable) },
-                        color = SettingsSecondary, fontSize = 15.sp, lineHeight = 21.sp)
-                }
-            }
+            Text("Justnoise · " + appVersion.ifBlank { stringResource(R.string.integrated_settings_version_unavailable) },
+                color = SettingsSecondary, fontSize = 13.sp, lineHeight = 19.sp,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("settings-version"))
         }
     }
 }
@@ -301,15 +332,16 @@ private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> 
 }
 
 @Composable
-private fun SettingsActionRow(title: String, detail: String? = null, tag: String, onClick: () -> Unit) {
+private fun SettingsActionRow(title: String, detail: String? = null, tag: String,
+    enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag(tag).clickable(role = Role.Button, onClick = onClick)
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag(tag).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(title, fontSize = 17.sp, lineHeight = 23.sp)
+            Text(title, fontSize = 17.sp, lineHeight = 23.sp, color = if (enabled) Color.Black else SettingsSecondary)
             if (detail != null) Text(detail, fontSize = 13.sp, lineHeight = 19.sp, color = SettingsSecondary)
         }
         Canvas(Modifier.size(12.dp)) {
@@ -335,6 +367,12 @@ private fun SettingsPreview() {
 private fun SettingsNotificationPreview() {
     IntegratedSettingsSurface(IntegratedSettingsPage.MAIN, "", "", null, {}, {}, {}, {}, {}, {}, {},
         notificationsEnabled = true)
+}
+
+@Preview(name = "More settings", widthDp = 360, heightDp = 640, fontScale = 2f)
+@Composable
+private fun MoreSettingsPreview() {
+    IntegratedSettingsSurface(IntegratedSettingsPage.ADVANCED, "1.0.13", "", null, {}, {}, {}, {}, {}, {}, {})
 }
 
 @Preview(name = "Privacy draft enlarged", widthDp = 360, heightDp = 640, fontScale = 2f)

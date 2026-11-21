@@ -302,6 +302,46 @@ class ModePersistenceTest {
     }
 
     private fun token() = requireNotNull(store.loadModes().token)
+    @Test fun everyCreationSelectionFixtureUsesOneDurableSaveWithoutStartingSession() {
+        val fixture = requireNotNull(javaClass.classLoader?.getResourceAsStream("android-modes.v1.json"))
+            .bufferedReader().use { org.json.JSONObject(it.readText()) }
+        val cases = fixture.getJSONArray("creationSelectionCases")
+        assertEquals(3, cases.length())
+        repeat(cases.length()) { index ->
+            assertTrue(store.clearForWithdrawal())
+            val case = cases.getJSONObject(index)
+            val existing = create("Existing", setOf("example.existing"))
+            assertEquals(ModeMutationResult.SAVED, store.selectMode(token(), existing.id))
+            val edited = if (case.getBoolean("creating")) null else create("Other", setOf("example.other"))
+            val beforeRevision = store.snapshot().sessionRevision
+            assertEquals(ModeMutationResult.SAVED, store.saveMode(token(), edited?.id, "Saved",
+                setOf("example.saved"), selectNewMode = case.getBoolean("selectNewMode")))
+            val reloaded = Gate0Preferences(raw, history) { elapsed }
+            val saved = reloaded.loadModes().modes.single { it.name == "Saved" }
+            assertEquals(case.getString("id"),
+                if (case.getString("expectedRecent") == "saved") saved.id else existing.id,
+                reloaded.loadModes().recentModeId)
+            assertEquals(beforeRevision + 1L, reloaded.snapshot().sessionRevision)
+            assertFalse(reloaded.snapshot().desiredActive)
+        }
+    }
+
+    @Test fun failedAutoSelectingCreateDoesNotChangeThePreviousMode() {
+        val existing = create("Existing", setOf("example.existing"))
+        assertEquals(ModeMutationResult.SAVED, store.selectMode(token(), existing.id))
+        val authority = token()
+        raw.failNextCommit = true
+        assertEquals(ModeMutationResult.STORAGE_FAILED, store.saveMode(authority, null, "New",
+            setOf("example.new"), selectNewMode = true))
+        // Failed commits restore the previous catalog but quarantine normal UI reads.
+        assertEquals(existing, store.modeForReference(existing.id))
+        assertEquals(existing.id, store.snapshot().recentModeId)
+        assertEquals(setOf("example.existing"), store.readSelectionEdit().selectedPackages)
+        assertTrue(store.loadModes().error)
+        assertNull(store.loadModes().token)
+        assertTrue(store.snapshot().recoveryRequired)
+        assertFalse(store.snapshot().desiredActive)
+    }
     private fun startDecision() = SessionDecision(SessionTransition.START, SessionState.ACTIVE, RestrictionAction.APPLY)
     private fun create(name: String, targets: Set<String>): StoredMode {
         val previous = store.loadModes().modes.map { it.id }.toSet()
@@ -312,7 +352,7 @@ class ModePersistenceTest {
         ScheduleTiming(oneTimeEpochMilliseconds = 100_000L), "UTC", mode)
 }
 
-private class MemoryHistory : SessionHistoryStorage {
+internal class MemoryHistory : SessionHistoryStorage {
     val entries = mutableListOf<SessionHistoryEntry>()
     override fun insert(entry: SessionHistoryEntry) { if (entries.none { it.id == entry.id }) entries += entry }
     override fun load(limit: Int) = SessionHistorySnapshot(entries.toList(), entries.size)

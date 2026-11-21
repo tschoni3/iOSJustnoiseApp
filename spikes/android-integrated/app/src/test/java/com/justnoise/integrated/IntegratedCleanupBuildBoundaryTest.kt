@@ -16,6 +16,26 @@ class IntegratedCleanupBuildBoundaryTest {
         .first { File(it, "build.gradle.kts").isFile }
 
     @Test
+    fun userFacingPhoneActivitiesRequestPortraitWithoutRotatingBackgroundNfcEntry() {
+        val main = xml("src/main/AndroidManifest.xml").getElementsByTagName("activity")
+        val activities = (0 until main.length).map { main.item(it) as Element }
+        listOf("com.justnoise.integrated.MainActivity", "com.justnoise.gate0.app.MainActivity").forEach { name ->
+            assertEquals("portrait", activities.single { it.android("name") == name }.android("screenOrientation"))
+        }
+        assertEquals("", activities.single {
+            it.android("name") == "com.justnoise.gate0.app.DirectNfcActivity"
+        }.android("screenOrientation"))
+        val repository = File(appRoot, "../../..").canonicalFile
+        val release = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }.newDocumentBuilder().parse(File(repository, "android-app/app/src/release/AndroidManifest.xml"))
+        val account = release.getElementsByTagName("activity").item(0) as Element
+        assertEquals("com.justnoise.app.auth.AccountActivity", account.android("name"))
+        assertEquals("portrait", account.android("screenOrientation"))
+    }
+
+    @Test
     fun cleanupIdentityAndDebugSigningAreScopedToTheNewBuildType() {
         val source = File(appRoot, "build.gradle.kts").readText()
         val cleanup = block(source, "create(\"cleanupCheck\")")

@@ -60,7 +60,15 @@ def main():
                             raise ValueError("Development class found in release DEX")
         if hashlib.sha256(path.read_bytes()).hexdigest() != hashes[path.name]:
             raise ValueError("Candidate changed during verification")
-    report = {"application_id": "shop.justnoise.app", "version_code": 1, "version_name": "1.0.0",
+    metadata = json.loads((outputs / "apk/release/output-metadata.json").read_text())
+    elements = metadata.get("elements", [])
+    if metadata.get("applicationId") != "shop.justnoise.app" or len(elements) != 1:
+        raise ValueError("Unexpected release APK identity or artifact count")
+    version_code = elements[0].get("versionCode")
+    version_name = elements[0].get("versionName")
+    if version_code != 20 or version_name != "1.0.18":
+        raise ValueError("Expected Play update 1.0.18 (20)")
+    report = {"application_id": "shop.justnoise.app", "version_code": version_code, "version_name": version_name,
               "sha256": hashes, "upload_certificate_sha256": pin,
               "local_artifact_checks": "PASS", "device_acceptance": "NOT RUN",
               "installation": "NOT AUTHORIZED", "distribution": "HOLD",

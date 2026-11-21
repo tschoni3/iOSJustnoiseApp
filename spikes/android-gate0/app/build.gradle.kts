@@ -5,6 +5,14 @@ plugins {
     id("com.android.application")
 }
 
+val generatedZapResources = layout.buildDirectory.dir("generated/zapArtwork/res")
+val copyZapArtwork by tasks.registering(Sync::class) {
+    from(rootProject.projectDir.resolve("../../justnoiseradio/Assets.xcassets/zap_button.imageset/zap_button.png")) {
+        into("drawable-nodpi")
+    }
+    into(generatedZapResources)
+}
+
 android {
     namespace = "com.justnoise.gate0"
     compileSdk = 36
@@ -51,11 +59,14 @@ android {
     }
 
     sourceSets {
+        getByName("main").res.directories.add(generatedZapResources.get().asFile.path)
         getByName("test").resources.srcDir(
             rootProject.projectDir.resolve("../../product/behavior"),
         )
     }
 }
+
+tasks.named("preBuild").configure { dependsOn(copyZapArtwork) }
 
 tasks.withType<Test>().configureEach {
     inputs.files(
