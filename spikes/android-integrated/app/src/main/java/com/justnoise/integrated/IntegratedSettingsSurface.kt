@@ -78,6 +78,7 @@ fun IntegratedSettingsSurface(
     notificationsEnabled: Boolean = false,
     onManageNotifications: () -> Unit = {},
     onComposeSupportEmail: () -> Boolean = { false },
+    onOpenPrivacyPolicy: () -> Boolean = { false },
     liveUpdateStatus: SessionLiveUpdateStatus = SessionLiveUpdateStatus.UNSUPPORTED,
     onManageLiveUpdates: () -> Unit = {},
     onOpenAccount: (() -> Unit)? = null,
@@ -122,13 +123,13 @@ fun IntegratedSettingsSurface(
                     }
                 }
                 if (page == IntegratedSettingsPage.PRIVACY) {
-                    PrivacyDraftContent()
+                    PrivacyDraftContent(onOpenPrivacyPolicy)
                 } else {
                     SettingsGroups(appVersion, setupSummary, message, onOpenSetup, onShowTutorial,
                         onShowPrivacy, onReviewLocalData, onOpenAppInfo, notificationsEnabled,
                         onManageNotifications, onComposeSupportEmail, liveUpdateStatus, onManageLiveUpdates, onOpenAccount,
                         emergencyUnlocks, emergencySessionId, emergencyBusy, onEmergencyUnzap,
-                        page == IntegratedSettingsPage.ADVANCED, onShowMore)
+                        page == IntegratedSettingsPage.ADVANCED, onShowMore, onOpenPrivacyPolicy)
                 }
             }
         }
@@ -157,8 +158,10 @@ private fun SettingsGroups(
     onEmergencyUnzap: (String) -> Unit,
     advanced: Boolean,
     onShowMore: () -> Unit,
+    onOpenPrivacyPolicy: () -> Boolean,
 ) {
     var emailUnavailable by rememberSaveable { mutableStateOf(false) }
+    var browserUnavailable by rememberSaveable { mutableStateOf(false) }
     var emergencyConfirmation by rememberSaveable { mutableStateOf<String?>(null) }
     val mainListState = rememberLazyListState()
     val moreListState = rememberLazyListState()
@@ -239,6 +242,11 @@ private fun SettingsGroups(
                             color = Color.Black, fontSize = 17.sp, modifier = Modifier.testTag("support-address"))
                     }
                 }
+                SettingsRowDivider()
+                SettingsActionRow(title = stringResource(R.string.integrated_settings_privacy),
+                    detail = stringResource(R.string.integrated_settings_privacy_policy_link_detail),
+                    tag = "settings-privacy-policy-link", onClick = { browserUnavailable = !onOpenPrivacyPolicy() })
+                if (browserUnavailable) PrivacyPolicyAddress()
             }
         }
         if (!advanced) item {
@@ -284,7 +292,21 @@ private fun SettingsGroups(
 }
 
 @Composable
-private fun PrivacyDraftContent() {
+private fun PrivacyPolicyAddress() {
+    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.integrated_settings_browser_unavailable),
+            color = Color(0xFF8A241B), fontSize = 15.sp, lineHeight = 21.sp,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        SelectionContainer {
+            Text(stringResource(R.string.integrated_settings_privacy_policy_url),
+                color = Color.Black, fontSize = 17.sp, modifier = Modifier.testTag("privacy-policy-address"))
+        }
+    }
+}
+
+@Composable
+private fun PrivacyDraftContent(onOpenPrivacyPolicy: () -> Boolean) {
+    var browserUnavailable by rememberSaveable { mutableStateOf(false) }
     val paragraphs = stringArrayResource(R.array.integrated_android_privacy_draft_paragraphs)
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag("settings-privacy-list"),
@@ -292,6 +314,16 @@ private fun PrivacyDraftContent() {
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item { SettingsTitle(stringResource(R.string.integrated_settings_privacy)) }
+        item {
+            Surface(color = Color.White, shape = RoundedCornerShape(12.dp)) {
+                Column {
+                    SettingsActionRow(title = stringResource(R.string.integrated_settings_privacy_policy_open),
+                        detail = stringResource(R.string.integrated_settings_privacy_policy_link_detail),
+                        tag = "privacy-policy-open", onClick = { browserUnavailable = !onOpenPrivacyPolicy() })
+                    if (browserUnavailable) PrivacyPolicyAddress()
+                }
+            }
+        }
         item {
             Surface(color = Color(0xFFFFF3CD), contentColor = Color(0xFF5C4200), shape = RoundedCornerShape(12.dp)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp).testTag("privacy-draft-banner"),

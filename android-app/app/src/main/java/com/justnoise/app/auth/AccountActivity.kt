@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -75,7 +76,7 @@ class AccountActivity : ComponentActivity() {
             AccountSurface(state, runtime::navigate, runtime::passwordSignIn, runtime::requestRecovery,
                 runtime::google, runtime::updatePassword, runtime::signOut, runtime::deleteAccount,
                 runtime::restore, runtime::setAnalytics, runtime::reauthenticate, runtime::retryPendingLink, ::finish,
-                runtime::importLocalData, runtime::deferLocalImport, ::setScreenshotProtection)
+                runtime::importLocalData, runtime::deferLocalImport, ::setScreenshotProtection, ::openPrivacyPolicy)
         }
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); receive(intent) }
@@ -96,6 +97,10 @@ class AccountActivity : ComponentActivity() {
         }
         super.onDestroy()
     }
+    /** Opens the public privacy policy in the browser; nothing about the account is attached. */
+    private fun openPrivacyPolicy(): Boolean = runCatching {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.integrated_settings_privacy_policy_url))))
+    }.isSuccess
     private fun setScreenshotProtection(protected: Boolean) {
         if (protected) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -126,6 +131,7 @@ internal fun AccountSurface(
     onImportLocal: (LocalDataImportOffer) -> Unit,
     onDeferLocal: (LocalDataImportOffer) -> Unit,
     onScreenshotProtection: (Boolean) -> Unit,
+    onPrivacyPolicy: () -> Boolean = { false },
 ) {
     // Deliberately not rememberSaveable: passwords/drafts never enter Android backups/Bundles.
     var email by remember(state.page) { mutableStateOf("") }
@@ -135,6 +141,7 @@ internal fun AccountSurface(
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmAnalytics by remember { mutableStateOf(false) }
     var emailFormRequested by remember { mutableStateOf(false) }
+    var browserUnavailable by remember { mutableStateOf(false) }
     val authForm = state.page != AccountPage.ACCOUNT
     val showEmailForm = AccountEntryPresentation.showEmailForm(state.page, emailFormRequested)
     val showPasswordFields = AccountEntryPresentation.showPasswordFields(state.page, emailFormRequested)
@@ -183,6 +190,10 @@ internal fun AccountSurface(
                             TextButton(onClick = { onNavigate(AccountPage.REAUTHENTICATE) }, enabled = !state.busy) { Text("Confirm sign-in again") }
                             TextButton(onClick = { confirmDelete = true }, enabled = !state.busy) {
                                 Text(if (state.deletionPending) "Retry account deletion" else "Delete account", color = Color(0xFFB3261E))
+                            }
+                            TextButton(onClick = { browserUnavailable = !onPrivacyPolicy() },
+                                modifier = Modifier.testTag("account-privacy-policy")) {
+                                Text(stringResource(R.string.integrated_settings_privacy))
                             }
                         }
                     }
@@ -275,6 +286,14 @@ internal fun AccountSurface(
                         setOf(LocalDataImportStatus.ERROR, LocalDataImportStatus.PENDING))) {
                     TextButton(onClick = onRetry, enabled = !state.busy) { Text("Try again") }
                 }
+                if (authForm) TextButton(onClick = { browserUnavailable = !onPrivacyPolicy() },
+                    modifier = Modifier.align(Alignment.CenterHorizontally).testTag("account-entry-privacy-policy")) {
+                    Text(stringResource(R.string.integrated_settings_privacy),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (browserUnavailable) Text(stringResource(R.string.integrated_settings_browser_unavailable) + " " +
+                    stringResource(R.string.integrated_settings_privacy_policy_url),
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 if (!authForm) TextButton(onClick = onDone) { Text("Back to Justnoise") }
             }
         }

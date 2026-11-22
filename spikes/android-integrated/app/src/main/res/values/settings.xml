@@ -27,6 +27,10 @@
     <string name="integrated_settings_tutorial_detail">Watch how Justnoise works. Your setup stays unchanged.</string>
     <string name="integrated_settings_privacy_group">PRIVACY &amp; DATA</string>
     <string name="integrated_settings_privacy">Privacy Policy</string>
+    <string name="integrated_settings_privacy_policy_url" translatable="false">https://justnoise.shop/pages/android-privacy-policy</string>
+    <string name="integrated_settings_privacy_policy_link_detail">Opens justnoise.shop in your browser</string>
+    <string name="integrated_settings_privacy_policy_open">Open Privacy Policy</string>
+    <string name="integrated_settings_browser_unavailable">No browser app? Copy this address to read the policy.</string>
     <string name="integrated_settings_privacy_detail">Justnoise Media — Android policy draft, not yet published.</string>
     <string name="integrated_settings_local_data">Review local-data removal</string>
     <string name="integrated_settings_local_data_detail">Open setup to review withdrawal. This row does not clear data.</string>

@@ -508,6 +508,7 @@ fun IntegratedAccessibilitySetupSurface(
     onEnable: () -> Unit,
     onLater: () -> Unit,
     exitOnLater: Boolean,
+    onPrivacyPolicy: (() -> Unit)? = null,
 ) {
     FirstRunSystemBars(lightSurface = true)
     Column(
@@ -528,6 +529,13 @@ fun IntegratedAccessibilitySetupSurface(
             )
             Text(stringResource(R.string.first_run_accessibility_path), style = IntegratedGuidanceTypography.explanation,
                 modifier = Modifier.padding(top = 14.dp, bottom = 16.dp))
+            if (onPrivacyPolicy != null) {
+                TextButton(onClick = onPrivacyPolicy, contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.testTag("disclosure-privacy-policy")) {
+                    Text(stringResource(R.string.integrated_settings_privacy), color = Color.Black,
+                        textDecoration = TextDecoration.Underline)
+                }
+            }
             if (!errorMessage.isNullOrBlank()) {
                 Text(errorMessage, color = Color(0xFFB3261E), modifier = Modifier.padding(top = 12.dp))
             }

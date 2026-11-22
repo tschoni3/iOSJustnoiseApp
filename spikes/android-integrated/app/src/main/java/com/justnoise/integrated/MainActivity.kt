@@ -56,6 +56,14 @@ internal fun launchSupportEmail(address: String, launch: (Intent) -> Unit): Bool
     false
 }
 
+/** User-invoked browser handoff to the public privacy policy; nothing is attached. */
+internal fun launchPrivacyPolicy(url: String, launch: (Intent) -> Unit): Boolean = try {
+    launch(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    true
+} catch (_: RuntimeException) {
+    false
+}
+
 class MainActivity : ComponentActivity() {
     private lateinit var controller: Gate0Controller
     private lateinit var preferences: Gate0Preferences
@@ -296,6 +304,7 @@ class MainActivity : ComponentActivity() {
                         onEnable = ::enableAccessibilityFromSetup,
                         onLater = ::deferBlockingSetup,
                         exitOnLater = blockingSetupIsRequired,
+                        onPrivacyPolicy = ::openPrivacyPolicy,
                     )
                 } else if (showingScheduleSetup) {
                     IntegratedScheduleSetupSurface(
@@ -326,7 +335,8 @@ class MainActivity : ComponentActivity() {
                 } else if (IntegratedProductEntryRules.needsBlocking(screenState.truth,
                         disclosureAccepted, accessibilityEnabled) && !showingSettings) {
                     IntegratedAccessibilitySetupSurface(disclosureAccepted, accessibilitySetupError,
-                        ::enableAccessibilityFromSetup, ::finish, exitOnLater = true)
+                        ::enableAccessibilityFromSetup, ::finish, exitOnLater = true,
+                        onPrivacyPolicy = ::openPrivacyPolicy)
                 } else if (showingSchedules && !alarmAccessEnabled) {
                     IntegratedScheduleSetupSurface(accessibilitySetupError,
                         ::enableScheduleAccessFromSetup, ::skipScheduleSetup)
@@ -381,6 +391,9 @@ class MainActivity : ComponentActivity() {
                         onEmergencyUnzap = ::handleEmergencyUnzap,
                         onComposeSupportEmail = {
                             launchSupportEmail(getString(R.string.integrated_settings_support_email), ::startActivity)
+                        },
+                        onOpenPrivacyPolicy = {
+                            launchPrivacyPolicy(getString(R.string.integrated_settings_privacy_policy_url), ::startActivity)
                         },
                     )
                 } else if (showingSchedules) {
@@ -970,6 +983,12 @@ class MainActivity : ComponentActivity() {
         } catch (_: RuntimeException) {
             showTransientStatus(R.string.first_run_store_unavailable)
         }
+    }
+
+    private fun openPrivacyPolicy() {
+        if (!launchPrivacyPolicy(getString(R.string.integrated_settings_privacy_policy_url), ::startActivity))
+            accessibilitySetupError = getString(R.string.integrated_settings_browser_unavailable) + " " +
+                getString(R.string.integrated_settings_privacy_policy_url)
     }
 
     private fun refreshTruth() {
