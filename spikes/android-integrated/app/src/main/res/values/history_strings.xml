@@ -21,7 +21,7 @@
     <string name="history_meaning">Totals include all completed sessions saved on this phone. Active sessions appear after they end. Session time is elapsed duration, not a guarantee of continuous blocking.</string>
     <string name="history_day_meaning">Time is the portion of completed sessions attributed to this local day, not verified continuous blocking. A session crossing midnight can appear on more than one day.</string>
     <string name="history_empty_title">No completed sessions yet</string>
-    <string name="history_empty_body">Start a session with your paired Zap, then tap it again to finish. Completed sessions will appear on the timeline.</string>
+    <string name="history_empty_body">Start a session with your Zap, then tap it again to finish. Completed sessions will appear on the timeline.</string>
     <string name="history_error_title">History couldn’t load</string>
     <string name="history_error_body">We couldn’t read or save your sessions. Check that your phone has free storage, then retry. Your saved sessions have not been replaced.</string>
     <plurals name="history_day_sessions">

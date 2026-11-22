@@ -50,6 +50,11 @@ object ZapCompatibilityLabels {
         }
     }
 
+    /**
+     * Mirrors iOS: any recognized Zap (legacy label or valid JNZ1) starts and stops sessions,
+     * regardless of which Zap was paired first on this phone. A previously paired tag keeps
+     * its stop-only escape during an existing session.
+     */
     fun allowsSessionRead(recognized: Boolean, paired: Boolean, sessionRequested: Boolean): Boolean =
-        paired && (recognized || sessionRequested)
+        recognized || (paired && sessionRequested)
 }
